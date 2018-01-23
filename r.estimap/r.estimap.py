@@ -21,86 +21,117 @@
                for details.
 """
 
-
 #%Module
 #%  description:  Implementation of ESTIMAP to support mapping and modelling of ecosystem services (Zulian, 2014)
 #%  keywords: estimap
 #%  keywords: ecosystem services
-#%  keywords: recreation
+#%  keywords: recreation potential
 #%End
 
+#%flag
+#%  key: i
+#%  description: Print out citation
+#%end
+
+#%flag
+#%  key: f
+#%  description: Filter input map before...
+#%end
+
 #%option G_OPT_R_INPUT
-#% key: landcover
-#% key_desc: map name
-#% description: Land cover map
-#% required : no
+#% key: suitability
+#% type: string
+#% key_desc: name
+#% description: Suitability of land use classes to support recreation activities
+#% required: no
+#% guisection: Land
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: landuse
-#% key_desc: map name
-#% description: Land use map
+#% type: string
+#% key_desc: name
+#% description: Land use as an input to derive suitability of land use classes to support recreation activities
 #% required : no
+#% guisection: Land
 #%end
 
 #%option G_OPT_F_INPUT
-#% key: suitability
-#% key_desc: map name
-#% description: Suitability of land to support recreation activities
+#% key: suitability_scores
+#% type: string
+#% key_desc: name
+#% description: Scores, in form of recoding rules, for suitability of land use classes to support recreation activities. Should correspond to the given landuse classification map.
 #% required: no
+#% guisection: Land
 #%end
 
 #%rules
-#% exclusive: landcover, suitability
+#% exclusive: suitability, landuse, suitability_scores
+#% requires: landuse, suitability_scores
 #%end
 
-#%option G_OPT_R_INPUT
-#% key: coast_geomorphology
-#% key_desc: map name
-#% description: Score of coastal geomorphology to support recreation activities
+#%option G_OPT_R_INPUTS
+#% key: land_component
+#% key_desc: names
+#% description: Maps scoring access to water resources
 #% required : no
-#%end
-
-#%option G_OPT_R_INPUT
-#% key: water_clarity
-#% key_desc: map name
-#% description: Water clarity
-#% required : no
-#%end
-
-#%option G_OPT_R_INPUT
-#% key: coast_proximity
-#% key_desc: map name
-#% description: Score of proximity to coast based on a distance function
-#% required : no
-#%end
-
-#%option G_OPT_R_INPUT
-#% key: marine
-#% key_desc: map name
-#% description: Marine protected natural areas
-#% required : no
+#% guisection: Land
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: lakes
 #% key_desc: filename
-#% description: Score of access to lakes based on a distance function
+#% description: Accessibility to lakes, scored based on a distance function
 #% required : no
+#% guisection: Water
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: water_clarity
+#% key_desc: map name
+#% description: Water clarity. The higher, the greater the recreation value.
+#% required : no
+#% guisection: Water
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: coast_proximity
+#% key_desc: map name
+#% description: Coastal proximity, scored based on a distance function
+#% required : no
+#% guisection: Water
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: coast_geomorphology
+#% key_desc: map name
+#% description: Coastal geomorphology, scored as suitable to support recreation activities
+#% required : no
+#% guisection: Water
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: bathing_water
 #% key_desc: filename
-#% description: Bathing Water Quality Index
+#% description: Bathing Water Quality Index. The higher, the greater is the recreational value.
 #% required : yes
+#% guisection: Water
 #%end
 
 #%option G_OPT_R_INPUT
+#% key: marine
+#% key_desc: map name
+#% description: Access to marine natural protected areas
+#% required : no
+#% guisection: Water
+#%end
+
+#%option G_OPT_R_INPUTS
 #% key: water_component
 #% key_desc: filename
-#% description: Maps scoring access to water resources
+#% description: Maps scoring access to and quality of water resources
 #% required : no
+#% guisection: Water
 #%end
 
 #%rules
@@ -108,24 +139,27 @@
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: natural
+#% key: protected
 #% key_desc: filename
 #% description: Natural Protected Areas
 #% required : yes
+#% guisection: Natural
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: forest
 #% key_desc: filename
-#% description: High Resolution Forest
+#% description: Access to forested areas.
 #% required : yes
+#% guisection: Natural
 #%end
 
-#%option G_OPT_R_INPUT
+#%option G_OPT_R_INPUTS
 #% key: natural_component
 #% key_desc: filename
-#% description: Maps scoring access to inland natural resources
+#% description: Maps scoring access to  and quality of inland natural resources
 #% required : no
+#% guisection: Natural
 #%end
 
 #%option G_OPT_R_INPUT
@@ -133,6 +167,7 @@
 #% key_desc: map name
 #% description: Urban green areas
 #% required : no
+#% guisection: Urban
 #%end
 
 #%option G_OPT_R_INPUT
@@ -140,40 +175,39 @@
 #% key_desc: filename
 #% description: Maps scoring urban green infrastructure
 #% required : no
+#% guisection: Urban
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: roads
 #% key_desc: map name
-#% description: Roads
+#% description: Road network
 #% required : no
+#% guisection: Urban
 #%end
 
-#%option G_OPT_R_INPUT
-#% key: negative_elements
+#%option G_OPT_R_INPUTS
+#% key: urban_component
 #% key_desc: map name
-#% description: Roads
+#% description: Maps scoring recreational value of urban components
 #% required : no
+#% guisection: Natural
 #%end
 
-#%option G_OPT_F_INPUT
-#% key: suitability_scores
-#% key_desc: filename
-#% description: Scores of suitability to support recreation activities in form of reccoding rules for the CORINE land cover classification
-#% required: no
+#%option G_OPT_R_INPUTS
+#% key: devaluation
+#% key_desc: map name
+#% description: Devaluing elements. Maps hindering accessibility to and degrading quality of various resources or infrastructure
+#% required : no
+#% guisection: Devaluation
 #%end
-
-######################
-# #%rules
-# #% requires: landuse, suitability_scores
-# #%end
-#######################
 
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: map name
 #% description: Recreation Potential Map
-#% required: no
+#% required: yes
+#% answer: recreation_potential
 #%end
 
 # required librairies
@@ -200,38 +234,47 @@ def cleanup():
     if grass.find_file(name='MASK', element='cell')['file']:
         r.mask(flags='r', verbose=True)
 
-
 def run(cmd, **kwargs):
     """
     Pass required arguments to grass commands (?)
     """
     grass.run_command(cmd, quiet=True, **kwargs)
 
-def add_timestamp(mtl_filename, outname):
+# def add_timestamp(mtl_filename, outname):
+#     """
+#     Retrieve metadata from MTL file.
+#     """
+#     import datetime
+#     metadata = Landsat8_MTL(mtl_filename)
+
+#     # required format is: day=integer month=string year=integer time=hh:mm:ss.dd
+#     acquisition_date = str(metadata.date_acquired)  ### FixMe ###
+#     acquisition_date = datetime.datetime.strptime(acquisition_date, '%Y-%m-%d').strftime('%d %b %Y')
+#     acquisition_time = str(metadata.scene_center_time)[0:8]
+#     date_time_string = acquisition_date + ' ' + acquisition_time
+
+#     #msg = "Date and time of acquisition: " + date_time_string
+#     #grass.verbose(msg)
+
+#     run('r.timestamp', map=outname, date=date_time_string)
+
+#     del(date_time_string)
+
+def set_null_to_zero(input_raster, output_raster):
     """
-    Retrieve metadata from MTL file.
     """
-    import datetime
-    metadata = Landsat8_MTL(mtl_filename)
+    zero = 0
+    zero_expression = 'float(if(isnull({input_raster}), {zero}, {input_raster}))'
+    zero_expression = zero_expression.format(input_raster=suitability, zero=zero)
+    zero_equation = equation.format(result=suitability, expression=zero_expression)
+    grass.mapcalc(zero_equation, overwrite=True)
+    del(zero_equation)
+    del(zero_expression)
 
-    # required format is: day=integer month=string year=integer time=hh:mm:ss.dd
-    acquisition_date = str(metadata.date_acquired)  ### FixMe ###
-    acquisition_date = datetime.datetime.strptime(acquisition_date, '%Y-%m-%d').strftime('%d %b %Y')
-    acquisition_time = str(metadata.scene_center_time)[0:8]
-    date_time_string = acquisition_date + ' ' + acquisition_time
-
-    #msg = "Date and time of acquisition: " + date_time_string
-    #grass.verbose(msg)
-
-    run('r.timestamp', map=outname, date=date_time_string)
-
-    del(date_time_string)
-
-
-def normalize (raster, output_name):
+def normalize_map (raster, output_name):
     """
     Normalize a raster map
- 
+
     #
     # deletes the input raster map
     #
@@ -247,8 +290,42 @@ def normalize (raster, output_name):
         expression=normalisation_expression)
     grass.mapcalc(normalisation_equation, overwrite=True)
 
+    del(minimum)
+    del(maximum)
+    del(expression)
+    del(normalisation_equation)
+
     # # grass.run_command('g.remove', flags='f', type='raster', name=inras, quiet=True)
     # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
+
+def tmp_map_name(name):
+    """
+    Return a temporary map name, for example:
+
+    tmp_avg_lse = tmp + '.avg_lse'
+    """
+    temporary_file = grass.tempfile()
+    tmp = "tmp." + grass.basename(temporary_file)  # use its basename
+    return tmp + '.' + str(name)
+
+def normalise_component(components, output_name):
+    """
+    Sums up all maps listed in the components object and derives a normalised output.
+    """
+
+    components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
+    tmp_output = tmp_map_name(components_string)
+
+    component_expression = spacy_plus.join(components)
+    component_equation = equation.format(result=tmp_output, expression=component_expression)
+    grass.mapcalc(component_equation, overwrite=True)
+    normalize(tmp_output, output_name)
+
+    del(components_string)
+    del(tmp_output)
+    del(component_expression)
+    del(component_equation)
+    del(output_name)
 
 def main():
     """
@@ -257,179 +334,163 @@ def main():
 
     # basic equation for mapcalc
     global equation, citation
+    spacy_plus = ' + '
     equation = "{result} = {expression}"
     recreation_potential_components = []
 
-    # ?
+    # Land Component
+    #  or Suitability of Land to Support Recreation Activities (SLSRA)
 
-    slsra_rules = options['image'].split(',')
+    if options['land_component']:
+        land_component = options['land_component']
 
+    else:
+        land_components = []
 
-    # 1
+        if options['landuse'] and options['suitability_scores']:
 
-    mask = "mask" #'lakes3' #"
-    #mask = 'testmask'
+            landuse = options['landuse']
+            suitability_scores = options['suitability_scores']
+            suitability = 'suitability'
+            run('r.recode', input = landcover, rules = suitability_scores, output = suitability)
 
-    # 2
+        if not options['landuse'] and not options['suitability_scores']:
 
-    listfinalNATURE =[]
-    deleterlist=[]
-    deletevlist=[]
+            if options['suitability']:
+                suitability = options['suitability']
 
-    # 3
+            else:
+                suitability = 'suitability'
 
-    landcover = options['landcover']
-    # computationlist=['clc2012']
+        land_components.append(suitability)
 
-    # 4 -- DONE --
+        # # provided land components in one string
+        # land_component = spacy_plus.join(land_components)
 
-    # --------------------------------------------------------------------------
-    grass.use_temp_region()  # to safely modify the region
-    run('g.region', flags='p', rast=mask) # Set region to 'mask'
-    g.message("|! Region's resolution matched to mask's ({p})".format(p=mask))
-    # --------------------------------------------------------------------------
+    # Water Component
 
-    # 5 # Suitability of Land to support recreation activities
+    if options['water_component']:
+        water_component = options['water_component']
 
-    # Reclass rules for corine land cover
-    # SLSRA_rules = "/natcapes_nfs/grassdb/INCA_R/scores/recodeCLC.txt"
-    suitability_scores = options['suitability_scores']
+    else:
+        water_components = []
 
-    # 6
+        if options['lakes']:
+            lakes = options['lakes']
+            water_components.append(lakes_proximity)
 
-    # for raster in computationlist:  # Not required since the list contains
-    # only one map!
+        if options['water_clarity']:
+            water_clarity = options['water_clarity']
+            water_components.append(water_clarity)
 
-    # # Fix Me
-    # year = raster[-4:]  # This was extracting the year from the name of
-    # the corine map.  Not required.
-    #
+        if options['coast_geomorphology']:
+            coast_geomorphology = options['coast_geomorphology']
+            water_components.append(coast_geomorphology)
 
-    # ?
-    # SLSRA = 'SLSRA_'+year
+        if options['coast_proximity']:
+            coast_proximity = options['coast_proximity']
+            water_components.append(coast_proximity)
 
-    if not suitability:
-        suitability = 'suitability'
-        suitability_scores = options['suitability_scores']
+        if options['bathing_water']:
+            bathing_water = options['bathing_water']
+            water_components.append(bathing_water)
 
-    #recode CLC
-    # grass.run_command("r.recode", input= r, output= SLSRA, rules = SLSRA_rules, overwrite=True)
-    
-    # r has been replaced here with the 'landcover'
-    # SLSRA: recreation_suitability
+        if options['marine']:
+            marine = options['marine']
+            water_components.append(marine)
 
-        run('r.recode',
-                input = landcover,
-                rules = suitability_scores,
-                output = suitability)
+        # # provided water components in one string
+        # water_component = spacy_plus.join(water_components)
 
-    # Set NULLs to 0
+    # Protected Areas  ( or Natural Component ? )
 
-    # setnull_0('SLSRA_'+year, 'SLSRA0_'+year)  # Why not use r.null?
+    if options['natural_component']:
+        natural_component = options['natural_component']
 
-    zero_expression = 'float(if(isnull({input_raster}), {zero}, {input_raster}))'
-    zero_expression = zero_expression.format(input_raster=suitability, zero=zero)
-    zero_equation = equation.format(result=suitability, expression=zero_expression)
-    grass.mapcalc(zero_equation, overwrite=True)
+    else:
+        natural_components = []
 
-    # masklak('SLSRA0_'+year,'SLSRA1_'+year,mask)
+        if options['protected']:
+            protected_areas = options['protected']
+            natural_components.append(protected_areas)
 
-    # 7 # mask RA with recode industry
+        if options['forest']:
+            forest = options['forest']
+            natural_components.append(forest)
 
-    # for r in computationlist:  # Not required, since list consists of one
-    # map.
+        # # provided natural components in one string
+        # natural_component = spacy_plus.join(natural_components)
 
-
-    # Fix Me
-    # year = r[-4:]  # Not required.
-    # print year
-
-    ## Water Component
-    water_components = []
-
-    # WaterL.append('F_statagperc1') add bathing water here
-
-    # WaterL.append('bathing_water_quality_2006_gscores')
-    ### Score access to bathing waters as a distance function
-    if options['bathing_water']:
-        bathing_water = options['bathing_water']
-        water_component.append(bathing_water)
-
-    # WaterL.append('fd_coastD')
-    ### Coast:  Score access to the coast as a distance function
-    if options['coast_proximity']:
-        coast_proximity = options['coast_proximity']
-        water_components.append(coast_proximity)
-
-    # WaterL.append('Lake_D')
-    ### Lakes:  Score access to lakes as a distance function
-    if options['lakes']:
-        lakes_proximity = options['lakes']
-        water_components.append(lakes_proximity)
-
-    # WaterL.append('geo_coast')
-    ### Coast Geomorphology: Score coastal areas as a function of their geomorphology
-    if options['coast_geomorphology']:
-        coast_geomorphology = options['coast_geomorphology']
-        water_components.append(coast_geomorphology)
-
-    # laststring = " + ".join(WaterL)
-    water_component = ' + '.join(water_components)
-
-    water_component_expression = 'water_component * lakes3'
-
-    water_component_equation =  water_component_expression.format(result=water_component,
-            expression=water_component_expression)
-
-    grass.mapcalc(water_component_equation, overwrite=True)
-
-    #
-
-    # normalize ('Wat'+year,'Wat_N'+year)
-    normalize(water_component, water_component_normalised)
-
-    # 8 # final inputs for Recreation Potential
-
-    # for r in computationlist:  # Not required
-
-    # Fix Me
-    year = r[-4:]
-
-    # if year == '2012':  # Not required
-
-    ## Land Use Component
-
-    finalRP.append('SLSRA0_'+year) #land use
-    finalRP.append('Wat_N'+year)  #Fresh Water
-
-    ## Natural Protected Areas
-
-    if options['natural']:
-        natural_protected_areas = options['natural']
-        recreation_potential_components.append(natural)
-
-    # laststring = " + ".join(finalRP)
-    # RP = 'RP00V3'+year+' = ('+ laststring+')'
-    recreation_potential_expression = ' + '.join(recreation_potential_components)
+    # Output
 
     if not options['potential']:
         recreation_potential = "recreation_potential"
     else:
         recreation_potential = options['potential']
 
-    recreation_potential_equation = equation.format(result=recreation_potential,
-            expression=recreation_potential_expression)
+    # Mask out lakes
+    if lakes:
+        r.mask(raster=lakes, overwrite=True)
 
-    # grass.mapcalc(RP, quiet=False, verbose=False, overwrite=True)
-    grass.mapcalc(recreation_potential_equation, overwrite=True)
+    #
+    # set computational region  # ?  To smallest in extent among given maps?
+    #
 
-    # normalize recreation potential map
-    normalize (recreation_potential, recreation_potential_normalised)
+    grass.use_temp_region()  # to safely modify the region
+    run('g.region', flags='p', rast=mask) # Set region to 'mask'
+    g.message("|! Computational resolution matched to mask's ({p})".format(p=mask))
+
+    # Normalize inputs and add them as recreation potential components
+
+    ## Land Use Component
+    # Set NULLs to 0 -- why not: run('r.null', map=suitability, null=0)
+    set_null_to_zero(suitability, suitability_null_to_zero)
+    recreation_potential_components.append(suitability)
+
+    ## Water Component
+    normalise_component(water_component, water_component_normalised)
+    recreation_potential_components.append(water_component_normalised)
+
+    ## Natural Components
+    normalise_component(natural_component, natural_component_normalised)
+    recreation_potential_components.append(natural_component_normalised)
+
+    # Recreation Potential
+    normalise_component(recreation_potential_components,
+            recreation_potential_components_normalised)
 
 
-# Input :: Components
+    # Time Stamping ?
 
-# Inter
+    # Apply Color Table(s) ?
+
+    # ToDo: helper function for r.support
+
+    # strings for metadata
+    history_recreation_potential = '\n' + citation_recreation_potential
+    description_recreation_potential = ('Recreation Potential Map derived from ... . ')
+
+    title_recreation_potential = 'Recreation Potential'
+    # units_recreation_potential = ''
+
+    source1_recreation_potential = 'Source 1'
+    source2_recreation_potential = 'Source 2'
+
+    # history entry
+    run("r.support", map=recreation_potential_output, title=title_recreation_potential,
+        units=units_recreation_potential, description=description_recreation_potential,
+        source1=source1_recreation_potential, source2=source2_recreation_potential,
+        history=history_recreation_potential)
+
+    # # restore region
+    # if scene_extent:
+    #     grass.del_temp_region()  # restoring previous region settings
+    #     g.message("|! Original Region restored")
+
+    # print citation
+    if info:
+        print '\nCitatin: ' + citation_recreation_potential
+
 if __name__ == "__main__":
     options, flags = grass.parser()
     atexit.register(cleanup)

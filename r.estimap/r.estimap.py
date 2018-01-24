@@ -29,13 +29,18 @@
 #%End
 
 #%flag
-#%  key: i
-#%  description: Print out citation
+#%  key: e
+#%  description: Match computational region to extent of land use map
 #%end
 
 #%flag
 #%  key: f
 #%  description: Filter input map before...
+#%end
+
+#%flag
+#%  key: i
+#%  description: Print out citation
 #%end
 
 #%option G_OPT_R_INPUT
@@ -66,7 +71,8 @@
 #%end
 
 #%rules
-#% exclusive: suitability, landuse, suitability_scores
+#% exclusive: suitability, landuse
+#% exclusive: suitability, suitability_scores
 #% requires: landuse, suitability_scores
 #%end
 
@@ -114,7 +120,7 @@
 #% key: bathing_water
 #% key_desc: filename
 #% description: Bathing Water Quality Index. The higher, the greater is the recreational value.
-#% required : yes
+#% required : no
 #% guisection: Water
 #%end
 
@@ -150,14 +156,14 @@
 #% key: forest
 #% key_desc: filename
 #% description: Access to forested areas.
-#% required : yes
+#% required : no
 #% guisection: Natural
 #%end
 
 #%option G_OPT_R_INPUTS
 #% key: natural_component
 #% key_desc: filename
-#% description: Maps scoring access to  and quality of inland natural resources
+#% description: Maps scoring access to and quality of inland natural resources
 #% required : no
 #% guisection: Natural
 #%end
@@ -202,6 +208,13 @@
 #% guisection: Devaluation
 #%end
 
+#%option G_OPT_R_INPUT
+#% key: mask
+#% key_desc: name
+#% description: A raster map to apply as an inverted MASK
+#% required : no
+#%end
+
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: map name
@@ -220,6 +233,7 @@ import atexit
 import grass.script as grass
 from grass.exceptions import CalledModuleError
 from grass.pygrass.modules.shortcuts import general as g
+from grass.pygrass.modules.shortcuts import raster as r
 
 # from scoring_schemes import corine
 
@@ -260,66 +274,57 @@ def run(cmd, **kwargs):
 
 #     del(date_time_string)
 
-def set_null_to_zero(input_raster, output_raster):
-    """
-    """
-    zero = 0
-    zero_expression = 'float(if(isnull({input_raster}), {zero}, {input_raster}))'
-    zero_expression = zero_expression.format(input_raster=suitability, zero=zero)
-    zero_equation = equation.format(result=suitability, expression=zero_expression)
-    grass.mapcalc(zero_equation, overwrite=True)
-    del(zero_equation)
-    del(zero_expression)
-
-def normalize_map (raster, output_name):
-    """
-    Normalize a raster map
-
-    #
-    # deletes the input raster map
-    #
-
-    ### Why delete a map here?
-    """
-    minimum = grass.raster_info(raster)['min']
-    maximum = grass.raster_info(raster)['max']
-
-    expression = 'float(({raster} - ${minimum}) / ({maximum} - {minimum}))'
-    expression = expression.format(input_map=raster, minimum=minimum, maximum=maximum)
-    normalisation_equation = equation.format(result=output_map,
-        expression=normalisation_expression)
-    grass.mapcalc(normalisation_equation, overwrite=True)
-
-    del(minimum)
-    del(maximum)
-    del(expression)
-    del(normalisation_equation)
-
-    # # grass.run_command('g.remove', flags='f', type='raster', name=inras, quiet=True)
-    # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
-
 def tmp_map_name(name):
     """
-    Return a temporary map name, for example:
+    Return a temporary map name
 
-    tmp_avg_lse = tmp + '.avg_lse'
+    Example:
+    tmp_output = tmp + '.output'
     """
     temporary_file = grass.tempfile()
     tmp = "tmp." + grass.basename(temporary_file)  # use its basename
     return tmp + '.' + str(name)
+
+def normalize_map (raster, output_name):
+    """
+    Normalize a raster map
+    """
+    minimum = grass.raster_info(raster)['min']
+    maximum = grass.raster_info(raster)['max']
+
+    normalisation = 'float(({raster} - {minimum}) / ({maximum} - {minimum}))'
+    normalisation = normalisation.format(raster=raster, minimum=minimum, maximum=maximum)
+    normalisation_equation = equation.format(result=output_name,
+        expression=normalisation)
+    grass.mapcalc(normalisation_equation, overwrite=True)
+
+    del(minimum)
+    del(maximum)
+    del(normalisation)
+    del(normalisation_equation)
+
+    # Why delete a map here?
+    # # grass.run_command('g.remove', flags='f', type='raster', name=inras, quiet=True)
+    # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
 
 def normalise_component(components, output_name):
     """
     Sums up all maps listed in the components object and derives a normalised output.
     """
 
+    print "Components are:", components
+    print
+
+    components = [ name.split('@')[0] for name in components ]
     components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
     tmp_output = tmp_map_name(components_string)
 
     component_expression = spacy_plus.join(components)
     component_equation = equation.format(result=tmp_output, expression=component_expression)
+    print "Equation:", component_equation
+    print
     grass.mapcalc(component_equation, overwrite=True)
-    normalize(tmp_output, output_name)
+    normalize_map(tmp_output, output_name)
 
     del(components_string)
     del(tmp_output)
@@ -333,10 +338,22 @@ def main():
     """
 
     # basic equation for mapcalc
-    global equation, citation
+    global equation, citation, spacy_plus
     spacy_plus = ' + '
     equation = "{result} = {expression}"
-    recreation_potential_components = []
+    
+    # names for normalised component maps
+    land_component_map_name='land_component'
+    water_component_map='water_component'
+    natural_component_map='natural_component'
+    # recreation_potential_component_map='recreation_potential'
+    normalised_suffix='normalised'
+
+# ------------------------------------------------------------------------------
+    landuse_extent = flags['e']
+# ------------------------------------------------------------------------------
+
+    recreation_potential_component = []
 
     # Land Component
     #  or Suitability of Land to Support Recreation Activities (SLSRA)
@@ -352,7 +369,10 @@ def main():
             landuse = options['landuse']
             suitability_scores = options['suitability_scores']
             suitability = 'suitability'
-            run('r.recode', input = landcover, rules = suitability_scores, output = suitability)
+            run('r.recode',
+                    input = landuse,
+                    rules = suitability_scores,
+                    output = suitability)
 
         if not options['landuse'] and not options['suitability_scores']:
 
@@ -369,40 +389,51 @@ def main():
 
     # Water Component
 
+    # one list to hold arbitrary water component related maps
+    water_component = []
+
     if options['water_component']:
-        water_component = options['water_component']
+        water_component = options['water_component'].split(',')
 
-    else:
-        water_components = []
+        # How to avoid going through the rest... if?
 
-        if options['lakes']:
-            lakes = options['lakes']
-            water_components.append(lakes_proximity)
+          # Should water_component  AND water_components be exclusive!
 
-        if options['water_clarity']:
-            water_clarity = options['water_clarity']
-            water_components.append(water_clarity)
+    # one list for explicitly defined water component related maps
+    water_components = []
 
-        if options['coast_geomorphology']:
-            coast_geomorphology = options['coast_geomorphology']
-            water_components.append(coast_geomorphology)
+    if options['lakes']:
+        lakes_proximity = options['lakes']
+        water_components.append(lakes_proximity)
 
-        if options['coast_proximity']:
-            coast_proximity = options['coast_proximity']
-            water_components.append(coast_proximity)
+    if options['water_clarity']:
+        water_clarity = options['water_clarity']
+        water_components.append(water_clarity)
 
-        if options['bathing_water']:
-            bathing_water = options['bathing_water']
-            water_components.append(bathing_water)
+    if options['coast_geomorphology']:
+        coast_geomorphology = options['coast_geomorphology']
+        water_components.append(coast_geomorphology)
 
-        if options['marine']:
-            marine = options['marine']
-            water_components.append(marine)
+    if options['coast_proximity']:
+        coast_proximity = options['coast_proximity']
+        water_components.append(coast_proximity)
 
-        # # provided water components in one string
-        # water_component = spacy_plus.join(water_components)
+    if options['bathing_water']:
+        bathing_water = options['bathing_water']
+        water_components.append(bathing_water)
+
+    if options['marine']:
+        marine = options['marine']
+        water_components.append(marine)
+
+    # merge water component related maps in one list
+    water_component += water_components
+
 
     # Protected Areas  ( or Natural Component ? )
+
+    natural_component = []
+    natural_components = []
 
     if options['natural_component']:
         natural_component = options['natural_component']
@@ -418,8 +449,7 @@ def main():
             forest = options['forest']
             natural_components.append(forest)
 
-        # # provided natural components in one string
-        # natural_component = spacy_plus.join(natural_components)
+    natural_component += natural_components
 
     # Output
 
@@ -428,37 +458,36 @@ def main():
     else:
         recreation_potential = options['potential']
 
-    # Mask out lakes
-    if lakes:
-        r.mask(raster=lakes, overwrite=True)
+    if options['mask']:
+        mask = options['mask']
+        r.mask(raster=mask, overwrite=True)
 
     #
     # set computational region  # ?  To smallest in extent among given maps?
     #
 
-    grass.use_temp_region()  # to safely modify the region
-    run('g.region', flags='p', rast=mask) # Set region to 'mask'
-    g.message("|! Computational resolution matched to mask's ({p})".format(p=mask))
+    if landuse_extent:
+        grass.use_temp_region()  # to safely modify the region
+        run('g.region', flags='p', rast=mask) # Set region to 'mask'
+        g.message("|! Computational resolution matched to {raster}".format(raster=landuse))
 
     # Normalize inputs and add them as recreation potential components
 
     ## Land Use Component
-    # Set NULLs to 0 -- why not: run('r.null', map=suitability, null=0)
-    set_null_to_zero(suitability, suitability_null_to_zero)
-    recreation_potential_components.append(suitability)
+    run('r.null', map=suitability, null=0)  # Set NULLs to 0
+    recreation_potential_component.append(suitability)
 
     ## Water Component
-    normalise_component(water_component, water_component_normalised)
-    recreation_potential_components.append(water_component_normalised)
+    normalise_component(water_component, water_component_map)
+    recreation_potential_component.append(water_component_map)
 
     ## Natural Components
-    normalise_component(natural_component, natural_component_normalised)
-    recreation_potential_components.append(natural_component_normalised)
+    normalise_component(natural_component, natural_component_map)
+    recreation_potential_component.append(natural_component_map)
 
     # Recreation Potential
-    normalise_component(recreation_potential_components,
-            recreation_potential_components_normalised)
-
+    normalise_component(recreation_potential_component,
+            recreation_potential)
 
     # Time Stamping ?
 
@@ -467,17 +496,18 @@ def main():
     # ToDo: helper function for r.support
 
     # strings for metadata
+    citation_recreation_potential='Zulian (2014)'
     history_recreation_potential = '\n' + citation_recreation_potential
     description_recreation_potential = ('Recreation Potential Map derived from ... . ')
 
     title_recreation_potential = 'Recreation Potential'
-    # units_recreation_potential = ''
+    units_recreation_potential = 'Meters'
 
     source1_recreation_potential = 'Source 1'
     source2_recreation_potential = 'Source 2'
 
     # history entry
-    run("r.support", map=recreation_potential_output, title=title_recreation_potential,
+    run('r.support', map=recreation_potential, title=title_recreation_potential,
         units=units_recreation_potential, description=description_recreation_potential,
         source1=source1_recreation_potential, source2=source2_recreation_potential,
         history=history_recreation_potential)
@@ -488,8 +518,8 @@ def main():
     #     g.message("|! Original Region restored")
 
     # print citation
-    if info:
-        print '\nCitatin: ' + citation_recreation_potential
+    if flags['i']:
+        print '\nCitation: ' + citation_recreation_potential
 
 if __name__ == "__main__":
     options, flags = grass.parser()

@@ -7,7 +7,7 @@
  AUTHOR(S):    Nikos Alexandris <nik@nikosalexandris.net>
 
                Grazia Zulian <Grazia.Zulian@ec.europa.eu>
-               First implementation in Python
+               First scripted implementation in Python
 
  PURPOSE:      An implementation of the Ecosystem Services Mapping Tool
                (ESTIMAP). ESTIMAP is a collection of spatially explicit models
@@ -22,7 +22,7 @@
 """
 
 #%Module
-#%  description:  Implementation of ESTIMAP to support mapping and modelling of ecosystem services (Zulian, 2014)
+#%  description: Implementation of ESTIMAP to support mapping and modelling of ecosystem services (Zulian, 2014)
 #%  keywords: estimap
 #%  keywords: ecosystem services
 #%  keywords: recreation potential
@@ -40,7 +40,7 @@
 
 #%flag
 #%  key: i
-#%  description: Print out citation
+#%  description: Print out citation and other information
 #%end
 
 #%option G_OPT_R_INPUT
@@ -56,7 +56,7 @@
 #% key: landuse
 #% type: string
 #% key_desc: name
-#% description: Land use as an input to derive suitability of land use classes to support recreation activities
+#% description: Input to derive suitability of land use classes to support recreation activities
 #% required : no
 #% guisection: Land
 #%end
@@ -65,7 +65,7 @@
 #% key: suitability_scores
 #% type: string
 #% key_desc: name
-#% description: Scores, in form of recoding rules, for suitability of land use classes to support recreation activities. Should correspond to the given landuse classification map.
+#% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input landuse map.
 #% required: no
 #% guisection: Land
 #%end
@@ -79,7 +79,7 @@
 #%option G_OPT_R_INPUTS
 #% key: land_component
 #% key_desc: names
-#% description: Maps scoring access to water resources
+#% description: Arbitrary number of maps scoring access to land resources
 #% required : no
 #% guisection: Land
 #%end
@@ -87,7 +87,7 @@
 #%option G_OPT_R_INPUT
 #% key: lakes
 #% key_desc: filename
-#% description: Accessibility to lakes, scored based on a distance function
+#% description: Lake proximity, scored based on a distance function
 #% required : no
 #% guisection: Water
 #%end
@@ -103,7 +103,7 @@
 #%option G_OPT_R_INPUT
 #% key: coast_proximity
 #% key_desc: map name
-#% description: Coastal proximity, scored based on a distance function
+#% description: Coast proximity, scored based on a distance function
 #% required : no
 #% guisection: Water
 #%end
@@ -135,7 +135,7 @@
 #%option G_OPT_R_INPUTS
 #% key: water_component
 #% key_desc: filename
-#% description: Maps scoring access to and quality of water resources
+#% description: Arbitrary number of maps scoring access to and quality of water resources
 #% required : no
 #% guisection: Water
 #%end
@@ -155,7 +155,7 @@
 #%option G_OPT_R_INPUT
 #% key: forest
 #% key_desc: filename
-#% description: Access to forested areas.
+#% description: Access to forested areas
 #% required : no
 #% guisection: Natural
 #%end
@@ -163,7 +163,7 @@
 #%option G_OPT_R_INPUTS
 #% key: natural_component
 #% key_desc: filename
-#% description: Maps scoring access to and quality of inland natural resources
+#% description: Arbitrary number of maps scoring access to and quality of inland natural resources
 #% required : no
 #% guisection: Natural
 #%end
@@ -218,15 +218,20 @@
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: map name
-#% description: Recreation Potential Map
+#% description: Recreation potential map
 #% required: yes
 #% answer: recreation_potential
 #%end
 
+#%option
+#% key: timestamp
+#% type: string
+#% label: Timestamp
+#% description: Timestamp for the recreation potential raster map
+#%end
+
 # required librairies
-import os
-import sys
-import subprocess
+import os, sys, subprocess
 import datetime, time
 
 import atexit
@@ -235,7 +240,14 @@ from grass.exceptions import CalledModuleError
 from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 
+if "GISBASE" not in os.environ:
+    print "You must be in GRASS GIS to run this program."
+    sys.exit(1)
+
 # from scoring_schemes import corine
+
+# globals
+citation_recreation_potential='Zulian (2014)'
 
 # helper functions
 def cleanup():
@@ -253,26 +265,6 @@ def run(cmd, **kwargs):
     Pass required arguments to grass commands (?)
     """
     grass.run_command(cmd, quiet=True, **kwargs)
-
-# def add_timestamp(mtl_filename, outname):
-#     """
-#     Retrieve metadata from MTL file.
-#     """
-#     import datetime
-#     metadata = Landsat8_MTL(mtl_filename)
-
-#     # required format is: day=integer month=string year=integer time=hh:mm:ss.dd
-#     acquisition_date = str(metadata.date_acquired)  ### FixMe ###
-#     acquisition_date = datetime.datetime.strptime(acquisition_date, '%Y-%m-%d').strftime('%d %b %Y')
-#     acquisition_time = str(metadata.scene_center_time)[0:8]
-#     date_time_string = acquisition_date + ' ' + acquisition_time
-
-#     #msg = "Date and time of acquisition: " + date_time_string
-#     #grass.verbose(msg)
-
-#     run('r.timestamp', map=outname, date=date_time_string)
-
-#     del(date_time_string)
 
 def tmp_map_name(name):
     """
@@ -309,11 +301,13 @@ def normalize_map (raster, output_name):
 
 def normalise_component(components, output_name):
     """
-    Sums up all maps listed in the components object and derives a normalised output.
+    Sums up all maps listed in the given "components" object and derives a
+    normalised output.
     """
 
-    print "Components are:", components
-    print
+    msg = "Normalising maps: "
+    msg += ', '.join(components)
+    g.message(msg)
 
     components = [ name.split('@')[0] for name in components ]
     components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
@@ -321,8 +315,12 @@ def normalise_component(components, output_name):
 
     component_expression = spacy_plus.join(components)
     component_equation = equation.format(result=tmp_output, expression=component_expression)
-    print "Equation:", component_equation
-    print
+
+    # if info:
+    #     msg = "Equation:"
+    #     msg += component_equation
+    #     g.message(msg)
+
     grass.mapcalc(component_equation, overwrite=True)
     normalize_map(tmp_output, output_name)
 
@@ -331,6 +329,36 @@ def normalise_component(components, output_name):
     del(component_expression)
     del(component_equation)
     del(output_name)
+
+def update_meta(raster):
+    """
+    """
+    # strings for metadata
+    history_recreation_potential = '\n' + citation_recreation_potential
+    description_recreation_potential = ('Recreation Potential Map')
+
+    title_recreation_potential = 'Recreation Potential'
+    units_recreation_potential = 'Meters'
+
+    source1_recreation_potential = 'Source 1'
+    source2_recreation_potential = 'Source 2'
+
+    # history entry
+    run('r.support', map=raster, title=title_recreation_potential,
+        units=units_recreation_potential, description=description_recreation_potential,
+        source1=source1_recreation_potential, source2=source2_recreation_potential,
+        history=history_recreation_potential)
+
+    if options['timestamp']:
+        timestamp = options['timestamp']
+        run('r.timestamp', map=raster, date=timestamp)
+
+    del(history_recreation_potential)
+    del(description_recreation_potential)
+    del(title_recreation_potential)
+    del(units_recreation_potential)
+    del(source1_recreation_potential)
+    del(source2_recreation_potential)
 
 def main():
     """
@@ -341,7 +369,11 @@ def main():
     global equation, citation, spacy_plus
     spacy_plus = ' + '
     equation = "{result} = {expression}"
-    
+
+    # flags
+    global info
+    info = flags['i']
+
     # names for normalised component maps
     land_component_map_name='land_component'
     water_component_map='water_component'
@@ -366,11 +398,14 @@ def main():
 
         if options['landuse'] and options['suitability_scores']:
 
-            landuse = options['landuse']
-            suitability_scores = options['suitability_scores']
-            suitability = 'suitability'
-            run('r.recode',
-                    input = landuse,
+            # landuse = options['landuse']
+            # suitability_scores = options['suitability_scores']
+            # suitability = 'suitability'
+            # run('r.recode',
+            #         input = landuse,
+            #         rules = suitability_scores,
+            #         output = suitability)
+            r.recode(input = landuse,
                     rules = suitability_scores,
                     output = suitability)
 
@@ -429,7 +464,6 @@ def main():
     # merge water component related maps in one list
     water_component += water_components
 
-
     # Protected Areas  ( or Natural Component ? )
 
     natural_component = []
@@ -458,23 +492,26 @@ def main():
     else:
         recreation_potential = options['potential']
 
+    if not options['opportunity']:
+        recreation_opportunity = "recreation_opportunity"
+    else:
+        recreation_opportunity = options['opportunity']
+
     if options['mask']:
         mask = options['mask']
         r.mask(raster=mask, overwrite=True)
 
-    #
-    # set computational region  # ?  To smallest in extent among given maps?
-    #
-
     if landuse_extent:
         grass.use_temp_region()  # to safely modify the region
-        run('g.region', flags='p', rast=mask) # Set region to 'mask'
+        # run('g.region', flags='p', rast=mask) # Set region to 'mask'
+        g.region(flags='p', rast=mask) # Set region to 'mask'
         g.message("|! Computational resolution matched to {raster}".format(raster=landuse))
 
     # Normalize inputs and add them as recreation potential components
 
     ## Land Use Component
-    run('r.null', map=suitability, null=0)  # Set NULLs to 0
+    # run('r.null', map=suitability, null=0)  # Set NULLs to 0
+    r.null( map=suitability, null=0)  # Set NULLs to 0
     recreation_potential_component.append(suitability)
 
     ## Water Component
@@ -489,37 +526,26 @@ def main():
     normalise_component(recreation_potential_component,
             recreation_potential)
 
+    # Recreation Opportunity Spectrum
+    
+
     # Time Stamping ?
 
     # Apply Color Table(s) ?
 
     # ToDo: helper function for r.support
 
-    # strings for metadata
-    citation_recreation_potential='Zulian (2014)'
-    history_recreation_potential = '\n' + citation_recreation_potential
-    description_recreation_potential = ('Recreation Potential Map derived from ... . ')
+    update_meta(recreation_potential)
 
-    title_recreation_potential = 'Recreation Potential'
-    units_recreation_potential = 'Meters'
-
-    source1_recreation_potential = 'Source 1'
-    source2_recreation_potential = 'Source 2'
-
-    # history entry
-    run('r.support', map=recreation_potential, title=title_recreation_potential,
-        units=units_recreation_potential, description=description_recreation_potential,
-        source1=source1_recreation_potential, source2=source2_recreation_potential,
-        history=history_recreation_potential)
-
-    # # restore region
-    # if scene_extent:
-    #     grass.del_temp_region()  # restoring previous region settings
-    #     g.message("|! Original Region restored")
+    # restore region
+    if landuse_extent:
+        grass.del_temp_region()  # restoring previous region settings
+        g.message("|! Original Region restored")
 
     # print citation
-    if flags['i']:
-        print '\nCitation: ' + citation_recreation_potential
+    if info:
+        citation = '\nCitation: ' + citation_recreation_potential
+        g.message(citation)
 
 if __name__ == "__main__":
     options, flags = grass.parser()

@@ -43,10 +43,22 @@
 #%  description: Print out citation and other information
 #%end
 
+#%option G_OPT_R_INPUTS
+#% key: land_component
+#% key_desc: names
+#% label: Maps scoring access to land resources
+#% description: Arbitrary number of maps scoring access to land resources
+#% required : no
+#% guisection: Components
+#%end
+
+# Land
+
 #%option G_OPT_R_INPUT
 #% key: suitability
 #% type: string
 #% key_desc: name
+#% label: Suitability of land to support recreation
 #% description: Suitability of land use classes to support recreation activities
 #% required: no
 #% guisection: Land
@@ -56,6 +68,7 @@
 #% key: landuse
 #% type: string
 #% key_desc: name
+#% label: Map to derive suitability of land to support recreation
 #% description: Input to derive suitability of land use classes to support recreation activities
 #% required : no
 #% guisection: Land
@@ -65,7 +78,8 @@
 #% key: suitability_scores
 #% type: string
 #% key_desc: name
-#% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input landuse map.
+#% label: Scores for suitability of land to support recreation
+#% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input land use map.
 #% required: no
 #% guisection: Land
 #%end
@@ -76,17 +90,12 @@
 #% requires: landuse, suitability_scores
 #%end
 
-#%option G_OPT_R_INPUTS
-#% key: land_component
-#% key_desc: names
-#% description: Arbitrary number of maps scoring access to land resources
-#% required : no
-#% guisection: Land
-#%end
+# Water
 
 #%option G_OPT_R_INPUT
 #% key: lakes
 #% key_desc: filename
+#% label: Map scoring access to lakes
 #% description: Lake proximity, scored based on a distance function
 #% required : no
 #% guisection: Water
@@ -95,6 +104,7 @@
 #%option G_OPT_R_INPUT
 #% key: water_clarity
 #% key_desc: map name
+#% label: Map scoring water clarity
 #% description: Water clarity. The higher, the greater the recreation value.
 #% required : no
 #% guisection: Water
@@ -103,6 +113,7 @@
 #%option G_OPT_R_INPUT
 #% key: coast_proximity
 #% key_desc: map name
+#% label: Map scoring access to coast
 #% description: Coast proximity, scored based on a distance function
 #% required : no
 #% guisection: Water
@@ -111,6 +122,7 @@
 #%option G_OPT_R_INPUT
 #% key: coast_geomorphology
 #% key_desc: map name
+#% label: Map scoring recreation potential in coast
 #% description: Coastal geomorphology, scored as suitable to support recreation activities
 #% required : no
 #% guisection: Water
@@ -119,6 +131,7 @@
 #%option G_OPT_R_INPUT
 #% key: bathing_water
 #% key_desc: filename
+#% label: Map scoring bathing water quality
 #% description: Bathing Water Quality Index. The higher, the greater is the recreational value.
 #% required : no
 #% guisection: Water
@@ -127,6 +140,7 @@
 #%option G_OPT_R_INPUT
 #% key: marine
 #% key_desc: map name
+#% label: Map scoring access to marine natural provided areas
 #% description: Access to marine natural protected areas
 #% required : no
 #% guisection: Water
@@ -135,18 +149,22 @@
 #%option G_OPT_R_INPUTS
 #% key: water_component
 #% key_desc: filename
+#% label: Maps scoring access to and quality of water resources
 #% description: Arbitrary number of maps scoring access to and quality of water resources
 #% required : no
-#% guisection: Water
+#% guisection: Components
 #%end
 
 #%rules
 #%  excludes: water_component, coast_geomorphology, water_clarity, coast_proximity, marine, lakes, bathing_water
 #%end
 
+# Natural
+
 #%option G_OPT_R_INPUT
 #% key: protected
 #% key_desc: filename
+#% label: Protected areas
 #% description: Natural Protected Areas
 #% required : yes
 #% guisection: Natural
@@ -155,6 +173,7 @@
 #%option G_OPT_R_INPUT
 #% key: forest
 #% key_desc: filename
+#% label: Forested areas
 #% description: Access to forested areas
 #% required : no
 #% guisection: Natural
@@ -163,15 +182,19 @@
 #%option G_OPT_R_INPUTS
 #% key: natural_component
 #% key_desc: filename
+#% label: Maps scoring access to and quality of inland natural resources
 #% description: Arbitrary number of maps scoring access to and quality of inland natural resources
 #% required : no
-#% guisection: Natural
+#% guisection: Components
 #%end
 
+# Urban
+
 #%option G_OPT_R_INPUT
-#% key: urban_green
+#% key: green_urban
 #% key_desc: map name
-#% description: Urban green areas
+#% label: Urban green surfaces
+#% description: Map scoring urban green surfaces
 #% required : no
 #% guisection: Urban
 #%end
@@ -179,17 +202,10 @@
 #%option G_OPT_R_INPUT
 #% key: green_infrastructure
 #% key_desc: filename
-#% description: Maps scoring urban green infrastructure
+#% label: Urban green infrastructure
+#% description: Map scoring urban green infrastructure
 #% required : no
-#% guisection: Urban
-#%end
-
-#%option G_OPT_R_INPUT
-#% key: roads
-#% key_desc: map name
-#% description: Road network
-#% required : no
-#% guisection: Urban
+#% guisection: Urban Green
 #%end
 
 #%option G_OPT_R_INPUTS
@@ -197,16 +213,38 @@
 #% key_desc: map name
 #% description: Maps scoring recreational value of urban components
 #% required : no
-#% guisection: Natural
+#% guisection: Components
 #%end
 
-#%option G_OPT_R_INPUTS
-#% key: devaluation
+# Roads
+
+#%option G_OPT_R_INPUT
+#% key: roads
 #% key_desc: map name
-#% description: Devaluing elements. Maps hindering accessibility to and degrading quality of various resources or infrastructure
+#% label: Primary road network
+#% description: Primary road network
 #% required : no
-#% guisection: Devaluation
+#% guisection: Roads
 #%end
+
+#%option G_OPT_R_INPUT
+#% key: roads_secondary
+#% key_desc: map name
+#% label: Secondary road network
+#% description: Secondary network including arterial and collector roads
+#% required : no
+#% guisection: Roads
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: roads_local
+#% key_desc: map name
+#% label: Local road network
+#% description: Local roads and streets
+#% required : no
+#% guisection: Roads
+#%end
+
 
 #%option G_OPT_R_INPUT
 #% key: mask
@@ -215,12 +253,89 @@
 #% required : no
 #%end
 
+
+#######################################################################
+# Offer input for potential?
+
+# #%option G_OPT_R_OUTPUT
+# #% key: recreation_potential
+# #% key_desc: map name
+# #% description: Recreation potential map
+# #% required: no
+# #% answer: recreation_potential
+# #% guisection: Components
+# #%end
+
+#
+#######################################################################
+
+#%option G_OPT_R_INPUTS
+#% key: facility_component
+#% type: string
+#% key_desc: name
+#% description: Infrastructure to reach locations of recreation activities
+#% required: no
+#% guisection: Components
+#%end
+
+## Review the following item's "parsing rules"!
+
+#%rules
+#%  excludes: facility_component, roads
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: recreation_component
+#% type: string
+#% key_desc: name
+#% description: Recreational facilities and amenities
+#% required: no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: osmlines
+#% key_desc: map name
+#% description: OpenStreetMap linear features
+#% required : no
+#% guisection: OpenStreetMap
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: osmpoints
+#% key_desc: map name
+#% description: OpenStreetMap point features
+#% required : no
+#% guisection: OpenStreetMap
+#%end
+
+# Devaluation
+
+#%option G_OPT_R_INPUTS
+#% key: devaluation
+#% key_desc: map name
+#% label: Devaluing elements
+#% description: Maps hindering accessibility to and degrading quality of various resources or infrastructure relating to recreation
+#% required : no
+#% guisection: Devaluation
+#%end
+
+# Output
+
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: map name
 #% description: Recreation potential map
-#% required: yes
-#% answer: recreation_potential
+#% required: no
+#% guisection: Output
+#%end
+
+#%option G_OPT_R_OUTPUT
+#% key: opportunity_component
+#% key_desc: map name
+#% description: Recreation opportunity spectrum map
+#% required: no
+#% guisection: Output
 #%end
 
 #%option
@@ -228,6 +343,7 @@
 #% type: string
 #% label: Timestamp
 #% description: Timestamp for the recreation potential raster map
+#% required: no
 #%end
 
 # required librairies
@@ -277,6 +393,22 @@ def tmp_map_name(name):
     tmp = "tmp." + grass.basename(temporary_file)  # use its basename
     return tmp + '.' + str(name)
 
+def zero_small_values(raster, output_name):
+    """
+    Set the input raster map cell values to 0 if they are smaller than 0.0001
+    """
+    threshhold = 0.0001
+    rounding='if({raster} < {threshhold}, 0, {raster})'
+    rounding = rounding.format(raster=raster, threshhold=threshhold)
+    rounding_equation = equation.format(result=output_name, expression=rounding)
+    grass.mapcalc(rounding_equation, overwrite=True)
+    
+    # Unless the input raster map has to be retained as is, the following is
+    # not required and the result can overwrite the input raster map itself.
+    #
+    # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
+    #
+
 def normalize_map (raster, output_name):
     """
     Normalize a raster map
@@ -285,7 +417,8 @@ def normalize_map (raster, output_name):
     maximum = grass.raster_info(raster)['max']
 
     normalisation = 'float(({raster} - {minimum}) / ({maximum} - {minimum}))'
-    normalisation = normalisation.format(raster=raster, minimum=minimum, maximum=maximum)
+    normalisation = normalisation.format(raster=raster, minimum=minimum,
+            maximum=maximum)
     normalisation_equation = equation.format(result=output_name,
         expression=normalisation)
     grass.mapcalc(normalisation_equation, overwrite=True)
@@ -296,8 +429,11 @@ def normalize_map (raster, output_name):
     del(normalisation_equation)
 
     # Why delete a map here?
-    # # grass.run_command('g.remove', flags='f', type='raster', name=inras, quiet=True)
+    # Unless the input raster map has to be retained as is, the following is
+    # not required and the result can overwrite the input raster map itself.
+    #
     # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
+    #
 
 def normalise_component(components, output_name):
     """
@@ -380,6 +516,15 @@ def main():
     natural_component_map='natural_component'
     # recreation_potential_component_map='recreation_potential'
     normalised_suffix='normalised'
+
+    #
+    # names for maps related to recreation opportunity
+    #
+    facility_component='facility_component'
+    recreation_component='recreation_component'
+    osm_lines='osm_lines'
+    osm_points='osm_points'
+    opportunity_component='opportunity_component'
 
 # ------------------------------------------------------------------------------
     landuse_extent = flags['e']
@@ -473,7 +618,7 @@ def main():
         natural_component = options['natural_component']
 
     else:
-        natural_components = []
+        natural_components = []  # Is this necessary?
 
         if options['protected']:
             protected_areas = options['protected']
@@ -527,13 +672,47 @@ def main():
             recreation_potential)
 
     # Recreation Opportunity Spectrum
-    
+    if options['recreation_opportunity']:
+        recreation_opportunity=options['recreation_opportunity']
+
+        # input
+
+            # round values of
+                # - features_to_reach
+                # - features_to_enjoy
+
+            # normalise values of
+                # - features_to_reach
+                # - features_to_enjoy
+
+        # inter
+
+            # Add normalised raster maps
+
+            # Sums up
+
+            # Set Input Raster Cells to NULL if they are < 0.0003
+                # Why this threshhold?
+
+            # Normalise sum of all raster maps
+
+            # Recode
+                # recreation_potential
+                    # rules?
+                # opportunity_component
+                    # rules?
+
+        # output
+
+            # Recreation Opportunity Spectrum
+                # Combination of Potential and Opportunity
+                # Why `r.mapcalc` instead of (now fixed) `r.cross`?
+
+
 
     # Time Stamping ?
 
     # Apply Color Table(s) ?
-
-    # ToDo: helper function for r.support
 
     update_meta(recreation_potential)
 

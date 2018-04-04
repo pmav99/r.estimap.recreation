@@ -43,12 +43,60 @@
 #%  description: Print out citation and other information
 #%end
 
+# Components section
+
 #%option G_OPT_R_INPUTS
-#% key: land_component
+#% key: land
 #% key_desc: names
 #% label: Maps scoring access to land resources
 #% description: Arbitrary number of maps scoring access to land resources
 #% required : no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: water
+#% key_desc: filename
+#% label: Maps scoring access to and quality of water resources
+#% description: Arbitrary number of maps scoring access to and quality of water resources
+#% required : no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: natural
+#% key_desc: filename
+#% label: Maps scoring access to and quality of inland natural resources
+#% description: Arbitrary number of maps scoring access to and quality of inland natural resources
+#% required : no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: urban
+#% key_desc: map name
+#% description: Maps scoring recreational value of urban components
+#% required : no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: infrastructure
+#% type: string
+#% key_desc: name
+#% label: Infrastructure to reach locations of recreation activities
+#% description: Infrastructure to reach locations of recreation activities [required to derive recreation spectrum map]
+#% required: no
+#% guisection: Components
+#%end
+
+#%option G_OPT_R_INPUTS
+#% key: recreation
+#% type: string
+#% key_desc: name
+#% label: Recreational facilities, amenities and services
+#% description: Recreational opportunities facilities, amenities and services [required to derive recreation spectrum map]
+#% required: no
 #% guisection: Components
 #%end
 
@@ -58,7 +106,7 @@
 #% key: suitability
 #% type: string
 #% key_desc: name
-#% label: Suitability of land to support recreation
+#% label: Land suitability for recreation
 #% description: Suitability of land use classes to support recreation activities
 #% required: no
 #% guisection: Land
@@ -68,8 +116,8 @@
 #% key: landuse
 #% type: string
 #% key_desc: name
-#% label: Map to derive suitability of land to support recreation
-#% description: Input to derive suitability of land use classes to support recreation activities
+#% label: Map to derive land suitability for recreation
+#% description: Input to derive suitability of land use classes to support recreation activities. Requires scores, overrides suitability.
 #% required : no
 #% guisection: Land
 #%end
@@ -78,7 +126,7 @@
 #% key: suitability_scores
 #% type: string
 #% key_desc: name
-#% label: Scores for suitability of land to support recreation
+#% label: Land suitability scores for recreation
 #% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input land use map.
 #% required: no
 #% guisection: Land
@@ -146,17 +194,8 @@
 #% guisection: Water
 #%end
 
-#%option G_OPT_R_INPUTS
-#% key: water_component
-#% key_desc: filename
-#% label: Maps scoring access to and quality of water resources
-#% description: Arbitrary number of maps scoring access to and quality of water resources
-#% required : no
-#% guisection: Components
-#%end
-
 #%rules
-#%  excludes: water_component, coast_geomorphology, water_clarity, coast_proximity, marine, lakes, bathing_water
+#%  excludes: water, coast_geomorphology, water_clarity, coast_proximity, marine, lakes, bathing_water
 #%end
 
 # Natural
@@ -179,15 +218,6 @@
 #% guisection: Natural
 #%end
 
-#%option G_OPT_R_INPUTS
-#% key: natural_component
-#% key_desc: filename
-#% label: Maps scoring access to and quality of inland natural resources
-#% description: Arbitrary number of maps scoring access to and quality of inland natural resources
-#% required : no
-#% guisection: Components
-#%end
-
 # Urban
 
 #%option G_OPT_R_INPUT
@@ -205,15 +235,7 @@
 #% label: Urban green infrastructure
 #% description: Map scoring urban green infrastructure
 #% required : no
-#% guisection: Urban Green
-#%end
-
-#%option G_OPT_R_INPUTS
-#% key: urban_component
-#% key_desc: map name
-#% description: Maps scoring recreational value of urban components
-#% required : no
-#% guisection: Components
+#% guisection: Urban
 #%end
 
 # Roads
@@ -224,7 +246,7 @@
 #% label: Primary road network
 #% description: Primary road network
 #% required : no
-#% guisection: Roads
+#% guisection: Infrastructure
 #%end
 
 #%option G_OPT_R_INPUT
@@ -233,7 +255,7 @@
 #% label: Secondary road network
 #% description: Secondary network including arterial and collector roads
 #% required : no
-#% guisection: Roads
+#% guisection: Infrastructure
 #%end
 
 #%option G_OPT_R_INPUT
@@ -242,9 +264,8 @@
 #% label: Local road network
 #% description: Local roads and streets
 #% required : no
-#% guisection: Roads
+#% guisection: Infrastructure
 #%end
-
 
 #%option G_OPT_R_INPUT
 #% key: mask
@@ -269,44 +290,35 @@
 #
 #######################################################################
 
-#%option G_OPT_R_INPUTS
-#% key: facility_component
-#% type: string
-#% key_desc: name
-#% description: Infrastructure to reach locations of recreation activities
-#% required: no
-#% guisection: Components
-#%end
-
 ## Review the following item's "parsing rules"!
 
 #%rules
-#%  excludes: facility_component, roads
-#%end
-
-#%option G_OPT_R_INPUTS
-#% key: recreation_component
-#% type: string
-#% key_desc: name
-#% description: Recreational facilities and amenities
-#% required: no
-#% guisection: Components
+#%  excludes: infrastructure, roads
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: osmlines
+#% key: osm_lines
 #% key_desc: map name
 #% description: OpenStreetMap linear features
 #% required : no
-#% guisection: OpenStreetMap
+#% guisection: Recreation
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: osmpoints
+#% key: osm_points
 #% key_desc: map name
 #% description: OpenStreetMap point features
 #% required : no
-#% guisection: OpenStreetMap
+#% guisection: Recreation
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: blue_flags
+#% key_desc: map name
+#% label: Moorings with blue flag distinction
+#% description: Moorings with blue flag distinction
+#% required : no
+#% guisection: Recreation
 #%end
 
 # Devaluation
@@ -331,11 +343,15 @@
 #%end
 
 #%option G_OPT_R_OUTPUT
-#% key: opportunity_component
+#% key: spectrum
 #% key_desc: map name
-#% description: Recreation opportunity spectrum map
+#% description: Recreation spectrum map
 #% required: no
 #% guisection: Output
+#%end
+
+#%rules
+#%  requires: spectrum, infrastructure
 #%end
 
 #%option
@@ -376,33 +392,33 @@ def cleanup():
     if grass.find_file(name='MASK', element='cell')['file']:
         r.mask(flags='r', verbose=True)
 
+def tmp_map_name(name):
+    """
+    Return a temporary map name, for example:
+
+    tmp_map_name(potential) will return:
+
+    tmp.SomeTemporaryString.potential
+    """
+    temporary_file = grass.tempfile()
+    tmp = "tmp." + grass.basename(temporary_file)  # use its basename
+    return tmp + '.' + str(name)
+
 def run(cmd, **kwargs):
     """
     Pass required arguments to grass commands (?)
     """
     grass.run_command(cmd, quiet=True, **kwargs)
 
-def tmp_map_name(name):
-    """
-    Return a temporary map name
-
-    Example:
-    tmp_output = tmp + '.output'
-    """
-    temporary_file = grass.tempfile()
-    tmp = "tmp." + grass.basename(temporary_file)  # use its basename
-    return tmp + '.' + str(name)
-
-def zero_small_values(raster, output_name):
+def zerofy_small_values(raster, threshhold, output_name):
     """
     Set the input raster map cell values to 0 if they are smaller than 0.0001
     """
-    threshhold = 0.0001
     rounding='if({raster} < {threshhold}, 0, {raster})'
     rounding = rounding.format(raster=raster, threshhold=threshhold)
     rounding_equation = equation.format(result=output_name, expression=rounding)
     grass.mapcalc(rounding_equation, overwrite=True)
-    
+
     # Unless the input raster map has to be retained as is, the following is
     # not required and the result can overwrite the input raster map itself.
     #
@@ -411,7 +427,8 @@ def zero_small_values(raster, output_name):
 
 def normalize_map (raster, output_name):
     """
-    Normalize a raster map
+    Normalize all raster map cells by subtracting the raster map's minimum and
+    dividing by the range.
     """
     minimum = grass.raster_info(raster)['min']
     maximum = grass.raster_info(raster)['max']
@@ -466,6 +483,116 @@ def normalise_component(components, output_name):
     del(component_equation)
     del(output_name)
 
+def zerofy_and_normalise_component(components, output_name):
+    """
+    Sums up all maps listed in the given "components" object and derives a
+    normalised output.
+    """
+
+    msg = "Normalising maps: "
+    msg += ', '.join(components)
+    g.message(msg)
+
+    components = [ name.split('@')[0] for name in components ]
+    components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
+    tmp_intermediate = tmp_map_name(components_string)
+
+    component_expression = spacy_plus.join(components)
+    component_equation = equation.format(result=tmp_intermediate, expression=component_expression)
+
+    # if info:
+    #     msg = "Equation:"
+    #     msg += component_equation
+    #     g.message(msg)
+
+    grass.mapcalc(component_equation, overwrite=True)
+    tmp_output = tmp_map_name(components_string)
+
+    #
+    # The following is just an extra step as compared to the normalise_component()
+    # function
+    # Is it worth the duplication?
+    #
+
+    # Set Input Raster Cells to NULL if they are < 0.0003
+    # ----------------------------------------------------------------------
+    # Why this threshhold? How and Why is it different from the "0.0001" one?
+    zerofy_small_values(tmp_intermediate, tmp_output, 0.0003)
+    # ----------------------------------------------------------------------
+
+    normalize_map(tmp_output, output_name)
+
+    del(components_string)
+    del(tmp_intermediate)
+    del(tmp_output)
+    del(component_expression)
+    del(component_equation)
+    del(output_name)
+
+def opportunity_spectrum_expression(potential, opportunity):
+    """
+    Build and return a valid mapcalc expression for deriving
+    the Recreation Opportunity Spectrum
+
+
+    See `r.mapcalc` expression provided by Grazia Zulian below:
+
+    exp04 = 'ROS' + fua + ' = (if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 1, 1,\
+            if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 2, 2, \
+            if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 3, 3, \
+            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 1, 4, \
+            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 2, 5, \
+            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 3, 6, \
+            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 1, 7, \
+            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 2, 8, \
+            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 3, 9))))))))))'
+
+    Questions:
+
+    - Why not use `r.cross`?
+    - Use DUMMY strings for potential and opportunity raster map names?
+    """
+    spectrum ='\
+            if( {potential} == 1 && {opportunity} == 1, 1, \
+            if( {potential} == 1 && {opportunity} == 2, 2, \
+            if( {potential} == 1 && {opportunity} == 3, 3, \
+            if( {potential} == 2 && {opportunity} == 1, 4, \
+            if( {potential} == 2 && {opportunity} == 2, 5, \
+            if( {potential} == 2 && {opportunity} == 3, 6, \
+            if( {potential} == 3 && {opportunity} == 1, 7, \
+            if( {potential} == 3 && {opportunity} == 2, 8, \
+            if( {potential} == 3 && {opportunity} == 3, 9)))))))))'
+
+    spectrum_expression.format(potential=potential, opportunity=opportunity)
+
+    return spectrum_expression
+
+def compute_opportunity_spectrum(potential, opportunity, spectrum):
+    """
+    Computes recreation opportunity spectrum based on recreation potential and
+    recreation opportunity maps.
+
+    Input: Recreation potential, Recreation opportunity
+    Output: Recreation spectrum
+    """
+
+
+    # Maybe move outside in independent function?
+    run('r.recode', input=potential, output=recreation_potential,
+            rules=recreation_potential_classes)
+
+    # Maybe move outside in independent function?
+    run('r.recode', input=opportunity, output=recreation_opportunity,
+            rules=recreation_opportunity_classes)
+
+    spectrum_expression = opportunity_spectrum_expression(recreation_potential,
+            recreation_opportunity)
+
+    spectrum_equation = equation.format(result=spectrum,
+            expression=spectrum_expression)
+
+    grass.mapcalc(spectrum_equation, overwrite=True)
+
 def update_meta(raster):
     """
     """
@@ -514,14 +641,20 @@ def main():
     land_component_map_name='land_component'
     water_component_map='water_component'
     natural_component_map='natural_component'
-    # recreation_potential_component_map='recreation_potential'
+    urban_component_map='urban_component'
+    recreation_potential_component_map='recreation_potential'
+    infrastructure_component_map='infrastructure_component'
+    recreation_component_map='recreation_component'
+    recreation_potential_component_map='recreation_potential_map'
+    recreation_opportunity_component_map='recreation_opportunity_map'
+    recreation_spectrum_component_map='recreation_spectrum_component_map'
     normalised_suffix='normalised'
 
     #
-    # names for maps related to recreation opportunity
+    # names for maps related to recreation spectrum
     #
-    facility_component='facility_component'
-    recreation_component='recreation_component'
+    facility_component='facilities'
+    recreation_component='recreation'
     osm_lines='osm_lines'
     osm_points='osm_points'
     opportunity_component='opportunity_component'
@@ -535,32 +668,32 @@ def main():
     # Land Component
     #  or Suitability of Land to Support Recreation Activities (SLSRA)
 
-    if options['land_component']:
-        land_component = options['land_component']
+    if options['land']:
+        land_component = options['land']
 
-    else:
-        land_components = []
+    # else:
+    land_components = []
 
-        if options['landuse'] and options['suitability_scores']:
+    if not options['landuse'] and not options['suitability_scores']:
 
-            # landuse = options['landuse']
-            # suitability_scores = options['suitability_scores']
-            # suitability = 'suitability'
-            # run('r.recode',
-            #         input = landuse,
-            #         rules = suitability_scores,
-            #         output = suitability)
-            r.recode(input = landuse,
-                    rules = suitability_scores,
-                    output = suitability)
+        if options['suitability']:
+            suitability = options['suitability']
 
-        if not options['landuse'] and not options['suitability_scores']:
+    if options['landuse'] and options['suitability_scores']:
+        landuse = options['landuse']
+        suitability_scores = options['suitability_scores']
+        suitability = 'suitability'
 
-            if options['suitability']:
-                suitability = options['suitability']
-
-            else:
-                suitability = 'suitability'
+        # landuse = options['landuse']
+        # suitability_scores = options['suitability_scores']
+        # suitability = 'suitability'
+        # run('r.recode',
+        #         input = landuse,
+        #         rules = suitability_scores,
+        #         output = suitability)
+        r.recode(input = landuse,
+                rules = suitability_scores,
+                output = suitability)
 
         land_components.append(suitability)
 
@@ -572,12 +705,11 @@ def main():
     # one list to hold arbitrary water component related maps
     water_component = []
 
-    if options['water_component']:
-        water_component = options['water_component'].split(',')
+    if options['water']:
+        water_component = options['water'].split(',')
 
-        # How to avoid going through the rest... if?
-
-          # Should water_component  AND water_components be exclusive!
+        # Avoid going through the rest?
+        # Should water_component  AND  water_components be exclusive!
 
     # one list for explicitly defined water component related maps
     water_components = []
@@ -612,35 +744,36 @@ def main():
     # Protected Areas  ( or Natural Component ? )
 
     natural_component = []
+
+    if options['natural']:
+        natural_component = options['natural']
+
+    # else:
     natural_components = []
 
-    if options['natural_component']:
-        natural_component = options['natural_component']
+    if options['protected']:
+        protected_areas = options['protected']
+        natural_components.append(protected_areas)
 
-    else:
-        natural_components = []  # Is this necessary?
+    if options['forest']:
+        forest = options['forest']
+        natural_components.append(forest)
 
-        if options['protected']:
-            protected_areas = options['protected']
-            natural_components.append(protected_areas)
-
-        if options['forest']:
-            forest = options['forest']
-            natural_components.append(forest)
-
+    # if natural_components:
     natural_component += natural_components
 
-    # Output
+
+    # Recreation Potential [Output  1]
 
     if not options['potential']:
         recreation_potential = "recreation_potential"
     else:
         recreation_potential = options['potential']
 
-    if not options['opportunity']:
-        recreation_opportunity = "recreation_opportunity"
-    else:
-        recreation_opportunity = options['opportunity']
+    # if not options['recreation']:
+    #     recreation_component = "recreation_component"
+    # else:
+    #     recreation_component = options['recreation']
 
     if options['mask']:
         mask = options['mask']
@@ -654,60 +787,110 @@ def main():
 
     # Normalize inputs and add them as recreation potential components
 
-    ## Land Use Component
+    ## Land Use Component [Input]
     # run('r.null', map=suitability, null=0)  # Set NULLs to 0
-    r.null( map=suitability, null=0)  # Set NULLs to 0
+    r.null(map=suitability, null=0)  # Set NULLs to 0
     recreation_potential_component.append(suitability)
 
-    ## Water Component
+    ## Water Component [Input]
     normalise_component(water_component, water_component_map)
     recreation_potential_component.append(water_component_map)
 
-    ## Natural Components
+    ## Natural Components [Input]
     normalise_component(natural_component, natural_component_map)
     recreation_potential_component.append(natural_component_map)
 
-    # Recreation Potential
+    # Recreation Potential [Output]
     normalise_component(recreation_potential_component,
             recreation_potential)
 
+    # Inputs for Recreation Spectrum
+
+    # Infrastructure to access recreational facilities, amenities, services
+
+    infrastructure_component = []
+
+    if options['infrastructure']:
+        infrastructure = options['infrastructure']
+
+    # else:
+    infrastructure_components = []
+
+    if options['roads']:
+        roads = options['roads']
+        infrastructure_components.append(roads)
+
+    if options['roads_secondary']:
+        roads_secondary = options['roads_secondary']
+        infrastructure_components.append(roads_secondary)
+
+    if options['roads_local']:
+        roads_local = options['roads_local']
+        infrastructure_components.append(roads_local)
+
+    # if infrastructure_components:
+    infrastructure_component += infrastructure_components
+
+    # Recreational facilities, amenities, services
+
+    recreation_component = []
+
+    if options['recreation']:
+        recreation_component = options['recreation']
+
+    # else:
+    recreation_components = []
+
+    if options['osm_lines']:
+        osm_lines = options['osm_lines']
+        recreation_components.append(osm_lines)
+
+    if options['osm_points']:
+        osm_points = options['osm_points']
+        recreation_components.append(osm_points)
+
+    if options['blue_flags']:
+        blue_flags = options['blue_flags']
+        recreation_components.append(blue_flags)
+
+    # if recreation_components:
+    recreation_component += recreation_components
+
     # Recreation Opportunity Spectrum
-    if options['recreation_opportunity']:
-        recreation_opportunity=options['recreation_opportunity']
+    if options['spectrum']:
+        recreation_spectrum=options['spectrum']
 
-        # input
+        # Input maps
 
-            # round values of
-                # - features_to_reach
-                # - features_to_enjoy
+        # add infrastructure related maps to infrastructure_component
+        tmp_infrastructure = tmp_map_name(infrastructure)
+        zerofy_small_values(infrastructure_component, tmp_infrastructure, 0.0001)
+        normalise_component(tmp_infrastructure, infrastructure_component_map)
+        del(tmp_infrastructure)
 
-            # normalise values of
-                # - features_to_reach
-                # - features_to_enjoy
+        # add recreation related maps to recreation_component
+        tmp_infrastructure = tmp_map_name(infrastructure)
+        zerofy_small_values(recreation_component, tmp_infrastructure, 0.0001)
+        normalise_component(tmp_infrastructure, recreation_component_map)
+        del(recreation_map)
 
-        # inter
+        # Intermediate maps
 
-            # Add normalised raster maps
+        # Add normalised raster maps
+        recreation_opportunity_component.append(infrastructure_component_map)
+        recreation_opportunity_component.append(recreation_component_map)
 
-            # Sums up
+        # Recreation Spectrum, Potential + Opportunity [Output]
 
-            # Set Input Raster Cells to NULL if they are < 0.0003
-                # Why this threshhold?
+        # Sum maps, Zerofy if < 0.0003, Normalise, Recode
+        zerofy_and_normalise_component(recreation_opportunity_component,
+                recreation_opportunity_component_map)
 
-            # Normalise sum of all raster maps
+        # recode recreation_potential, opportunity_component
+            # which are the rules?
 
-            # Recode
-                # recreation_potential
-                    # rules?
-                # opportunity_component
-                    # rules?
-
-        # output
-
-            # Recreation Opportunity Spectrum
-                # Combination of Potential and Opportunity
-                # Why `r.mapcalc` instead of (now fixed) `r.cross`?
-
+        compute_recreation_spectrum(recreation_potential,
+                recreation_opportunity, recreation_spectrum)
 
 
     # Time Stamping ?

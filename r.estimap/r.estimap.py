@@ -351,7 +351,9 @@
 #%end
 
 #%rules
-#%  requires: spectrum, infrastructure
+#%  required: potential, spectrum
+#%  requires: spectrum, infrastructure, roads, roads_secondary, roads_local
+#%  requires: spectrum, recreation, osm_lines, osm_points, blue_flags
 #%end
 
 #%option
@@ -379,7 +381,20 @@ if "GISBASE" not in os.environ:
 # from scoring_schemes import corine
 
 # globals
+global equation, citation, spacy_plus
 citation_recreation_potential='Zulian (2014)'
+spacy_plus = ' + '
+equation = "{result} = {expression}"  # basic equation for mapcalc
+
+global threshhold_0001, threshhold_0003
+threshhold_0001 = 0.0001
+threshhold_0003 = 0.0003
+
+recreation_potential_classification_rules='0.0:0.2:1\n0.2:0.4:2\n0.4:*:3'
+recreation_opportunity_classification_rules=recreation_potential_classification_rules
+
+color_recreation_potential = 'ryg'
+color_recreation_spectrum = 'ryg'
 
 # helper functions
 def cleanup():
@@ -412,7 +427,8 @@ def run(cmd, **kwargs):
 
 def zerofy_small_values(raster, threshhold, output_name):
     """
-    Set the input raster map cell values to 0 if they are smaller than 0.0001
+    Set the input raster map cell values to 0 if they are smaller than the
+    given threshhold
     """
     rounding='if({raster} < {threshhold}, 0, {raster})'
     rounding = rounding.format(raster=raster, threshhold=threshhold)
@@ -430,12 +446,28 @@ def normalize_map (raster, output_name):
     Normalize all raster map cells by subtracting the raster map's minimum and
     dividing by the range.
     """
+
+    # print "Input:", raster
+    # print "Output:", output_name
+
+    # univar_string = grass.read_command('r.univar', flags='g', map=raster)
+    # print "Univariate statistics:", univar_string
+
     minimum = grass.raster_info(raster)['min']
+    # print "Minimum:", minimum
+
     maximum = grass.raster_info(raster)['max']
+    # print "Maximum:", maximum
+
+    if minimum is None or maximum is None:
+        msg = "Minimum and maximum values of the <{raster}> map are 'None'. "
+        msg += "Perhaps the MASK (<{mask}> map), opacifies all non-NULL cells of the <{raster}> map?."
+        grass.fatal(_(msg.format(raster=raster, mask=mask)))
 
     normalisation = 'float(({raster} - {minimum}) / ({maximum} - {minimum}))'
     normalisation = normalisation.format(raster=raster, minimum=minimum,
             maximum=maximum)
+
     normalisation_equation = equation.format(result=output_name,
         expression=normalisation)
     grass.mapcalc(normalisation_equation, overwrite=True)
@@ -458,32 +490,34 @@ def normalise_component(components, output_name):
     normalised output.
     """
 
-    msg = "Normalising maps: "
+    msg = "Normalising sum of: "
     msg += ', '.join(components)
     g.message(msg)
 
     components = [ name.split('@')[0] for name in components ]
     components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
-    tmp_output = tmp_map_name(components_string)
+    tmp_sum = tmp_map_name(components_string)
 
-    component_expression = spacy_plus.join(components)
-    component_equation = equation.format(result=tmp_output, expression=component_expression)
+    component_sum = spacy_plus.join(components)
+    component_sum_equation = equation.format(result=tmp_sum,
+            expression=component_sum)
 
     # if info:
     #     msg = "Equation:"
     #     msg += component_equation
     #     g.message(msg)
 
-    grass.mapcalc(component_equation, overwrite=True)
-    normalize_map(tmp_output, output_name)
+    grass.mapcalc(component_sum_equation, overwrite=True)
+    # output_name = tmp_map_name(output_name)
+    normalize_map(tmp_sum, output_name)
 
     del(components_string)
-    del(tmp_output)
-    del(component_expression)
-    del(component_equation)
+    del(tmp_sum)
+    del(component_sum)
+    del(component_sum_equation)
     del(output_name)
 
-def zerofy_and_normalise_component(components, output_name):
+def zerofy_and_normalise_component(components, threshhold, output_name):
     """
     Sums up all maps listed in the given "components" object and derives a
     normalised output.
@@ -493,43 +527,50 @@ def zerofy_and_normalise_component(components, output_name):
     msg += ', '.join(components)
     g.message(msg)
 
-    components = [ name.split('@')[0] for name in components ]
-    components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
-    tmp_intermediate = tmp_map_name(components_string)
 
-    component_expression = spacy_plus.join(components)
-    component_equation = equation.format(result=tmp_intermediate, expression=component_expression)
+    if len(components) > 1:
+        # prepare string for mapcalc expression
+        components = [ name.split('@')[0] for name in components ]
+        components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
 
-    # if info:
-    #     msg = "Equation:"
-    #     msg += component_equation
-    #     g.message(msg)
+        # temporary map names
+        tmp_intermediate = tmp_map_name(components_string)
+        tmp_output = tmp_map_name(components_string)
 
-    grass.mapcalc(component_equation, overwrite=True)
-    tmp_output = tmp_map_name(components_string)
+        # build mapcalc expression
+        component_expression = spacy_plus.join(components)
+        component_equation = equation.format(result=tmp_intermediate, expression=component_expression)
+
+        # if info:
+        #     msg = "Equation:"
+        #     msg += component_equation
+        #     g.message(msg)
+
+        grass.mapcalc(component_equation, overwrite=True)
+
+        del(components_string)
+        del(component_expression)
+        del(component_equation)
+
+    else:
+        # temporary map names, if components contains one element
+        tmp_intermediate = components[0]
+        tmp_output = tmp_map_name(tmp_intermediate)
 
     #
     # The following is just an extra step as compared to the normalise_component()
     # function
+    zerofy_small_values(tmp_intermediate, threshhold, tmp_output)
     # Is it worth the duplication?
     #
 
-    # Set Input Raster Cells to NULL if they are < 0.0003
-    # ----------------------------------------------------------------------
-    # Why this threshhold? How and Why is it different from the "0.0001" one?
-    zerofy_small_values(tmp_intermediate, tmp_output, 0.0003)
-    # ----------------------------------------------------------------------
-
     normalize_map(tmp_output, output_name)
 
-    del(components_string)
     del(tmp_intermediate)
     del(tmp_output)
-    del(component_expression)
-    del(component_equation)
     del(output_name)
 
-def opportunity_spectrum_expression(potential, opportunity):
+def recreation_spectrum_expression(potential, opportunity):
     """
     Build and return a valid mapcalc expression for deriving
     the Recreation Opportunity Spectrum
@@ -552,22 +593,35 @@ def opportunity_spectrum_expression(potential, opportunity):
     - Why not use `r.cross`?
     - Use DUMMY strings for potential and opportunity raster map names?
     """
-    spectrum ='\
-            if( {potential} == 1 && {opportunity} == 1, 1, \
-            if( {potential} == 1 && {opportunity} == 2, 2, \
-            if( {potential} == 1 && {opportunity} == 3, 3, \
-            if( {potential} == 2 && {opportunity} == 1, 4, \
-            if( {potential} == 2 && {opportunity} == 2, 5, \
-            if( {potential} == 2 && {opportunity} == 3, 6, \
-            if( {potential} == 3 && {opportunity} == 1, 7, \
-            if( {potential} == 3 && {opportunity} == 2, 8, \
-            if( {potential} == 3 && {opportunity} == 3, 9)))))))))'
+    expression = ('if( {potential} == 1 && {opportunity} == 1, 1,'
+    ' \ \n if( {potential} == 1 && {opportunity} == 2, 2,'
+    ' \ \n if( {potential} == 1 && {opportunity} == 3, 3,'
+    ' \ \n if( {potential} == 2 && {opportunity} == 1, 4,'
+    ' \ \n if( {potential} == 2 && {opportunity} == 2, 5,'
+    ' \ \n if( {potential} == 2 && {opportunity} == 3, 6,'
+    ' \ \n if( {potential} == 3 && {opportunity} == 1, 7,'
+    ' \ \n if( {potential} == 3 && {opportunity} == 2, 8,'
+    ' \ \n if( {potential} == 3 && {opportunity} == 3,'
+    ' 9)))))))))')
 
-    spectrum_expression.format(potential=potential, opportunity=opportunity)
+    expression.format(potential=potential, opportunity=opportunity)
+    return expression
 
-    return spectrum_expression
+def classify_recreation_component(recreation_component, rules, output_name):
+    """
+    Recode an input recreation component based on given rules
 
-def compute_opportunity_spectrum(potential, opportunity, spectrum):
+    To Do:
+
+    - Potentially, test range of input recreation component, i.e. ranging in
+      [0,1]
+
+    """
+
+    r.recode(input=recreation_component, rules='-',
+            stdin=rules, output=output_name)
+
+def compute_recreation_spectrum(potential, opportunity, spectrum):
     """
     Computes recreation opportunity spectrum based on recreation potential and
     recreation opportunity maps.
@@ -576,20 +630,18 @@ def compute_opportunity_spectrum(potential, opportunity, spectrum):
     Output: Recreation spectrum
     """
 
-
-    # Maybe move outside in independent function?
-    run('r.recode', input=potential, output=recreation_potential,
-            rules=recreation_potential_classes)
-
-    # Maybe move outside in independent function?
-    run('r.recode', input=opportunity, output=recreation_opportunity,
-            rules=recreation_opportunity_classes)
-
-    spectrum_expression = opportunity_spectrum_expression(recreation_potential,
-            recreation_opportunity)
-
+    spectrum_expression = recreation_spectrum_expression(potential, opportunity)
+    spectrum_expression = spectrum_expression.format(potential=potential,
+            opportunity=opportunity)
     spectrum_equation = equation.format(result=spectrum,
             expression=spectrum_expression)
+
+    if info:
+        msg = "Recreation Spectrum equation: \n"
+        msg += spectrum_equation
+        print msg
+        # g.message(msg)
+        del(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
@@ -597,307 +649,343 @@ def update_meta(raster):
     """
     """
     # strings for metadata
-    history_recreation_potential = '\n' + citation_recreation_potential
-    description_recreation_potential = ('Recreation Potential Map')
+    history = '\n' + citation_recreation_potential
+    description_string = 'Recreation {raster} map'
+    description = description_string.format(raster=raster)
 
-    title_recreation_potential = 'Recreation Potential'
-    units_recreation_potential = 'Meters'
+    title = 'Recreation {raster}'.format(raster=raster)
+    units = 'Meters'
 
-    source1_recreation_potential = 'Source 1'
-    source2_recreation_potential = 'Source 2'
+    source1 = 'Source 1'
+    source2 = 'Source 2'
 
-    # history entry
-    run('r.support', map=raster, title=title_recreation_potential,
-        units=units_recreation_potential, description=description_recreation_potential,
-        source1=source1_recreation_potential, source2=source2_recreation_potential,
-        history=history_recreation_potential)
+    # update metadata
+    r.support(map=raster, title=title, description=description, units=units,
+            source1=source1, source2=source2, history=history)
 
-    if options['timestamp']:
-        timestamp = options['timestamp']
-        run('r.timestamp', map=raster, date=timestamp)
+    if timestamp:
+        r.timestamp(map=raster, date=timestamp)
 
-    del(history_recreation_potential)
-    del(description_recreation_potential)
-    del(title_recreation_potential)
-    del(units_recreation_potential)
-    del(source1_recreation_potential)
-    del(source2_recreation_potential)
+    del(history)
+    del(description)
+    del(title)
+    del(units)
+    del(source1)
+    del(source2)
 
 def main():
     """
     Main program: get names for input, output suffix, options and flags
     """
 
-    # basic equation for mapcalc
-    global equation, citation, spacy_plus
-    spacy_plus = ' + '
-    equation = "{result} = {expression}"
-
     # flags
     global info
     info = flags['i']
+    landuse_extent = flags['e']
 
     # names for normalised component maps
-    land_component_map_name='land_component'
-    water_component_map='water_component'
-    natural_component_map='natural_component'
-    urban_component_map='urban_component'
-    recreation_potential_component_map='recreation_potential'
-    infrastructure_component_map='infrastructure_component'
-    recreation_component_map='recreation_component'
-    recreation_potential_component_map='recreation_potential_map'
-    recreation_opportunity_component_map='recreation_opportunity_map'
-    recreation_spectrum_component_map='recreation_spectrum_component_map'
+
     normalised_suffix='normalised'
 
-    #
-    # names for maps related to recreation spectrum
-    #
+    # input
+
+    land_component_map='land_component'
+    urban_component_map='urban_component'
+
+    # intermediate
+
+    recreation_opportunity='recreation_opportunity'
+    # recreation_opportunity_component_map='recreation_opportunity_map'
     facility_component='facilities'
     recreation_component='recreation'
     osm_lines='osm_lines'
     osm_points='osm_points'
     opportunity_component='opportunity_component'
 
-# ------------------------------------------------------------------------------
-    landuse_extent = flags['e']
-# ------------------------------------------------------------------------------
+    # intermediate / output
 
-    recreation_potential_component = []
 
-    # Land Component
-    #  or Suitability of Land to Support Recreation Activities (SLSRA)
+    # names from options
+    land = options['land']
+    water = options['water']
+    water_component_map_name = tmp_map_name('water_component')
+    
+    natural = options['natural']
+    natural_component_map_name = tmp_map_name('natural_component')
+    
+    urban = options['urban']
+    
+    infrastructure = options['infrastructure']
+    infrastructure_component_map_name = tmp_map_name('infrastructure_component')
 
-    if options['land']:
-        land_component = options['land']
+    recreation = options['recreation']
+    recreation_component_map_name = tmp_map_name('recreation_component')
+    
+    suitability = options['suitability']
+    suitability_map_name = tmp_map_name('suitability')
+    
+    landuse = options['landuse']
+    suitability_scores = options['suitability_scores']
 
-    # else:
+    lakes = options['lakes']
+    water_clarity = options['water_clarity']
+    coast_proximity = options['coast_proximity']
+    coast_geomorphology = options['coast_geomorphology']
+    bathing_water = options['bathing_water']
+    marine = options['marine']
+
+    protected = options['protected']
+    forest = options['forest']
+
+    green_urban = options['green_urban']
+    green_infrastructure = options['green_infrastructure']
+    
+    roads = options['roads']
+    roads_secondary = options['roads_secondary']
+    roads_local = options['roads_local']
+    
+    mask = options['mask']
+    
+    osm_lines = options['osm_lines']
+    osm_points = options['osm_points']
+    
+    blue_flags = options['blue_flags']
+    
+    devaluation = options['devaluation']  # input
+    
+    recreation_potential = options['potential']  # intermediate / output
+    recreation_potential_map_name = tmp_map_name('recreation_potential')
+
+    recreation_spectrum = options['spectrum']  # output
+    # recreation_spectrum_component_map_name = tmp_map_name('recreation_spectrum_component_map')
+
+    global timestamp
+    timestamp = options['timestamp']
+    remove_at_exit = []
+
+    """ First, care about the computational region"""
+
+    if mask:
+        # global mask
+        g.message("|! Masking out non-NULL cells of {mask}".format(mask=mask))
+        r.mask(flags='i', raster=mask, overwrite=True)
+
+    if landuse_extent:
+        grass.use_temp_region()  # to safely modify the region
+        g.region(flags='p', rast=mask) # Set region to 'mask'
+        g.message("|! Computational resolution matched to {raster}".format(raster=landuse))
+
+    """Land Component
+            or Suitability of Land to Support Recreation Activities (SLSRA)"""
+
+    land_component = []
     land_components = []
 
-    if not options['landuse'] and not options['suitability_scores']:
+    if land:
+        land_component = land
 
-        if options['suitability']:
-            suitability = options['suitability']
+    if suitability:
+        land_components.append(suitability)
 
-    if options['landuse'] and options['suitability_scores']:
-        landuse = options['landuse']
-        suitability_scores = options['suitability_scores']
-        suitability = 'suitability'
+    if not suitability and landuse and suitability_scores:
+        suitability = suitability_map_name
 
-        # landuse = options['landuse']
-        # suitability_scores = options['suitability_scores']
-        # suitability = 'suitability'
-        # run('r.recode',
-        #         input = landuse,
-        #         rules = suitability_scores,
-        #         output = suitability)
+        msg = "Deriving land suitability map from {landuse} based on {rules}"
+        g.message(msg.format(landuse=landuse, rules=suitability_scores))
+
         r.recode(input = landuse,
                 rules = suitability_scores,
                 output = suitability)
 
         land_components.append(suitability)
 
-        # # provided land components in one string
-        # land_component = spacy_plus.join(land_components)
+    # merge land component related maps in one list
+    land_component += land_components
 
-    # Water Component
+    """Water Component"""
 
-    # one list to hold arbitrary water component related maps
     water_component = []
+    water_components = []
 
-    if options['water']:
-        water_component = options['water'].split(',')
+    if water:
+        water_component = water.split(',')
 
         # Avoid going through the rest?
         # Should water_component  AND  water_components be exclusive!
 
-    # one list for explicitly defined water component related maps
-    water_components = []
-
-    if options['lakes']:
-        lakes_proximity = options['lakes']
+    if lakes:
+        lakes_proximity = lakes
         water_components.append(lakes_proximity)
 
-    if options['water_clarity']:
-        water_clarity = options['water_clarity']
+    if water_clarity:
         water_components.append(water_clarity)
 
-    if options['coast_geomorphology']:
-        coast_geomorphology = options['coast_geomorphology']
+    if coast_geomorphology:
         water_components.append(coast_geomorphology)
 
-    if options['coast_proximity']:
-        coast_proximity = options['coast_proximity']
+    if coast_proximity:
         water_components.append(coast_proximity)
 
-    if options['bathing_water']:
-        bathing_water = options['bathing_water']
+    if bathing_water:
         water_components.append(bathing_water)
 
-    if options['marine']:
-        marine = options['marine']
+    if marine:
         water_components.append(marine)
 
     # merge water component related maps in one list
     water_component += water_components
 
-    # Protected Areas  ( or Natural Component ? )
+    """ Protected Areas  ( or Natural Component ? ) """
 
     natural_component = []
-
-    if options['natural']:
-        natural_component = options['natural']
-
-    # else:
     natural_components = []
 
-    if options['protected']:
-        protected_areas = options['protected']
+    if natural:
+        natural_component = natural
+
+    if protected:
+        protected_areas = protected
         natural_components.append(protected_areas)
 
-    if options['forest']:
-        forest = options['forest']
+    if forest:
         natural_components.append(forest)
 
-    # if natural_components:
+    # merge natural resources component related maps in one list
     natural_component += natural_components
 
+    """ Normalize land, water, natural inputs and add them to the recreation potential component"""
 
-    # Recreation Potential [Output  1]
+    recreation_potential_component = []
 
-    if not options['potential']:
-        recreation_potential = "recreation_potential"
-    else:
-        recreation_potential = options['potential']
-
-    # if not options['recreation']:
-    #     recreation_component = "recreation_component"
-    # else:
-    #     recreation_component = options['recreation']
-
-    if options['mask']:
-        mask = options['mask']
-        r.mask(raster=mask, overwrite=True)
-
-    if landuse_extent:
-        grass.use_temp_region()  # to safely modify the region
-        # run('g.region', flags='p', rast=mask) # Set region to 'mask'
-        g.region(flags='p', rast=mask) # Set region to 'mask'
-        g.message("|! Computational resolution matched to {raster}".format(raster=landuse))
-
-    # Normalize inputs and add them as recreation potential components
-
-    ## Land Use Component [Input]
-    # run('r.null', map=suitability, null=0)  # Set NULLs to 0
     r.null(map=suitability, null=0)  # Set NULLs to 0
     recreation_potential_component.append(suitability)
 
-    ## Water Component [Input]
-    normalise_component(water_component, water_component_map)
-    recreation_potential_component.append(water_component_map)
+    normalise_component(water_component, water_component_map_name)
+    recreation_potential_component.append(water_component_map_name)
+    remove_at_exit.append(water_component_map_name)
 
-    ## Natural Components [Input]
-    normalise_component(natural_component, natural_component_map)
-    recreation_potential_component.append(natural_component_map)
+    normalise_component(natural_component, natural_component_map_name)
+    recreation_potential_component.append(natural_component_map_name)
+    remove_at_exit.append(natural_component_map_name)
 
-    # Recreation Potential [Output]
+    """ Recreation Potential [Output] """
+
+    tmp_recreation_potential = tmp_map_name(recreation_potential_map_name)
+    msg = "Computing an intermediate map <{potential}>"
+    g.message(msg.format(potential=tmp_recreation_potential))
     normalise_component(recreation_potential_component,
-            recreation_potential)
+            tmp_recreation_potential)
 
-    # Inputs for Recreation Spectrum
+    if recreation_potential:
+
+        msg = "Writing <{potential}> map"
+        g.message(msg.format(potential=tmp_recreation_potential))
+        g.rename(raster=(tmp_recreation_potential,recreation_potential))
+        update_meta(recreation_potential)
+        r.colors(map=recreation_potential, color='ryg')
 
     # Infrastructure to access recreational facilities, amenities, services
 
     infrastructure_component = []
-
-    if options['infrastructure']:
-        infrastructure = options['infrastructure']
-
-    # else:
     infrastructure_components = []
 
-    if options['roads']:
-        roads = options['roads']
+    if infrastructure:
+        infrastructure_component = infrastructure
+
+    if roads:
         infrastructure_components.append(roads)
 
-    if options['roads_secondary']:
-        roads_secondary = options['roads_secondary']
+    if roads_secondary:
         infrastructure_components.append(roads_secondary)
 
-    if options['roads_local']:
-        roads_local = options['roads_local']
+    if roads_local:
         infrastructure_components.append(roads_local)
 
-    # if infrastructure_components:
+    # merge infrastructure component related maps in one list
     infrastructure_component += infrastructure_components
 
     # Recreational facilities, amenities, services
 
     recreation_component = []
-
-    if options['recreation']:
-        recreation_component = options['recreation']
-
-    # else:
     recreation_components = []
 
-    if options['osm_lines']:
-        osm_lines = options['osm_lines']
+    if recreation:
+        recreation_component.append(recreation)
+
+    if osm_lines:
         recreation_components.append(osm_lines)
 
-    if options['osm_points']:
-        osm_points = options['osm_points']
+    if osm_points:
         recreation_components.append(osm_points)
 
-    if options['blue_flags']:
-        blue_flags = options['blue_flags']
+    if blue_flags:
         recreation_components.append(blue_flags)
 
-    # if recreation_components:
+    # merge recreation component related maps in one list
     recreation_component += recreation_components
 
-    # Recreation Opportunity Spectrum
-    if options['spectrum']:
-        recreation_spectrum=options['spectrum']
+    """ Recreation Spectrum """
 
-        # Input maps
+    if recreation_spectrum:
 
-        # add infrastructure related maps to infrastructure_component
-        tmp_infrastructure = tmp_map_name(infrastructure)
-        zerofy_small_values(infrastructure_component, tmp_infrastructure, 0.0001)
-        normalise_component(tmp_infrastructure, infrastructure_component_map)
-        del(tmp_infrastructure)
+        recreation_opportunity_component = []
 
-        # add recreation related maps to recreation_component
-        tmp_infrastructure = tmp_map_name(infrastructure)
-        zerofy_small_values(recreation_component, tmp_infrastructure, 0.0001)
-        normalise_component(tmp_infrastructure, recreation_component_map)
-        del(recreation_map)
+        # input
+        zerofy_and_normalise_component(infrastructure_component,
+                threshhold_0001, infrastructure_component_map_name)
+        recreation_opportunity_component.append(infrastructure_component_map_name)
+        remove_at_exit.append(infrastructure_component_map_name)
 
-        # Intermediate maps
+        # input
+        zerofy_and_normalise_component(recreation_component,
+                threshhold_0001, recreation_component_map_name)
+        recreation_opportunity_component.append(recreation_component_map_name)
+        remove_at_exit.append(recreation_component_map_name)
 
-        # Add normalised raster maps
-        recreation_opportunity_component.append(infrastructure_component_map)
-        recreation_opportunity_component.append(recreation_component_map)
-
-        # Recreation Spectrum, Potential + Opportunity [Output]
-
-        # Sum maps, Zerofy if < 0.0003, Normalise, Recode
+        # Add maps, Zerofy if < 0.0003, Normalise [intermediate]
+        # ----------------------------------------------------------------------
+        # Why this threshhold? How and Why is it different from the "0.0001" one?
         zerofy_and_normalise_component(recreation_opportunity_component,
-                recreation_opportunity_component_map)
+                threshhold_0003, recreation_opportunity)
+        # ----------------------------------------------------------------------
 
-        # recode recreation_potential, opportunity_component
-            # which are the rules?
+        # recode recreation_potential
 
-        compute_recreation_spectrum(recreation_potential,
-                recreation_opportunity, recreation_spectrum)
+        #
+        # ----------------------------------------------------------------------
+        # ? Smart way to use only one name, regardless if
+        # 'recreation_potential' was requested earlier as an output or not.
 
+        if recreation_potential:
+            tmp_recreation_potential_classes = tmp_map_name(recreation_potential)
+            classify_recreation_component(recreation_potential,
+                    recreation_potential_classification_rules,
+                    tmp_recreation_potential_classes)
 
-    # Time Stamping ?
+        if not recreation_potential:
+            tmp_recreation_potential_classes = tmp_map_name(tmp_recreation_potential)
+            classify_recreation_component(tmp_recreation_potential,
+                    recreation_potential_classification_rules,
+                    tmp_recreation_potential_classes)
+        # ----------------------------------------------------------------------
+        #
 
-    # Apply Color Table(s) ?
+        # recode opportunity_component
+        tmp_recreation_opportunity_classes = tmp_map_name(recreation_opportunity)
 
-    update_meta(recreation_potential)
+        classify_recreation_component(recreation_opportunity,
+                recreation_opportunity_classification_rules,
+                tmp_recreation_opportunity_classes)
+
+        # Recreation Spectrum: Potential + Opportunity [Output]
+        compute_recreation_spectrum(tmp_recreation_potential_classes,
+                tmp_recreation_opportunity_classes, recreation_spectrum)
+
+        msg = "Writing requested <{spectrum}> map"
+        g.message(msg.format(spectrum=recreation_spectrum))
+
+        update_meta(recreation_spectrum)
+        r.colors(map=recreation_spectrum, color=color_recreation_spectrum)
 
     # restore region
     if landuse_extent:
@@ -908,6 +996,10 @@ def main():
     if info:
         citation = '\nCitation: ' + citation_recreation_potential
         g.message(citation)
+
+    if remove_at_exit:
+        g.message("Removing intermediate maps")
+        g.remove(flags='f', type='raster', name=','.join(remove_at_exit))
 
 if __name__ == "__main__":
     options, flags = grass.parser()

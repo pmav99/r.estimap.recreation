@@ -457,12 +457,6 @@ def zerofy_small_values(raster, threshhold, output_name):
     rounding_equation = equation.format(result=output_name, expression=rounding)
     grass.mapcalc(rounding_equation, overwrite=True)
 
-    # Unless the input raster map has to be retained as is, the following is
-    # not required and the result can overwrite the input raster map itself.
-    #
-    # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
-    #
-
 def normalize_map (raster, output_name):
     """
     Normalize all raster map cells by subtracting the raster map's minimum and
@@ -498,13 +492,6 @@ def normalize_map (raster, output_name):
     del(maximum)
     del(normalisation)
     del(normalisation_equation)
-
-    # Why delete a map here?
-    # Unless the input raster map has to be retained as is, the following is
-    # not required and the result can overwrite the input raster map itself.
-    #
-    # run('g.remove', flags='f', type='raster', name=raster, quiet=True)
-    #
 
 def normalise_component(components, output_name):
     """
@@ -583,7 +570,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     # The following is just an extra step as compared to the normalise_component()
     # function
     zerofy_small_values(tmp_intermediate, threshhold, tmp_output)
-    # Is it worth the duplication?
+    # Is the duplication worth?
     #
 
     normalize_map(tmp_output, output_name)

@@ -365,6 +365,7 @@
 #%end
 
 # required librairies
+
 import os, sys, subprocess
 import datetime, time
 
@@ -381,6 +382,7 @@ if "GISBASE" not in os.environ:
 # from scoring_schemes import corine
 
 # globals
+
 global equation, citation, spacy_plus
 citation_recreation_potential='Zulian (2014)'
 spacy_plus = ' + '
@@ -394,9 +396,29 @@ recreation_potential_classification_rules='0.0:0.2:1\n0.2:0.4:2\n0.4:*:3'
 recreation_opportunity_classification_rules=recreation_potential_classification_rules
 
 color_recreation_potential = 'ryg'
-color_recreation_spectrum = 'ryg'
+color_recreation_spectrum="""# Cubehelix color table generated using:
+#   r.colors.cubehelix -dn ncolors=9 map=recreation_spectrum nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_spectrum.colors
+0.000% 55:29:66
+11.111% 55:29:66
+11.111% 79:40:85
+22.222% 79:40:85
+22.222% 104:52:102
+33.333% 104:52:102
+33.333% 131:67:118
+44.444% 131:67:118
+44.444% 157:85:132
+55.556% 157:85:132
+55.556% 180:104:145
+66.667% 180:104:145
+66.667% 202:128:159
+77.778% 202:128:159
+77.778% 221:156:175
+88.889% 221:156:175
+88.889% 235:184:193
+100.000% 235:184:193"""
 
 # helper functions
+
 def cleanup():
     """
     Clean up temporary maps
@@ -570,23 +592,24 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     del(tmp_output)
     del(output_name)
 
+def classify_recreation_component(recreation_component, rules, output_name):
+    """
+    Recode an input recreation component based on given rules
+
+    To Do:
+
+    - Potentially, test range of input recreation component, i.e. ranging in
+      [0,1]
+
+    """
+
+    r.recode(input=recreation_component, rules='-',
+            stdin=rules, output=output_name)
+
 def recreation_spectrum_expression(potential, opportunity):
     """
     Build and return a valid mapcalc expression for deriving
     the Recreation Opportunity Spectrum
-
-
-    See `r.mapcalc` expression provided by Grazia Zulian below:
-
-    exp04 = 'ROS' + fua + ' = (if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 1, 1,\
-            if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 2, 2, \
-            if(' + 'RPnr' + fua + ' == 1 &  ' + 'OSr' + fua + '  == 3, 3, \
-            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 1, 4, \
-            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 2, 5, \
-            if(' + 'RPnr' + fua + ' == 2 &  ' + 'OSr' + fua + '  == 3, 6, \
-            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 1, 7, \
-            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 2, 8, \
-            if(' + 'RPnr' + fua + ' == 3 &  ' + 'OSr' + fua + '  == 3, 9))))))))))'
 
     Questions:
 
@@ -606,20 +629,6 @@ def recreation_spectrum_expression(potential, opportunity):
 
     expression.format(potential=potential, opportunity=opportunity)
     return expression
-
-def classify_recreation_component(recreation_component, rules, output_name):
-    """
-    Recode an input recreation component based on given rules
-
-    To Do:
-
-    - Potentially, test range of input recreation component, i.e. ranging in
-      [0,1]
-
-    """
-
-    r.recode(input=recreation_component, rules='-',
-            stdin=rules, output=output_name)
 
 def compute_recreation_spectrum(potential, opportunity, spectrum):
     """
@@ -647,8 +656,8 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
 def update_meta(raster):
     """
+    Update metadata of given raster map
     """
-    # strings for metadata
     history = '\n' + citation_recreation_potential
     description_string = 'Recreation {raster} map'
     description = description_string.format(raster=raster)
@@ -659,7 +668,6 @@ def update_meta(raster):
     source1 = 'Source 1'
     source2 = 'Source 2'
 
-    # update metadata
     r.support(map=raster, title=title, description=description, units=units,
             source1=source1, source2=source2, history=history)
 
@@ -679,51 +687,36 @@ def main():
     """
 
     # flags
+
     global info
     info = flags['i']
     landuse_extent = flags['e']
 
-    # names for normalised component maps
+    # names for inputs from options
 
-    normalised_suffix='normalised'
+    # following some hard-coded names -- review and remove!
 
-    # input
-
-    land_component_map='land_component'
-    urban_component_map='urban_component'
-
-    # intermediate
-
-    recreation_opportunity='recreation_opportunity'
-    # recreation_opportunity_component_map='recreation_opportunity_map'
-    facility_component='facilities'
-    recreation_component='recreation'
-    osm_lines='osm_lines'
-    osm_points='osm_points'
-    opportunity_component='opportunity_component'
-
-    # intermediate / output
-
-
-    # names from options
     land = options['land']
+    land_component_map='land_component'
+
     water = options['water']
     water_component_map_name = tmp_map_name('water_component')
-    
+
     natural = options['natural']
     natural_component_map_name = tmp_map_name('natural_component')
-    
+
     urban = options['urban']
-    
+    urban_component_map='urban_component'
+
     infrastructure = options['infrastructure']
     infrastructure_component_map_name = tmp_map_name('infrastructure_component')
 
     recreation = options['recreation']
+    # recreation_component='recreation'
     recreation_component_map_name = tmp_map_name('recreation_component')
-    
+
     suitability = options['suitability']
     suitability_map_name = tmp_map_name('suitability')
-    
     landuse = options['landuse']
     suitability_scores = options['suitability_scores']
 
@@ -739,22 +732,27 @@ def main():
 
     green_urban = options['green_urban']
     green_infrastructure = options['green_infrastructure']
-    
+
     roads = options['roads']
     roads_secondary = options['roads_secondary']
     roads_local = options['roads_local']
-    
+
     mask = options['mask']
-    
+
     osm_lines = options['osm_lines']
     osm_points = options['osm_points']
-    
+
     blue_flags = options['blue_flags']
-    
-    devaluation = options['devaluation']  # input
-    
+
+    devaluation = options['devaluation']
+
+    # names for outputs from options
+
     recreation_potential = options['potential']  # intermediate / output
     recreation_potential_map_name = tmp_map_name('recreation_potential')
+
+    recreation_opportunity='recreation_opportunity'
+    # recreation_opportunity_component_map='recreation_opportunity_map'
 
     recreation_spectrum = options['spectrum']  # output
     # recreation_spectrum_component_map_name = tmp_map_name('recreation_spectrum_component_map')
@@ -853,7 +851,8 @@ def main():
     # merge natural resources component related maps in one list
     natural_component += natural_components
 
-    """ Normalize land, water, natural inputs and add them to the recreation potential component"""
+    """ Normalize land, water, natural inputs
+    and add them to the recreation potential component"""
 
     recreation_potential_component = []
 
@@ -985,7 +984,7 @@ def main():
         g.message(msg.format(spectrum=recreation_spectrum))
 
         update_meta(recreation_spectrum)
-        r.colors(map=recreation_spectrum, color=color_recreation_spectrum)
+        r.colors(map=recreation_spectrum, rules='-', stdin=color_recreation_spectrum)
 
     # restore region
     if landuse_extent:

@@ -337,7 +337,17 @@
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: map name
-#% description: Recreation potential map
+#% label: Recreation potential map
+#% description: Recreation potential map classified in 3 categories
+#% required: no
+#% guisection: Output
+#%end
+
+#%option G_OPT_R_OUTPUT
+#% key: opportunity
+#% key_desc: map name
+#% label: Recreation opportunity map
+#% description: Recreation opportunity map classified in 3 categories
 #% required: no
 #% guisection: Output
 #%end
@@ -345,7 +355,8 @@
 #%option G_OPT_R_OUTPUT
 #% key: spectrum
 #% key_desc: map name
-#% description: Recreation spectrum map
+#% label: Recreation spectrum map
+#% description: Recreation spectrum map classified by default in 9 categories
 #% required: no
 #% guisection: Output
 #%end
@@ -395,8 +406,25 @@ threshhold_0003 = 0.0003
 recreation_potential_classification_rules='0.0:0.2:1\n0.2:0.4:2\n0.4:*:3'
 recreation_opportunity_classification_rules=recreation_potential_classification_rules
 
-color_recreation_potential = 'ryg'
-color_recreation_spectrum="""# Cubehelix color table generated using:
+color_recreation_potential = """ # Cubehelix color table generated using:
+#   r.colors.cubehelix -dn ncolors=3 map=recreation_potential nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_potential.colors
+0.000% 55:29:66
+33.333% 55:29:66
+33.333% 157:85:132
+66.667% 157:85:132
+66.667% 235:184:193
+100.000% 235:184:193"""
+
+color_recreation_opportunity = """# Cubehelix color table generated using:
+#   r.colors.cubehelix -dn ncolors=3 map=recreation_potential nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_potential.colors
+0.000% 55:29:66
+33.333% 55:29:66
+33.333% 157:85:132
+66.667% 157:85:132
+66.667% 235:184:193
+100.000% 235:184:193"""
+
+color_recreation_spectrum = """# Cubehelix color table generated using:
 #   r.colors.cubehelix -dn ncolors=9 map=recreation_spectrum nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_spectrum.colors
 0.000% 55:29:66
 11.111% 55:29:66
@@ -641,7 +669,7 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
-def update_meta(raster):
+def update_meta(raster, title):
     """
     Update metadata of given raster map
     """
@@ -649,7 +677,7 @@ def update_meta(raster):
     description_string = 'Recreation {raster} map'
     description = description_string.format(raster=raster)
 
-    title = 'Recreation {raster}'.format(raster=raster)
+    title = '{title}'.format(title=title)
     units = 'Meters'
 
     source1 = 'Source 1'
@@ -735,12 +763,15 @@ def main():
 
     # names for outputs from options
 
+    potential_title = "Recreation potential"
     recreation_potential = options['potential']  # intermediate / output
     recreation_potential_map_name = tmp_map_name('recreation_potential')
 
+    opportunity_title = "Recreation opportunity"
     recreation_opportunity='recreation_opportunity'
     # recreation_opportunity_component_map='recreation_opportunity_map'
 
+    spectrum_title = "Recreation spectrum"
     recreation_spectrum = options['spectrum']  # output
     # recreation_spectrum_component_map_name = tmp_map_name('recreation_spectrum_component_map')
 
@@ -864,11 +895,21 @@ def main():
 
     if recreation_potential:
 
-        msg = "Writing <{potential}> map"
+        msg = "Reclassifying <{potential}> map"
         g.message(msg.format(potential=tmp_recreation_potential))
-        g.rename(raster=(tmp_recreation_potential,recreation_potential))
-        update_meta(recreation_potential)
-        r.colors(map=recreation_potential, color='ryg')
+        tmp_recreation_potential_classes = tmp_map_name(recreation_potential)
+        classify_recreation_component(tmp_recreation_potential,
+                recreation_potential_classification_rules,
+                tmp_recreation_potential_classes)
+        msg = "Writing <{potential}> map"
+        g.message(msg.format(potential=tmp_recreation_potential_classes))
+        g.rename(raster=(tmp_recreation_potential_classes,recreation_potential))
+        update_meta(recreation_potential, potential_title)
+        r.colors(map=recreation_potential, rules='-', stdin =
+                color_recreation_potential)
+
+        del(msg)
+        del(tmp_recreation_potential_classes)
 
     # Infrastructure to access recreational facilities, amenities, services
 
@@ -928,40 +969,41 @@ def main():
         recreation_opportunity_component.append(recreation_component_map_name)
         remove_at_exit.append(recreation_component_map_name)
 
-        # Add maps, Zerofy if < 0.0003, Normalise [intermediate]
+        # intermediate
         # ----------------------------------------------------------------------
-        # Why this threshhold? How and Why is it different from the "0.0001" one?
+        # Why threshhold 0.0003? How and why it differs from 0.0001?
         zerofy_and_normalise_component(recreation_opportunity_component,
                 threshhold_0003, recreation_opportunity)
         # ----------------------------------------------------------------------
 
         # recode recreation_potential
-
-        #
-        # ----------------------------------------------------------------------
-        # ? Smart way to use only one name, regardless if
-        # 'recreation_potential' was requested earlier as an output or not.
-
-        if recreation_potential:
-            tmp_recreation_potential_classes = tmp_map_name(recreation_potential)
-            classify_recreation_component(recreation_potential,
-                    recreation_potential_classification_rules,
-                    tmp_recreation_potential_classes)
-
-        if not recreation_potential:
-            tmp_recreation_potential_classes = tmp_map_name(tmp_recreation_potential)
-            classify_recreation_component(tmp_recreation_potential,
-                    recreation_potential_classification_rules,
-                    tmp_recreation_potential_classes)
-        # ----------------------------------------------------------------------
-        #
+        tmp_recreation_potential_classes = tmp_map_name(tmp_recreation_potential)
+        classify_recreation_component(tmp_recreation_potential,
+                recreation_potential_classification_rules,
+                tmp_recreation_potential_classes)
 
         # recode opportunity_component
         tmp_recreation_opportunity_classes = tmp_map_name(recreation_opportunity)
 
+        msg = "Reclassifying <{opportunity}> map"
+        g.message(msg.format(opportunity=recreation_opportunity))
+        del(msg)
+
         classify_recreation_component(recreation_opportunity,
                 recreation_opportunity_classification_rules,
                 tmp_recreation_opportunity_classes)
+
+        if recreation_opportunity:
+
+            msg = "Writing <{opportunity}> map"
+            g.message(msg.format(opportunity=tmp_recreation_opportunity_classes))
+            g.copy(raster=(tmp_recreation_opportunity_classes,recreation_opportunity))
+
+            update_meta(recreation_opportunity, opportunity_title)
+            r.colors(map=recreation_opportunity, rules='-', stdin =
+                    color_recreation_opportunity)
+
+            del(msg)
 
         # Recreation Spectrum: Potential + Opportunity [Output]
         compute_recreation_spectrum(tmp_recreation_potential_classes,
@@ -970,7 +1012,7 @@ def main():
         msg = "Writing requested <{spectrum}> map"
         g.message(msg.format(spectrum=recreation_spectrum))
 
-        update_meta(recreation_spectrum)
+        update_meta(recreation_spectrum, spectrum_title)
         r.colors(map=recreation_spectrum, rules='-', stdin=color_recreation_spectrum)
 
     # restore region

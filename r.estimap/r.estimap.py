@@ -194,9 +194,9 @@
 #% guisection: Water
 #%end
 
-#%rules
-#%  excludes: water, coast_geomorphology, water_clarity, coast_proximity, marine, lakes, bathing_water
-#%end
+##%rules
+##%  excludes: water, coast_geomorphology, water_clarity, coast_proximity, marine, lakes, bathing_water
+##%end
 
 # Natural
 
@@ -399,14 +399,15 @@ citation_recreation_potential='Zulian (2014)'
 spacy_plus = ' + '
 equation = "{result} = {expression}"  # basic equation for mapcalc
 
-global threshhold_0001, threshhold_0003
-threshhold_0001 = 0.0001
-threshhold_0003 = 0.0003
+global THRESHHOLD_ZERO, THRESHHOLD_0001, THRESHHOLD_0003
+THRESHHOLD_ZERO = 0
+THRESHHOLD_0001 = 0.0001
+THRESHHOLD_0003 = 0.0003
 
 recreation_potential_classification_rules='0.0:0.2:1\n0.2:0.4:2\n0.4:*:3'
 recreation_opportunity_classification_rules=recreation_potential_classification_rules
 
-color_recreation_potential = """ # Cubehelix color table generated using:
+POTENTIAL_COLORS = """ # Cubehelix color table generated using:
 #   r.colors.cubehelix -dn ncolors=3 map=recreation_potential nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_potential.colors
 0.000% 55:29:66
 33.333% 55:29:66
@@ -415,7 +416,7 @@ color_recreation_potential = """ # Cubehelix color table generated using:
 66.667% 235:184:193
 100.000% 235:184:193"""
 
-color_recreation_opportunity = """# Cubehelix color table generated using:
+OPPORTUNITY_COLORS = """# Cubehelix color table generated using:
 #   r.colors.cubehelix -dn ncolors=3 map=recreation_potential nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_potential.colors
 0.000% 55:29:66
 33.333% 55:29:66
@@ -424,7 +425,7 @@ color_recreation_opportunity = """# Cubehelix color table generated using:
 66.667% 235:184:193
 100.000% 235:184:193"""
 
-color_recreation_spectrum = """# Cubehelix color table generated using:
+SPECTRUM_COLORS = """# Cubehelix color table generated using:
 #   r.colors.cubehelix -dn ncolors=9 map=recreation_spectrum nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_spectrum.colors
 0.000% 55:29:66
 11.111% 55:29:66
@@ -521,49 +522,20 @@ def normalize_map (raster, output_name):
     del(normalisation)
     del(normalisation_equation)
 
-def normalise_component(components, output_name):
+def zerofy_and_normalise_component(components, threshhold, output_name):
     """
     Sums up all maps listed in the given "components" object and derives a
     normalised output.
+
+    To Do:
+
+    * Improve `threshold` handling. What if threshholding is not desired? How
+    to skip performing it?
     """
 
     msg = "Normalising sum of: "
     msg += ', '.join(components)
     g.message(msg)
-
-    components = [ name.split('@')[0] for name in components ]
-    components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
-    tmp_sum = tmp_map_name(components_string)
-
-    component_sum = spacy_plus.join(components)
-    component_sum_equation = equation.format(result=tmp_sum,
-            expression=component_sum)
-
-    # if info:
-    #     msg = "Equation:"
-    #     msg += component_equation
-    #     g.message(msg)
-
-    grass.mapcalc(component_sum_equation, overwrite=True)
-    # output_name = tmp_map_name(output_name)
-    normalize_map(tmp_sum, output_name)
-
-    del(components_string)
-    del(tmp_sum)
-    del(component_sum)
-    del(component_sum_equation)
-    del(output_name)
-
-def zerofy_and_normalise_component(components, threshhold, output_name):
-    """
-    Sums up all maps listed in the given "components" object and derives a
-    normalised output.
-    """
-
-    msg = "Normalising maps: "
-    msg += ', '.join(components)
-    g.message(msg)
-
 
     if len(components) > 1:
         # prepare string for mapcalc expression
@@ -594,18 +566,21 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
         tmp_intermediate = components[0]
         tmp_output = tmp_map_name(tmp_intermediate)
 
-    #
-    # The following is just an extra step as compared to the normalise_component()
-    # function
-    zerofy_small_values(tmp_intermediate, threshhold, tmp_output)
-    # Is the duplication worth?
-    #
+    if threshhold > THRESHHOLD_ZERO:
+        msg = "Setting values < {threshhold} in <{raster}> to zero"
+        g.message(msg.format(threshhold=threshhold, raster=tmp_intermediate))
+        zerofy_small_values(tmp_intermediate, threshhold, tmp_output)
+
+    else:
+        tmp_output = tmp_intermediate
 
     normalize_map(tmp_output, output_name)
 
     del(tmp_intermediate)
     del(tmp_output)
     del(output_name)
+
+    print  # an empty line
 
 def classify_recreation_component(recreation_component, rules, output_name):
     """
@@ -620,6 +595,8 @@ def classify_recreation_component(recreation_component, rules, output_name):
 
     r.recode(input=recreation_component, rules='-',
             stdin=rules, output=output_name)
+
+    print  # an empty line
 
 def recreation_spectrum_expression(potential, opportunity):
     """
@@ -668,6 +645,10 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
         del(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
+
+    del(spectrum_expression)
+    del(spectrum_equation)
+    print  # an empty line
 
 def update_meta(raster, title):
     """
@@ -727,7 +708,6 @@ def main():
     infrastructure_component_map_name = tmp_map_name('infrastructure_component')
 
     recreation = options['recreation']
-    # recreation_component='recreation'
     recreation_component_map_name = tmp_map_name('recreation_component')
 
     suitability = options['suitability']
@@ -877,11 +857,13 @@ def main():
     r.null(map=suitability, null=0)  # Set NULLs to 0
     recreation_potential_component.append(suitability)
 
-    normalise_component(water_component, water_component_map_name)
+    zerofy_and_normalise_component(water_component, THRESHHOLD_ZERO,
+            water_component_map_name)
     recreation_potential_component.append(water_component_map_name)
     remove_at_exit.append(water_component_map_name)
 
-    normalise_component(natural_component, natural_component_map_name)
+    zerofy_and_normalise_component(natural_component, THRESHHOLD_ZERO,
+            natural_component_map_name)
     recreation_potential_component.append(natural_component_map_name)
     remove_at_exit.append(natural_component_map_name)
 
@@ -890,8 +872,8 @@ def main():
     tmp_recreation_potential = tmp_map_name(recreation_potential_map_name)
     msg = "Computing an intermediate map <{potential}>"
     g.message(msg.format(potential=tmp_recreation_potential))
-    normalise_component(recreation_potential_component,
-            tmp_recreation_potential)
+    zerofy_and_normalise_component(recreation_potential_component,
+            THRESHHOLD_ZERO, tmp_recreation_potential)
 
     if recreation_potential:
 
@@ -901,12 +883,14 @@ def main():
         classify_recreation_component(tmp_recreation_potential,
                 recreation_potential_classification_rules,
                 tmp_recreation_potential_classes)
+
         msg = "Writing <{potential}> map"
-        g.message(msg.format(potential=tmp_recreation_potential_classes))
-        g.rename(raster=(tmp_recreation_potential_classes,recreation_potential))
+        g.message(msg.format(potential=recreation_potential))
+        g.rename(raster=(tmp_recreation_potential_classes,recreation_potential),
+                quiet=True)
+
         update_meta(recreation_potential, potential_title)
-        r.colors(map=recreation_potential, rules='-', stdin =
-                color_recreation_potential)
+        r.colors(map=recreation_potential, rules='-', stdin = POTENTIAL_COLORS)
 
         del(msg)
         del(tmp_recreation_potential_classes)
@@ -959,13 +943,13 @@ def main():
 
         # input
         zerofy_and_normalise_component(infrastructure_component,
-                threshhold_0001, infrastructure_component_map_name)
+                THRESHHOLD_ZERO, infrastructure_component_map_name)
         recreation_opportunity_component.append(infrastructure_component_map_name)
         remove_at_exit.append(infrastructure_component_map_name)
 
         # input
         zerofy_and_normalise_component(recreation_component,
-                threshhold_0001, recreation_component_map_name)
+                THRESHHOLD_0001, recreation_component_map_name)
         recreation_opportunity_component.append(recreation_component_map_name)
         remove_at_exit.append(recreation_component_map_name)
 
@@ -973,7 +957,7 @@ def main():
         # ----------------------------------------------------------------------
         # Why threshhold 0.0003? How and why it differs from 0.0001?
         zerofy_and_normalise_component(recreation_opportunity_component,
-                threshhold_0003, recreation_opportunity)
+                THRESHHOLD_0003, recreation_opportunity)
         # ----------------------------------------------------------------------
 
         # recode recreation_potential
@@ -995,13 +979,14 @@ def main():
 
         if recreation_opportunity:
 
-            msg = "Writing <{opportunity}> map"
-            g.message(msg.format(opportunity=tmp_recreation_opportunity_classes))
-            g.copy(raster=(tmp_recreation_opportunity_classes,recreation_opportunity))
+            msg = "Writing requested <{opportunity}> map"
+            g.message(msg.format(opportunity=recreation_opportunity))
+            g.copy(raster=(tmp_recreation_opportunity_classes,recreation_opportunity),
+                    quiet=True)
 
             update_meta(recreation_opportunity, opportunity_title)
             r.colors(map=recreation_opportunity, rules='-', stdin =
-                    color_recreation_opportunity)
+                    OPPORTUNITY_COLORS)
 
             del(msg)
 
@@ -1013,7 +998,7 @@ def main():
         g.message(msg.format(spectrum=recreation_spectrum))
 
         update_meta(recreation_spectrum, spectrum_title)
-        r.colors(map=recreation_spectrum, rules='-', stdin=color_recreation_spectrum)
+        r.colors(map=recreation_spectrum, rules='-', stdin = SPECTRUM_COLORS)
 
     # restore region
     if landuse_extent:
@@ -1026,8 +1011,9 @@ def main():
         g.message(citation)
 
     if remove_at_exit:
-        g.message("Removing intermediate maps")
-        g.remove(flags='f', type='raster', name=','.join(remove_at_exit))
+        g.message("Removing temporary intermediate maps")
+        g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
+                quiet=True)
 
 if __name__ == "__main__":
     options, flags = grass.parser()

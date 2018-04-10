@@ -296,17 +296,19 @@
 #%  excludes: infrastructure, roads
 #%end
 
-#%option G_OPT_R_INPUT
+#%option G_OPT_R_INPUTS
 #% key: osm_lines
 #% key_desc: map name
+#% label: OpenStreetMap linear features
 #% description: OpenStreetMap linear features
 #% required : no
 #% guisection: Recreation
 #%end
 
-#%option G_OPT_R_INPUT
+#%option G_OPT_R_INPUTS
 #% key: osm_points
 #% key_desc: map name
+#% label: OpenStreetMap point features
 #% description: OpenStreetMap point features
 #% required : no
 #% guisection: Recreation
@@ -534,6 +536,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     """
 
     msg = "Normalising sum of: "
+    # print "Components:", components
     msg += ', '.join(components)
     g.message(msg)
 
@@ -924,10 +927,18 @@ def main():
         recreation_component.append(recreation)
 
     if osm_lines:
-        recreation_components.append(osm_lines)
+        if len(osm_lines) > 1:
+            osm_lines = osm_lines.split(',')
+            recreation_component += osm_lines
+        else:
+            recreation_components.append(osm_lines)
 
     if osm_points:
-        recreation_components.append(osm_points)
+        if len(osm_points) > 1:
+            osm_points = osm_points.split(',')
+            recreation_components += osm_points
+        else:
+            recreation_components.append(osm_points)
 
     if blue_flags:
         recreation_components.append(blue_flags)

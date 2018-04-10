@@ -763,7 +763,7 @@ def main():
 
     if mask:
         # global mask
-        g.message("|! Masking out non-NULL cells of {mask}".format(mask=mask))
+        g.message("Masking non-NULL cells based on <{mask}>".format(mask=mask))
         r.mask(flags='i', raster=mask, overwrite=True)
 
     if landuse_extent:

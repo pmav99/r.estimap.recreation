@@ -135,6 +135,7 @@
 #%rules
 #% exclusive: suitability, landuse
 #% exclusive: suitability, suitability_scores
+#% required: suitability, landuse
 #% requires: landuse, suitability_scores
 #%end
 
@@ -190,6 +191,15 @@
 #% key_desc: map name
 #% label: Map scoring access to marine natural provided areas
 #% description: Access to marine natural protected areas
+#% required : no
+#% guisection: Water
+#%end
+
+#%option G_OPT_R_INPUT
+#% key: riparian
+#% key_desc: map name
+#% label: Riparian zones
+#% description: Riparian zones
 #% required : no
 #% guisection: Water
 #%end
@@ -406,6 +416,7 @@ THRESHHOLD_ZERO = 0
 THRESHHOLD_0001 = 0.0001
 THRESHHOLD_0003 = 0.0003
 
+suitability_classification_rules=''
 recreation_potential_classification_rules='0.0:0.2:1\n0.2:0.4:2\n0.4:*:3'
 recreation_opportunity_classification_rules=recreation_potential_classification_rules
 
@@ -477,6 +488,34 @@ def run(cmd, **kwargs):
     Pass required arguments to grass commands (?)
     """
     grass.run_command(cmd, quiet=True, **kwargs)
+
+def compute_proximity(raster, constant, alpha, kappa, score, output_name):
+    """
+    Compute a raster map whose values follow an (euclidean) distance function
+    based on the given constants "constant", "alpha", "kappa" and "score".
+    """
+    r.grow.distance(input=raster, use="cat", overwrite=True)
+
+    numerator = ({constant} + {alpha})
+    denominator = ({alpha} + exp({raster} * {kappa}))
+    distance_function = (numerator / denominator * {score})  # need for float()?
+
+    distance_function = distance_function.format(alpha=alpha,
+            constant=constant, raster=raster, kappa=kappa, score=score)
+
+    tmp_output = tmp_map_name(output_name)  # all temporary maps will be removed
+    distance_function = equation.format(result=output_name,
+            expression=distance_function)
+
+    grass.mapcalc(distance_function, overwrite=True)
+
+    r.null(map=lakes_proximity, null=0)  # Set NULLs to 0
+
+
+    del(numerator)
+    del(denominator)
+    del(distance_function)
+    del(tmp_output)
 
 def zerofy_small_values(raster, threshhold, output_name):
     """
@@ -717,6 +756,8 @@ def main():
     suitability_map_name = tmp_map_name('suitability')
     landuse = options['landuse']
     suitability_scores = options['suitability_scores']
+    if not suitability_scores:
+        suitability_scores = recreation_potential_classification_rules
 
     lakes = options['lakes']
     water_clarity = options['water_clarity']
@@ -724,6 +765,7 @@ def main():
     coast_geomorphology = options['coast_geomorphology']
     bathing_water = options['bathing_water']
     marine = options['marine']
+    riparian = options['riparian']
 
     protected = options['protected']
     forest = options['forest']
@@ -813,7 +855,17 @@ def main():
         # Should water_component  AND  water_components be exclusive!
 
     if lakes:
-        lakes_proximity = lakes
+        lakes_proximity = compute_proximity(
+                lakes,
+                constant = 1,
+                alpha = 30,
+                kappa = 0.008,
+                score = 1,
+                lakes_proximity)
+        # what is the purpose of the output_name if the compute_proximity()
+        # function creates internally a temporary map name, which will be
+        # removed at the end of the script?
+
         water_components.append(lakes_proximity)
 
     if water_clarity:
@@ -823,6 +875,7 @@ def main():
         water_components.append(coast_geomorphology)
 
     if coast_proximity:
+        compute_proximity(coast_proximity)
         water_components.append(coast_proximity)
 
     if bathing_water:
@@ -830,6 +883,9 @@ def main():
 
     if marine:
         water_components.append(marine)
+
+    if riparian:
+        water_components.append(riparian)
 
     # merge water component related maps in one list
     water_component += water_components

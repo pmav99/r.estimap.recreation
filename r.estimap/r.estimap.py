@@ -55,7 +55,7 @@
 #%option G_OPT_R_INPUTS
 #% key: land
 #% type: string
-#% key_desc: map names
+#% key_desc: name
 #% label: Maps scoring access to and suitability of land resources for recreation
 #% description: Arbitrary number of maps scoring access to and land resources suitability of land use classes to support recreation activities
 #% required : no
@@ -64,7 +64,7 @@
 
 #%option G_OPT_R_INPUTS
 #% key: water
-#% key_desc: map names
+#% key_desc: name
 #% label: Maps scoring access to and quality of water resources
 #% description: Arbitrary number of maps scoring access to and quality of water resources
 #% required : no
@@ -73,7 +73,7 @@
 
 #%option G_OPT_R_INPUTS
 #% key: natural
-#% key_desc: map names
+#% key_desc: name
 #% label: Maps scoring access to and quality of inland natural resources
 #% description: Arbitrary number of maps scoring access to and quality of inland natural resources
 #% required : no
@@ -82,7 +82,7 @@
 
 #%option G_OPT_R_INPUTS
 #% key: urban
-#% key_desc: map names
+#% key_desc: name
 #% description: Maps scoring recreational value of urban surfaces
 #% required : no
 #% guisection: Components
@@ -91,7 +91,7 @@
 #%option G_OPT_R_INPUTS
 #% key: infrastructure
 #% type: string
-#% key_desc: map names
+#% key_desc: name
 #% label: Maps scoring infrastructure to reach locations of recreation activities
 #% description: Infrastructure to reach locations of recreation activities [required to derive recreation spectrum map]
 #% required: no
@@ -101,7 +101,7 @@
 #%option G_OPT_R_INPUTS
 #% key: recreation
 #% type: string
-#% key_desc: map names
+#% key_desc: name
 #% label: Maps scoring recreational facilities, amenities and services
 #% description: Recreational opportunities facilities, amenities and services [required to derive recreation spectrum map]
 #% required: no
@@ -113,7 +113,7 @@
 #%option G_OPT_R_INPUT
 #% key: landuse
 #% type: string
-#% key_desc: map name
+#% key_desc: name
 #% label: Land use map from which to derive suitability for recreation
 #% description: Input to derive suitability of land use classes to support recreation activities. Requires scores, overrides suitability.
 #% required : no
@@ -123,7 +123,7 @@
 #%option G_OPT_F_INPUT
 #% key: suitability_scores
 #% type: string
-#% key_desc: map name
+#% key_desc: filename
 #% label: Recreational suitability scores for the classes of the 'landuse' map
 #% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input land use map. If 'landuse' map given and 'suitability_scores' not provided, the module will use internal rules for the CORINE land classes
 #% required: no
@@ -134,7 +134,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: lakes
-#% key_desc: map name
+#% key_desc: name
 #% label: Lakes map for which to score accessibility
 #% description: Lakes map to compute proximity for, score accessibility based on a distance function
 #% required : no
@@ -154,7 +154,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: marine
-#% key_desc: map name
+#% key_desc: name
 #% label: Map scoring access to marine natural provided areas
 #% description: Access to marine natural protected areas
 #% required : no
@@ -163,7 +163,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: coastline
-#% key_desc: map name
+#% key_desc: name
 #% label: Sea coast map for which to compute proximity
 #% label: Map scoring access to coast
 #% description: Input map to compute coast proximity, scored based on a distance function
@@ -185,7 +185,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: coast_geomorphology
-#% key_desc: map name
+#% key_desc: name
 #% label: Map scoring recreation potential in coast
 #% description: Coastal geomorphology, scored as suitable to support recreation activities
 #% required : no
@@ -194,7 +194,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: water_clarity
-#% key_desc: map name
+#% key_desc: name
 #% label: Water clarity
 #% description: Water clarity. The higher, the greater the recreation value.
 #% required : no
@@ -212,7 +212,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: riparian
-#% key_desc: map name
+#% key_desc: name
 #% label: Riparian zones
 #% description: Riparian zones
 #% required : no
@@ -255,7 +255,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: anthropic
-#% key_desc: map name
+#% key_desc: name
 #% label: Map of artificial surfaces and agricultural areas
 #% description: Partial input map to compute anthropic areas proximity, scored via a distance function
 #% required : no
@@ -263,17 +263,21 @@
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: proximity_scores
-#% key_desc: map name
+#% key: proximity_classes
+#% type: string
+#% key_desc: recode rules
+#% label: Proximity classification rules
+#% description: Classes for proximity to anthropic surfaces. Expected are rules for `r.recode` that correspond to classes of the input land use map.
 #% label: Map scoring access to anthropic areas
 #% description: Anthropic areas proximity, scored based on a distance function
 #% required : no
-#% guisection: Water
+#% guisection: Anthropic
+#% answer: 0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: green_urban
-#% key_desc: map name
+#% key_desc: name
 #% label: Urban green surfaces
 #% description: Map scoring urban green surfaces
 #% required : no
@@ -293,7 +297,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: roads
-#% key_desc: map name
+#% key_desc: name
 #% label: Primary road network
 #% description: Input map to compute roads proximity, scored based on a distance function
 #% required : no
@@ -312,7 +316,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: roads_proximity
-#% key_desc: map name
+#% key_desc: name
 #% label: Primary road network
 #% description: Roads proximity, scored based on a distance function
 #% required : no
@@ -321,7 +325,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: roads_secondary
-#% key_desc: map name
+#% key_desc: name
 #% label: Secondary road network
 #% description: Secondary network including arterial and collector roads
 #% required : no
@@ -330,7 +334,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: roads_local
-#% key_desc: map name
+#% key_desc: name
 #% label: Local road network
 #% description: Local roads and streets
 #% required : no
@@ -339,20 +343,12 @@
 
 '''Various'''
 
-#%option G_OPT_R_INPUT
-#% key: mask
-#% key_desc: name
-#% description: A raster map to apply as an inverted MASK
-#% required : no
-#%end
-
-
 #######################################################################
 # Offer input for potential?
 
 # #%option G_OPT_R_OUTPUT
 # #% key: recreation_potential
-# #% key_desc: map name
+# #% key_desc: name
 # #% description: Recreation potential map
 # #% required: no
 # #% answer: recreation_potential
@@ -370,7 +366,7 @@
 
 #%option G_OPT_R_INPUTS
 #% key: osm_lines
-#% key_desc: map name
+#% key_desc: name
 #% label: OpenStreetMap linear features
 #% description: OpenStreetMap linear features
 #% required : no
@@ -379,7 +375,7 @@
 
 #%option G_OPT_R_INPUTS
 #% key: osm_points
-#% key_desc: map name
+#% key_desc: name
 #% label: OpenStreetMap point features
 #% description: OpenStreetMap point features
 #% required : no
@@ -388,7 +384,7 @@
 
 #%option G_OPT_R_INPUT
 #% key: blue_flags
-#% key_desc: map name
+#% key_desc: name
 #% label: Moorings with blue flag distinction
 #% description: Moorings with blue flag distinction
 #% required : no
@@ -399,12 +395,22 @@
 
 #%option G_OPT_R_INPUTS
 #% key: devaluation
-#% key_desc: map name
+#% key_desc: name
 #% label: Devaluing elements
 #% description: Maps hindering accessibility to and degrading quality of various resources or infrastructure relating to recreation
 #% required : no
 #% guisection: Devaluation
 #%end
+
+'''MASK'''
+
+#%option G_OPT_R_INPUT
+#% key: mask
+#% key_desc: name
+#% description: A raster map to apply as an inverted MASK
+#% required : no
+#%end
+
 
 '''Output'''
 
@@ -422,7 +428,7 @@
 
 #%option G_OPT_R_OUTPUT
 #% key: potential
-#% key_desc: map name
+#% key_desc: name
 #% label: Recreation potential map
 #% description: Recreation potential map classified in 3 categories
 #% required: no
@@ -431,7 +437,7 @@
 
 #%option G_OPT_R_OUTPUT
 #% key: opportunity
-#% key_desc: map name
+#% key_desc: name
 #% label: Recreation opportunity map
 #% description: Recreation opportunity map classified in 3 categories
 #% required: no
@@ -440,7 +446,7 @@
 
 #%option G_OPT_R_OUTPUT
 #% key: spectrum
-#% key_desc: map name
+#% key_desc: name
 #% label: Recreation spectrum map
 #% description: Recreation spectrum map classified by default in 9 categories
 #% required: no
@@ -480,6 +486,10 @@ if "GISBASE" not in os.environ:
 
 # globals
 
+global grass_render_directory, grass_render_file
+grass_render_directory = "/geo/grassdb/render"
+# grass_render_file = grass_render_directory + 'grass_render_file.png'  # REMOVE ME
+
 global equation, citation, spacy_plus
 citation_recreation_potential='Zulian (2014)'
 spacy_plus = ' + '
@@ -502,6 +512,19 @@ recreation_potential_classes='''0.0:0.2:1
 0.4:*:3'''
 anthropic_proximity_classes='0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5'
 recreation_opportunity_classes=recreation_potential_classes
+
+SCORE_COLORS = """ # http://colorbrewer2.org/?type=diverging&scheme=RdYlGn&n=11
+0.0% 165:0:38
+10.0% 215:48:39
+20.0% 244:109:67
+30.0% 253:174:97
+40.0% 254:224:139
+50.0% 255:255:191
+60.0% 217:239:139
+70.0% 166:217:106
+80.0% 102:189:99
+90.0% 26:152:80
+100.0% 0:104:55"""
 
 POTENTIAL_COLORS = """ # Cubehelix color table generated using:
 #   r.colors.cubehelix -dn ncolors=3 map=recreation_potential nrotations=0.33 gamma=1.5 hue=0.9 dark=0.3 output=recreation_potential.colors
@@ -549,6 +572,28 @@ def run(cmd, **kwargs):
     Pass required arguments to grass commands (?)
     """
     grass.run_command(cmd, quiet=True, **kwargs)
+
+def draw_map(mapname):
+    """
+    Set the GRASS_RENDER_FILE and draw the requested raster map
+    """
+    grass_render_file = "{directory}/{name}.{extension}"
+    grass_render_file = grass_render_file.format(
+            directory = grass_render_directory,
+            name = mapname,
+            extension = 'png'
+            );
+
+    os.putenv("GRASS_RENDER_FILE", grass_render_file)
+    # os.system("echo $GRASS_RENDER_FILE")
+    
+    run("d.erase", bgcolor='black', flags='f')
+    run("d.rast", map=mapname)
+    
+    grass.verbose(_(">>> {filename}".format(filename=grass_render_file)))
+    command = "tycat {filename}"
+    command = command.format(filename=grass_render_file)
+    subprocess.Popen(command.split())
 
 def save_map(mapname):
     """
@@ -612,7 +657,8 @@ def compute_attractiveness(raster, metric, constant, alpha, kappa, score, **kwar
                       str(kappa),
                       str(alpha),
                       str(score)]
-    tmp_distance = tmp_map_name('_'.join(distance_terms))
+    # tmp_distance = tmp_map_name('_'.join(distance_terms))
+    tmp_distance = tmp_map_name('_'.join([raster, metric]))
 
     grass.run_command('r.grow.distance',
                       input = raster,
@@ -660,6 +706,8 @@ def compute_attractiveness(raster, metric, constant, alpha, kappa, score, **kwar
     if save_temporary_maps:
         tmp_output = save_map(tmp_output)
 
+    draw_map(tmp_output)
+
     return tmp_output
 
     del(tmp_output)
@@ -680,11 +728,20 @@ def normalize_map (raster, output_name):
     dividing by the range.
     """
 
-    # print "Input:", raster
-    # print "Output:", output_name
+    # grass.debug(_("Input to normalize: {name}".format(name=raster)))
+    # grass.debug(_("Ouput: {name}".format(name=output_name)))
 
-    univar_string = grass.read_command('r.univar', flags='g', map=raster)
-    # print "Univariate statistics:", univar_string
+    result = grass.find_file(name=raster, element='cell')
+
+    if not result['file']:
+        grass.fatal("Raster map {name} not found".format(name=raster))
+    else:
+        grass.message("Raster map {name} found".format(name=raster))
+
+    # univar_string = grass.read_command('r.univar', flags='g', map=raster)
+    # univar_string = univar_string.replace('\n', '| ').replace('\r', '| ')
+    # msg = "Univariate statistics: {us}".format(us=univar_string)
+
 
     minimum = grass.raster_info(raster)['min']
     # print "Minimum:", minimum
@@ -694,8 +751,8 @@ def normalize_map (raster, output_name):
 
     if minimum is None or maximum is None:
         msg = "Minimum and maximum values of the <{raster}> map are 'None'. "
-        # msg += "Perhaps the MASK (<{mask}> map), opacifies all non-NULL cells of the <{raster}> map?."
-        msg += "Perhaps the MASK opacifies all non-NULL cells of the <{raster}> map?."
+        msg += "The {raster} map may be empty "
+        msg += "OR the MASK opacifies all non-NULL cells."
         grass.fatal(_(msg.format(raster=raster)))
 
     normalisation = 'float(({raster} - {minimum}) / ({maximum} - {minimum}))'
@@ -705,6 +762,8 @@ def normalize_map (raster, output_name):
     normalisation_equation = equation.format(result=output_name,
         expression=normalisation)
     grass.mapcalc(normalisation_equation, overwrite=True)
+
+    draw_map(output_name)
 
     del(minimum)
     del(maximum)
@@ -724,7 +783,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
     msg = "Normalising sum of: "
     msg += ', '.join(components)
-    g.message(_(msg), flags='d')
+    grass.debug(_(msg))
 
     if len(components) > 1:
         # prepare string for mapcalc expression
@@ -742,7 +801,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
         if info:
             msg = "Equation: "
             msg += component_equation
-            g.message(_(msg), flags='v')
+            grass.verbose(_(msg))
 
         grass.mapcalc(component_equation, overwrite=True)
 
@@ -757,15 +816,19 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
     if threshhold > THRESHHOLD_ZERO:
         msg = "Setting values < {threshhold} in '{raster}' to zero"
-        g.message(msg.format(threshhold=threshhold, raster=tmp_intermediate),
-                flags='v')
+        grass.verbose(msg.format(threshhold=threshhold, raster=tmp_intermediate))
         zerofy_small_values(tmp_intermediate, threshhold, tmp_output)
 
     else:
         tmp_output = tmp_intermediate
 
-    g.message(_("Temporary map name: {name}".format(name=tmp_output)), flags='v')
-    g.message(_("Output map name: {name}".format(name=output_name)), flags='d')
+    grass.verbose(_("Temporary map name: {name}".format(name=tmp_output)))
+    grass.debug(_("Output map name: {name}".format(name=output_name)))
+    # r.info(map=tmp_output, flags='g')
+    univariate = grass.read_command('r.univar', flags='g', map=tmp_output)
+    univariate = univariate.replace('\n', '| ').replace('\r', '| ')
+    msg = "Univariate statistics: {us}".format(us=univariate)
+    grass.verbose(_(univariate))
     normalize_map(tmp_output, output_name)
 
     del(tmp_intermediate)
@@ -782,9 +845,57 @@ def classify_recreation_component(recreation_component, rules, output_name):
       [0,1]
 
     """
-
     r.recode(input=recreation_component, rules='-',
             stdin=rules, output=output_name)
+    draw_map(output_name)
+
+def compute_anthropic_proximity(raster, proximity_classes, **kwargs):
+    """
+    """
+    anthropic_distances = tmp_map_name('raster')
+
+    # compute distance to roads
+    grass.run_command("r.grow.distance",
+            input = raster,
+            distance = anthropic_distances,
+            metric = euclidean,
+            overwrite = True)
+
+    if 'output_name' in kwargs:
+        tmp_output = tmp_map_name(kwargs.get('output_name'))  # temporary maps will be removed
+        grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
+
+    else:
+        tmp_output = tmp_map_name('anthropic_proximity')
+        grass.debug(_("Hardcoded temporary map name {name}".format(name=tmp_output)))
+
+    #
+    # Fix Here! Above & Below!
+    #
+
+    # msg = "Output map name: {proximity}"
+    # msg = msg.format(proximity=anthropic_proximity_map_name)
+    # grass.debug(_(msg))
+
+    # compute proximity to roads
+    msg = "Computing proximity to {mapname}"
+    msg = msg.format(mapname=anthropic_distances)
+    g.message(_(msg))
+    grass.run_command("r.recode",
+            input = anthropic_distances,
+            output = tmp_output,
+            rules = proximity_classes,
+            overwrite = True)
+
+    output = grass.find_file(name=tmp_output, element='cell')
+    if not output['file']:
+        grass.fatal("Proximity map {name} not created!".format(name=raster))
+#     else:
+#         grass.message(_("Output map {name}:".format(name=tmp_output)))
+
+    draw_map(tmp_output)
+
+    return tmp_output
 
 def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     """
@@ -828,65 +939,53 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
             ' \ \n if( {anthropic} >= 4 && {roads} == 3, 4,'
             ' \ \n if( {anthropic} == 5 && {roads} == 2, 4,'
             ' \ \n if( {anthropic} >= 3 && {roads} == 5, 5,'
-            ' \ \n if( {anthropic} => 4 && {roads} == 4, 5)))))))))')
+            ' \ \n if( {anthropic} >= 4 && {roads} == 4, 5)))))))))))))')
 
-    expression.format(anthropic=anthropic, roads=roads)
+    expression = expression.format(anthropic=anthropic_proximity,
+            roads=roads_proximity)
     return expression
 
-def compute_anthropic_proximity(raster, proximity_rules, **kwargs):
-    """
-    """
-
-    # compute distance to roads
-    grass.run_command("r.grow.distance",
-            input = anthropic,
-            distance = anthropic_distances,
-            metric = euclidean,
-            overwrite = True)
-
-    # compute proximity to roads
-    grass.run_command("r.recode",
-            input = anthropic_distances,
-            output = anthropic_proximity,
-            rules = proximity_rules,
-            overwrite = True)
-
-    if 'output_name' in kwargs:
-        tmp_output = tmp_map_name(kwargs.get('output_name'))  # temporary maps will be removed
-
-    else:
-        tmp_output = tmp_map_name('anthropic_proximity')
-
-    return anthropic_proximity
 
 def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwargs):
     """
     Inputs: anthropic areas, roads
     Output: anthropic_proximity
     """
+    anthropic = grass.find_file(name=anthropic_proximity, element='cell')
+    if not anthropic['file']:
+        grass.fatal("Raster map {name} not found".format(name=anthropic_proximity))
+    roads = grass.find_file(name=roads_proximity, element='cell')
+    if not roads['file']:
+        grass.fatal("Raster map {name} not found".format(name=roads_proximity))
 
-    accessibility_expression = anthropic_accessibility_expression( a_input, b_input)
-    accessibility_expression = accessibility_expression.format(anthropic = anthropic,
-            roads = roads)
-
+    accessibility_expression = anthropic_accessibility_expression(anthropic_proximity, roads_proximity)
     if 'output_name' in kwargs:
         tmp_output = tmp_map_name(kwargs.get('output_name'))  # temporary maps will be removed
 
     else:
         tmp_output = tmp_map_name('anthropic_accessibility')
 
-    anthropic_areas_equation = equation.format(result=tmp_output,
-            expression=anthropic_areas_expression)
+    accessibility_equation = equation.format(result=tmp_output,
+            expression=accessibility_expression)
 
     if info:
         msg = "Equation for proximity to anthropic areas: \n"
-        msg += proximity_equation
-        g.message(msg, flags='v')
+        msg += accessibility_equation
+        grass.debug(msg)
         del(msg)
 
-    grass.mapcalc(anthropic_areas_equation, overwrite=True)
-    del(anthropic_areas_expression)
-    del(anthropic_areas_equation)
+    g.message(_("Computing accessibility to anthropic surfaces"))
+    grass.mapcalc(accessibility_equation, overwrite=True)
+    del(accessibility_expression)
+    del(accessibility_equation)
+
+    # Maybe the user can request the output of this temporary map!
+    if save_temporary_maps:
+        tmp_output = save_map(tmp_output)
+
+    draw_map(tmp_output)
+
+    return tmp_output
 
 def recreation_spectrum_expression(potential, opportunity):
     """
@@ -918,7 +1017,8 @@ def recreation_spectrum_expression(potential, opportunity):
             ' \ \n if( {potential} == 3 && {opportunity} == 2, 8,'
             ' \ \n if( {potential} == 3 && {opportunity} == 3, 9)))))))))')
 
-    expression.format(potential=potential, opportunity=opportunity)
+    expression = expression.format(potential=potential,
+            opportunity=opportunity)
     return expression
 
 def compute_recreation_spectrum(potential, opportunity, spectrum):
@@ -930,9 +1030,8 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     Output: Recreation spectrum
     """
 
-    spectrum_expression = recreation_spectrum_expression(potential, opportunity)
-    spectrum_expression = spectrum_expression.format(potential=potential,
-            opportunity=opportunity)
+    spectrum_expression = recreation_spectrum_expression(potential,
+            opportunity)
     spectrum_equation = equation.format(result=spectrum,
             expression=spectrum_expression)
 
@@ -943,6 +1042,8 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
         del(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
+
+    draw_map(spectrum)
 
     del(spectrum_expression)
     del(spectrum_equation)
@@ -1019,7 +1120,7 @@ def main():
     if suitability_scores:
         msg = "Suitability scores from file: {scores}."
         msg = msg.format(scores = suitability_scores)
-        g.message(_(msg), flags='v')
+        grass.verbose(_(msg))
 
     suitability_map_name = tmp_map_name('suitability')
     if landuse and not suitability_scores:
@@ -1049,14 +1150,19 @@ def main():
     '''Anthropic areas'''
 
     anthropic = options['anthropic']
+    anthropic_proximity_map_name='anthropic_proximity'
 
     green_urban = options['green_urban']
     green_infrastructure = options['green_infrastructure']
 
     roads = options['roads']
     roads_proximity = options['roads_proximity']
+    roads_proximity_map_name='roads_proximity'
     roads_secondary = options['roads_secondary']
     roads_local = options['roads_local']
+
+    anthropic_proximity_classes = options['proximity_classes']
+    anthropic_accessibility_map_name='anthropic_accessibility'
 
     mask = options['mask']
 
@@ -1079,20 +1185,25 @@ def main():
 
     spectrum_title = "Recreation spectrum"
     recreation_spectrum = options['spectrum']  # output
-    # recreation_spectrum_component_map_name = tmp_map_name('recreation_spectrum_component_map')
+    # recreation_spectrum_component_map_name =
+    #       tmp_map_name('recreation_spectrum_component_map')
 
     """ First, care about the computational region"""
 
     if mask:
         # global mask
-        msg = "Masking non-NULL cells based on <{mask}>".format(mask=mask)
-        g.message(_(msg), flags='v')
-        r.mask(flags='i', raster=mask, overwrite=True, quiet=True)
+        msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
+        grass.verbose(_(msg))
+        r.mask(raster=mask, overwrite=True, quiet=True)
+
+        draw_map(mask)
 
     if landuse_extent:
         grass.use_temp_region()  # to safely modify the region
         g.region(flags='p', rast=mask) # Set region to 'mask'
-        g.message("|! Computational resolution matched to {raster}".format(raster=landuse))
+        msg = "|! Computational resolution matched to {raster}"
+        msg = msg.format(raster=landuse)
+        g.message(_(msg))
 
     """Land Component
             or Suitability of Land to Support Recreation Activities (SLSRA)"""
@@ -1100,21 +1211,31 @@ def main():
     land_component = []  # is a list, take care to use .extend() where required
 
     if land:
+
+        draw_map(land)
+
         land_component = land.split(',')
 
     if not land and landuse and suitability_scores:
         suitability = suitability_map_name
 
-        msg = "Deriving land suitability map from '{landuse}' based on '{rules}'"
+        msg = "Deriving land suitability from '{landuse}' based on '{rules}'"
         g.message(msg.format(landuse=landuse, rules=suitability_scores))
+
+        draw_map(landuse)
 
         r.recode(input = landuse,
                 rules = suitability_scores,
                 output = suitability)
 
-        land_component.append(suitability)
+        r.colors(map=suitability, rules='-', stdin = SCORE_COLORS, quiet=True)
 
-    # The 'land' and 'suitability' input maps are *now* programmaticaly exclusive
+        land_component.append(suitability)
+        grass.verbose(_("Suitability:"))
+
+        draw_map(suitability)
+
+    # 'land' and 'suitability' input maps are *now* programmaticaly exclusive
     # Below, an old approach merging land component related maps in one list.
     # Which, in turn, implies the option to use both the 'land' and 'landuse'
     # input options.
@@ -1140,7 +1261,7 @@ def main():
             lakes_proximity_kappa = lakes_coefficients[2]
             lakes_proximity_alpha = lakes_coefficients[3]
             lakes_proximity_score = lakes_coefficients[4]
-            msg = "Distance function coefficients:\n"
+            msg = "Distance function coefficients: "
             msg += "Metric='{metric}', "
             msg += "Constant='{constant}', "
             msg += "Kappa='{Kappa}', "
@@ -1242,7 +1363,7 @@ def main():
             suitability_map = tmp_map_name(land_map)
 
             msg = "Subsetting {subset} map".format(subset=suitability_map)
-            g.message(_(msg), flags='d')
+            grass.debug(_(msg))
             del(msg)
 
             subset_land = equation.format(result = suitability_map,
@@ -1250,20 +1371,20 @@ def main():
 
             msg = "Expression for Suitability map: {expression}"
             msg = msg.format(expression = subset_land)
-            g.message(_(msg), flags='d')
+            grass.debug(_(msg))
             del(msg)
             r.mapcalc(subset_land)
 
-            g.message(_("Setting NULL cells to 0"), flags='d')
+            grass.debug(_("Setting NULL cells to 0"))
             r.null(map=suitability_map, null=0)  # Set NULLs to 0
 
             msg = "\nAdding land suitability map '{suitability}' to 'Recreation Potential' component\n"
             msg = msg.format(suitability = suitability_map)
-            g.message(_(msg), flags='v')
+            grass.verbose(_(msg))
             land_component.append(suitability_map)
 
     if len(land_component) > 1:
-        g.message(_("\nNormalize 'Land' component\n"), flags='v')
+        grass.verbose(_("\nNormalize 'Land' component\n"))
         zerofy_and_normalise_component(land_component, THRESHHOLD_ZERO,
                 land_component_map_name)
         recreation_potential_component.extend(land_component)
@@ -1272,15 +1393,15 @@ def main():
     else:
         recreation_potential_component.extend(land_component)
 
-    if water_component:
-        g.message(_("\nNormalize 'Water' component\n"), flags='v')
+    if len(water_component) > 1:
+        grass.verbose(_("\nNormalize 'Water' component\n"))
         zerofy_and_normalise_component(water_component, THRESHHOLD_ZERO,
                 water_component_map_name)
         recreation_potential_component.append(water_component_map_name)
         remove_at_exit.append(water_component_map_name)
 
-    if natural_component:
-        g.message(_("\nNormalize 'Natural' component\n"), flags='v')
+    if len(natural_component) > 1:
+        grass.verbose(_("\nNormalize 'Natural' component\n"))
         zerofy_and_normalise_component(natural_component, THRESHHOLD_ZERO,
                 natural_component_map_name)
         recreation_potential_component.append(natural_component_map_name)
@@ -1290,10 +1411,10 @@ def main():
 
     tmp_recreation_potential = tmp_map_name(recreation_potential_map_name)
     msg = "Computing an intermediate map <{potential}>"
-    g.message(_(msg.format(potential=tmp_recreation_potential)), flags='v')
+    grass.verbose(_(msg.format(potential=tmp_recreation_potential)))
 
-    g.message(_("\nNormalize 'Recreation Potential' component\n"), flags='v')
-    g.message(_("Maps: {maps}".format(maps=recreation_potential_component)), flags='d')
+    grass.verbose(_("\nNormalize 'Recreation Potential' component\n"))
+    grass.debug(_("Maps: {maps}".format(maps=recreation_potential_component)))
 
     zerofy_and_normalise_component(recreation_potential_component,
             THRESHHOLD_ZERO, tmp_recreation_potential)
@@ -1302,15 +1423,16 @@ def main():
 
         msg = "\nReclassifying <{potential}> map"
         msg = msg.format(potential=tmp_recreation_potential)
-        g.message(_(msg), flags='v')
+        grass.verbose(_(msg))
         tmp_recreation_potential_classes = tmp_map_name(recreation_potential)
-        classify_recreation_component(tmp_recreation_potential,
+        classify_recreation_component(
+                tmp_recreation_potential,
                 recreation_potential_classes,
                 tmp_recreation_potential_classes)
 
         msg = "\nWriting <{potential}> map\n"
         msg = msg.format(potential=recreation_potential)
-        g.message(_(msg), flags='v')
+        grass.verbose(_(msg))
         g.rename(raster=(tmp_recreation_potential_classes,recreation_potential),
                 quiet=True)
 
@@ -1325,7 +1447,10 @@ def main():
     # Required for recreation opportunity and successively recreation spectrum
 
     if infrastructure and not any([recreation_opportunity, recreation_spectrum]):
-        g.message(_("Infrastructure is only required to derive the recreation opportunity and, successively, the recreation spectrum"), flags='w')
+        msg = "Infrastructure is only required to derive "
+        msg += "the recreation opportunity and, successively, "
+        msg += "the recreation spectrum!"
+        grass.warning(_(msg))
 
     if any([recreation_opportunity, recreation_spectrum]):
 
@@ -1337,32 +1462,45 @@ def main():
 
         '''Anthropic surfaces (includung Roads)'''
 
-        if anthropic and roads:
-
-            compute_anthropic_proximity(anthropic,
-                    anthropic_proximity_classes,
-                    output_name=anthropic_proximity)
-            infrastructure_components.append(anthropic_proximity)
-
-            compute_anthropic_proximity(roads,
-                    anthropic_proximity_classes,
-                    output_name=roads_proximity)
-            infrastructure_components.append(roads_proximity)
-
-            compute_anthropic_accessibility(anthropic_proximity, roads_proximity,
-                    output_name=anthropic_accessibility)
-
-            infrastructure_components.append(anthropic_accessibility)
-
-        if roads_secondary:
+        if anthropic and roads_secondary:
+            g.message(_("Computing proximity to secondary roads"))
             compute_anthropic_proximity(roads_secondary,
                     output_name=roads_secondary_proximity)
-            infrastructure_components.append(roads_secondary_proximity)
+            # infrastructure_components.append(roads_secondary_proximity)
 
-        if roads_local:
+        if anthropic and roads_local:
+            g.message(_("Computing proximity to local roads"))
             compute_anthropic_proximity(roads_local,
                     output_name=roads_local_proximity)
-            infrastructure_components.append(roads_local_proximity)
+            # infrastructure_components.append(roads_local_proximity)
+
+        if anthropic and roads:
+
+            roads_proximity = compute_anthropic_proximity(
+                    roads,
+                    anthropic_proximity_classes,
+                    output_name=roads_proximity_map_name)
+
+            try:
+                if roads_secondary_proximity:
+                    print "Do something"
+
+                if roads_local_proximity:
+                    print "Do something"
+            except:
+                pass
+
+            anthropic_proximity = compute_anthropic_proximity(
+                    anthropic,
+                    anthropic_proximity_classes,
+                    output_name=anthropic_proximity_map_name)
+
+            anthropic_accessibility = compute_anthropic_accessibility(
+                    anthropic_proximity,
+                    roads_proximity,
+                    output_name=anthropic_accessibility_map_name)
+
+            infrastructure_components.append(anthropic_accessibility)
 
         # merge infrastructure component related maps in one list
         infrastructure_component += infrastructure_components
@@ -1433,7 +1571,7 @@ def main():
         tmp_recreation_opportunity_classes = tmp_map_name(recreation_opportunity)
 
         msg = "Reclassifying <{opportunity}> map"
-        g.message(msg.format(opportunity=recreation_opportunity), flags='v')
+        grass.verbose(msg.format(opportunity=recreation_opportunity))
         del(msg)
 
         classify_recreation_component(recreation_opportunity,
@@ -1443,11 +1581,11 @@ def main():
         if recreation_opportunity:
 
             msg = "Writing requested <{opportunity}> map"
-            g.message(msg.format(opportunity=recreation_opportunity), flags='v')
+            grass.verbose(msg.format(opportunity=recreation_opportunity))
             del(msg)
 
-            g.copy(raster=(tmp_recreation_opportunity_classes,recreation_opportunity),
-                    quiet=True)
+            g.copy(raster=(tmp_recreation_opportunity_classes,
+                recreation_opportunity), quiet=True)
 
             update_meta(recreation_opportunity, opportunity_title)
             r.colors(map=recreation_opportunity, rules='-', stdin =
@@ -1459,7 +1597,7 @@ def main():
 
         msg = "Writing requested <{spectrum}> map"
         msg = msg.format(spectrum=recreation_spectrum)
-        g.message(_(msg), flags='v')
+        grass.verbose(_(msg))
         del(msg)
 
         update_meta(recreation_spectrum, spectrum_title)
@@ -1469,7 +1607,7 @@ def main():
     # restore region
     if landuse_extent:
         grass.del_temp_region()  # restoring previous region settings
-        g.message("Original Region restored")
+        grass.verbose("Original Region restored")
 
     # print citation
     if info:
@@ -1480,6 +1618,7 @@ def main():
         g.message("Removing temporary intermediate maps")
         g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
                 quiet=True)
+        g.message("*** Please remove the grass_render_file ***")
 
 if __name__ == "__main__":
     options, flags = grass.parser()

@@ -361,15 +361,6 @@
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: roads_proximity
-#% key_desc: name
-#% label: Primary road network
-#% description: Roads proximity, scored based on a distance function
-#% required : no
-#% guisection: Infrastructure
-#%end
-
-#%option G_OPT_R_INPUT
 #% key: roads_secondary
 #% key_desc: name
 #% label: Secondary road network
@@ -622,15 +613,27 @@ def run(cmd, **kwargs):
     grass.run_command(cmd, quiet=True, **kwargs)
 
 def tmp_map_name(name):
-    """
-    Return a temporary map name, for example:
+    """Return a temporary map name, for example:
 
+    Parameters
+    ----------
+    name :
+        Name of input raster map
+
+    Returns
+    -------
+    temporary_filename :
+        A temporary file name for the input raster map
+
+    Examples
+    --------
     >>> tmp_map_name(potential)
     tmp.SomeTemporaryString.potential
     """
-    temporary_file = grass.tempfile()
-    tmp = "tmp." + grass.basename(temporary_file)  # use its basename
-    return tmp + '.' + str(name)
+    temporary_absolute_filename = grass.tempfile()
+    temporary_filename = "tmp." + grass.basename(temporary_absolute_filename)  # use its basename
+    temporary_filename = temporary_filename + '.' + str(name)
+    return temporary_filename
 
 def cleanup():
     """Clean up temporary maps"""
@@ -661,24 +664,79 @@ def draw_map(mapname):
         subprocess.Popen(command.split())
 
 def save_map(mapname):
-    """Helper function to save some in-between maps, assisting in debugging"""
+    """Helper function to save some in-between maps, assisting in debugging
+
+    Parameters
+    ----------
+    mapname :
+        ...
+
+    Returns
+    -------
+    newname :
+        New name for the input raster map
+
+    Examples
+    --------
+    """
     # run('r.info', map=mapname, flags='r')
     # run('g.copy', raster=(mapname, 'DebuggingMap'))
-    newname = 'output_' + mapname
+
+    #
+    # Needs re-design!
+    #
+
+    newname = mapname
     if save_temporary_maps:
+        newname = 'output_' + mapname
         run('g.rename', raster=(mapname, newname))
     return newname
 
 def append_map_to_component(raster, component_name, component_list):
-    """Appends raster map to given list of components"""
+    """Appends raster map to given list of components
+    
+    Parameters
+    ----------
+    raster :
+        ...
+    
+    component_name :
+        ...
+        
+    component_list :
+        List of raster maps to add the input 'raster' map
+        
+    Returns
+    -------
+    
+    Examples
+    --------
+    ...
+    """
     component_list.append(raster)
     msg = "Map {name} added for inclusion in the {component}"
     msg = msg.format(name=raster, component=component_name)
     grass.verbose(_(msg))
 
-
 def get_univariate_statistics(raster):
-    """Return and print basic univariate statistics of the input raster map"""
+    """
+    Return and print basic univariate statistics of the input raster map
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    Returns
+    -------
+    univariate :
+        Univariate statistics min, mean, max and variance of the input raster
+        map
+
+    Example
+    -------
+    ...
+    """
     univariate = grass.parse_command('r.univar', flags='g', map=raster)
     if info:
         minimum = univariate['min']
@@ -694,6 +752,28 @@ def recode_map(raster, rules, colors, output):
     """Scores a raster map based on a set of category recoding rules.
 
     This is a wrapper around r.recode
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    rules :
+        Rules for r.recode
+
+    colors :
+        Color rules for r.colors
+
+    output :
+        Name of output raster map
+
+    Returns
+    -------
+        Does not return any value
+
+    Examples
+    --------
+    ...
     """
     msg = "Setting NULL cells in {name} map to 0"
     msg = msg.format(name=raster)
@@ -768,14 +848,12 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     grass.run_command('r.grow.distance',
                       input=raster,
                       distance=tmp_distance,
-                      value="cat",
                       metric=metric,
                       quiet=True,
                       overwrite=True)
 
     draw_map(tmp_distance)
 
-    # print "Inputs:", raster, metric, constant, kappa, alpha, score
 
     numerator = "{constant} + {kappa}"
     numerator = numerator.format(constant = constant, kappa = kappa)
@@ -795,9 +873,9 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         distance_function += " * {score}"  # need for float()?
         distance_function = distance_function.format(score = score)
 
-    if info:
-        msg = "Distance function: {f}".format(f=distance_function)
-        grass.message(_(msg))
+    # if info:
+    #     msg = "Distance function: {f}".format(f=distance_function)
+    #     grass.message(_(msg))
 
     # temporary maps will be removed
     if 'output_name' in kwargs:
@@ -805,19 +883,29 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     else:
         tmp_distance_map = tmp_map_name('attractiveness_map')
 
+    # print "tmp_distance_map", tmp_distance_map
+
     distance_function = equation.format(result=tmp_distance_map,
             expression=distance_function)
+    if info:
+        msg = "Distance function: {f}".format(f=distance_function)
+        grass.message(_(msg))
+
     grass.mapcalc(distance_function, overwrite=True)
+
 
     r.null(map=tmp_distance_map, null=0)  # Set NULLs to 0
 
     if 'filter_method' in kwargs:
         neighborhood_method = kwargs.get('filter_method')
+        # grass.verbose(_("Filter method {m}".format(m=neighborhood_method)))
 
         if 'filter_size' in kwargs:
             neighborhood_size = kwargs.get('filter_size')
         else:
             neighborhood_size = 11
+
+        # grass.verbose(_("Filter size {s}".format(s=neighborhood_size)))
 
         neighborhood_output = tmp_distance_map + '_' + neighborhood_method
         msg = "Neighborhood operator {method} (size: {size}) for {name}"
@@ -848,6 +936,9 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         del(neighborhood_function)
         del(filtered_output)
 
+    #
+    # Supress print of message when verbose=False
+    #
     r.compress(tmp_distance_map, flags='g')
 
     del(numerator)
@@ -862,6 +953,25 @@ def zerofy_small_values(raster, threshhold, output_name):
     """
     Set the input raster map cell values to 0 if they are smaller than the
     given threshhold
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    threshhold :
+        Reference for which to flatten smaller raster pixel values to zero
+
+    output_name :
+        Name of output raster map
+
+    Returns
+    -------
+        Does not return any value
+
+    Examples
+    --------
+    ...
     """
     rounding='if({raster} < {threshhold}, 0, {raster})'
     rounding = rounding.format(raster=raster, threshhold=threshhold)
@@ -872,6 +982,21 @@ def normalize_map (raster, output_name):
     """
     Normalize all raster map cells by subtracting the raster map's minimum and
     dividing by the range.
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    output_name :
+        Name of output raster map
+
+    Returns
+    -------
+
+    Examples
+    --------
+    ...
     """
 
     # grass.debug(_("Input to normalize: {name}".format(name=raster)))
@@ -933,6 +1058,26 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
     * Improve `threshold` handling. What if threshholding is not desired? How
     to skip performing it?
+
+    Parameters
+    ----------
+    components :
+        Input list of raster maps (components)
+
+    threshhold :
+        Reference value for which to flatten all smaller raster pixel values to
+        zero
+
+    output_name :
+        Name of output raster map
+
+    Returns
+    -------
+    ...
+
+    Examples
+    --------
+    ...
     """
     msg = "Normalising sum of: "
     msg += ','.join(components)
@@ -990,6 +1135,25 @@ def classify_recreation_component(component, rules, output_name):
     - Potentially, test range of input recreation component, i.e. ranging in
       [0,1]
 
+    Parameters
+    ----------
+    component :
+        Name of input raster map
+
+    rules :
+        Rules for r.recode
+
+    output_name :
+        Name for output raster map
+
+    Returns
+    -------
+        Does not return any value
+
+    Examples
+    --------
+    ...
+
     """
     r.recode(input=component,
             rules='-',
@@ -1003,6 +1167,26 @@ def compute_anthropic_proximity(raster, distance_classes, **kwargs):
 
     1. Distance to features
     2. Classify distances
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    distance_classes :
+        Distance classes for ...
+
+    kwargs :
+        Optional arguments: output_file
+
+    Returns
+    -------
+    tmp_output :
+        Name of the temporary output map for internal, in-script, re-use
+
+    Examples
+    --------
+    ...
     """
     anthropic_distances = tmp_map_name(raster)
 
@@ -1010,6 +1194,7 @@ def compute_anthropic_proximity(raster, distance_classes, **kwargs):
             input = raster,
             distance = anthropic_distances,
             metric = euclidean,
+            quiet = True,
             overwrite = True)
 
     if 'output_name' in kwargs:
@@ -1031,7 +1216,7 @@ def compute_anthropic_proximity(raster, distance_classes, **kwargs):
     # compute proximity to roads
     msg = "Computing proximity to '{mapname}'"
     msg = msg.format(mapname=raster)
-    g.message(_(msg))
+    grass.verbose(_(msg))
     grass.run_command("r.recode",
             input = anthropic_distances,
             output = tmp_output,
@@ -1051,13 +1236,8 @@ def compute_anthropic_proximity(raster, distance_classes, **kwargs):
 def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     """
     Build an r.mapcalc compatible expression to compute accessibility to
-    anthropic surfaces.
-
-    Input:
-
-        - 'anthropic': Proximity to anthropic surfaces
-        - 'roads': Proximity to roads
-        - Accessibility classification rules for anthropic surfaces:
+    anthropic surfaces based on the following accessibility classification
+    rules for anthropic surfaces:
 
     |-------------------+-------+------------+-------------+--------------+---------|
     | Anthropic / Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
@@ -1073,10 +1253,24 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     | > 10000           | 3     | 4          | 4           | 5            | 5       |
     |-------------------+-------+------------+-------------+--------------+---------|
 
-    Output:
 
-        - Valid r.mapcalc expression
+    Parameters
+    ----------
+    anthropic :
+        Proximity to anthropic surfaces
 
+    roads :
+        Proximity to roads
+
+    Returns
+    -------
+    expression
+        Valid r.mapcalc expression
+
+
+    Examples
+    --------
+    ...
     """
     expression = ('if( {anthropic} <= 2 && {roads} <= 2, 1,'
             ' \ \n if( {anthropic} == 1 && {roads} == 3, 2,'
@@ -1098,9 +1292,27 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
 
 
 def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwargs):
-    """
-    Inputs: anthropic areas, roads
-    Output: anthropic_proximity
+    """Compute anthropic proximity
+
+    Parameters
+    ----------
+    anthropic_proximity :
+        Anthropic surfaces...
+
+    roads_proximity :
+        Road infrastructure
+
+    kwargs :
+        Optional input parameters
+
+    Returns
+    -------
+    output :
+        ...
+
+    Examples
+    --------
+    ...
     """
     anthropic = grass.find_file(name=anthropic_proximity, element='cell')
     if not anthropic['file']:
@@ -1125,16 +1337,16 @@ def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwar
         grass.debug(msg)
         del(msg)
 
-    g.message(_("Computing accessibility to anthropic surfaces"))
+    grass.verbose(_("Computing accessibility to anthropic surfaces"))
     grass.mapcalc(accessibility_equation, overwrite=True)
+
     del(accessibility_expression)
     del(accessibility_equation)
 
-    # if save_temporary_maps:
-    tmp_output = save_map(tmp_output)
     draw_map(tmp_output)
+    output = save_map(tmp_output)
 
-    return tmp_output
+    return output
 
 def recreation_spectrum_expression(potential, opportunity):
     """
@@ -1155,6 +1367,23 @@ def recreation_spectrum_expression(potential, opportunity):
 
     - Why not use `r.cross`?
     - Use DUMMY strings for potential and opportunity raster map names?
+
+    Parameters
+    ----------
+    potential :
+        Map depicting potential for recreation
+
+    opportunity :
+        Map depicting opportunity for recreation
+
+    Returns
+    -------
+    expression :
+        A valid r.mapcalc expression
+
+    Examples
+    --------
+    ...
     """
     expression = ('if( {potential} == 1 && {opportunity} == 1, 1,'
             ' \ \n if( {potential} == 1 && {opportunity} == 2, 2,'
@@ -1172,15 +1401,31 @@ def recreation_spectrum_expression(potential, opportunity):
 
 def compute_recreation_spectrum(potential, opportunity, spectrum):
     """
-    Computes recreation opportunity spectrum based on recreation potential and
-    recreation opportunity maps.
+    Computes spectrum for recreation based on maps of potential and opportunity
+    for recreation
 
-    Input: Recreation potential, Recreation opportunity
-    Output: Recreation spectrum
+    Parameters
+    ----------
+    potential :
+        Name for input potential for recreation map
+
+    opportunity :
+        Name for input opportunity for recreation map
+
+    spectrum :
+        Name for Spectrum of Recreation map
+
+    Returns
+    -------
+        Does not return any value
+    
+    Examples
+    --------
+    ...
     """
-
     spectrum_expression = recreation_spectrum_expression(potential,
             opportunity)
+
     spectrum_equation = equation.format(result=spectrum,
             expression=spectrum_expression)
 
@@ -1200,6 +1445,22 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 def update_meta(raster, title):
     """
     Update metadata of given raster map
+
+    Parameters
+    ----------
+    raster :
+        ...
+
+    title :
+        ...
+
+    Returns
+    -------
+        Does not return any value
+
+    Examples
+    --------
+    ...
     """
     history = '\n' + citation_recreation_potential
     description_string = 'Recreation {raster} map'
@@ -1311,7 +1572,6 @@ def main():
     green_infrastructure = options['green_infrastructure']
 
     roads = options['roads']
-    roads_proximity = options['roads_proximity']
     roads_proximity_map_name = 'roads_proximity'
     roads_secondary = options['roads_secondary']
     roads_local = options['roads_local']
@@ -1567,7 +1827,7 @@ def main():
     if protected:
 
         msg = "Scoring protected areas '{protected}' based on '{rules}'"
-        g.message(_(msg.format(protected=protected, rules=protected_scores)))
+        grass.verbose(_(msg.format(protected=protected, rules=protected_scores)))
         draw_map(protected)
 
         protected_areas = protected_areas_map_name
@@ -1666,7 +1926,7 @@ def main():
 
     if recreation_potential:
 
-        msg = "\nReclassifying <{potential}> map"
+        msg = "\nReclassifying '{potential}' map"
         msg = msg.format(potential=tmp_recreation_potential)
         grass.verbose(_(msg))
         tmp_recreation_potential_classes = tmp_map_name(recreation_potential)

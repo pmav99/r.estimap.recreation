@@ -298,7 +298,7 @@
 #% type: string
 #% key_desc: rules
 #% label: Distance classification rules
-#% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to classes of the input land use map.
+#% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to categories of the input land use map.
 #% required : no
 #% guisection: Anthropic
 #% answer: 0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5
@@ -321,7 +321,7 @@
 #% type: string
 #% key_desc: rules
 #% label: Distance classification rules
-#% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to classes of the input land use map.
+#% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to categories of the input land use map.
 #% required : no
 #% guisection: Anthropic
 #% answer: 0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5
@@ -432,7 +432,7 @@
 #%end
 
 #%option G_OPT_R_OUTPUT
-#% key: cumulative_opportunity
+#% key: demand_distribution
 #% type: string
 #% key_desc: name
 #% label: Population per Local Administrative Unit and areas of high recreational value
@@ -442,7 +442,7 @@
 #%end
 
 #%rules
-#%  requires: cumulative_opportunity, population, base
+#%  requires: demand_distribution, population, base
 #%end
 
 '''Various'''
@@ -463,7 +463,7 @@
 #% key: units
 #% key_desc: Units
 #% label: Units to report
-#% description: Units to report the cumulative opportunity
+#% description: Units to report the demand distribution
 #% multiple: yes
 #% options: mi,me,k,a,h,c,p
 #% required: no
@@ -522,15 +522,13 @@ bathing_water_proximity_constant=1
 bathing_water_proximity_kappa=5
 bathing_water_proximity_alpha=0.1101
 
-suitability_classification_classes=''
-riparian_recoding_rules='''0:0:0
-100:100:1'''
+suitability_classification_categories=''
 recreation_potential_categories='''0.0:0.2:1
 0.2:0.4:2
 0.4:*:3'''
 #anthropic_distance_categories=
 #'0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5'
-recreation_opportunity_classes=recreation_potential_categories
+recreation_opportunity_categories=recreation_potential_categories
 
 SCORE_COLORS = """ # http://colorbrewer2.org/?type=diverging&scheme=RdYlGn&n=11
 0.0% 165:0:38
@@ -928,31 +926,24 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         distance_function += " * {score}"  # need for float()?
         distance_function = distance_function.format(score = score)
 
-    # if info:
-    #     msg = "Distance function: {f}".format(f=distance_function)
-    #     grass.message(_(msg))
-
     # temporary maps will be removed
     if 'output_name' in kwargs:
-        tmp_distance_map = tmp_map_name(kwargs.get('output_name'))  
+        tmp_distance_map = tmp_map_name(kwargs.get('output_name'))
     else:
-        tmp_distance_map = tmp_map_name('attractiveness_map')
-
-    # print "tmp_distance_map", tmp_distance_map
+        basename = '_'.join([raster, 'attractiveness'])
+        tmp_distance_map = tmp_map_name(basename)
 
     distance_function = equation.format(result=tmp_distance_map,
             expression=distance_function)
-    if info:
-        msg = "Distance function: {f}".format(f=distance_function)
-        grass.message(_(msg))
+
+    msg = "Distance function: {f}".format(f=distance_function)
+    grass.verbose(_(msg))
+    del(msg)
 
     grass.mapcalc(distance_function, overwrite=True)
 
     r.null(map=tmp_distance_map, null=0)  # Set NULLs to 0
 
-    #
-    # Supress print of message when verbose=False
-    #
     compress_status = grass.read_command('r.compress', flags='g', map=tmp_distance_map)
     grass.verbose(_("Compress status: {s}".format(s=compress_status)))
 
@@ -1272,7 +1263,7 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
         Name of input raster map
 
     distance_categories :
-        Distance classes for ...
+        Category rules to recode the input distance map
 
     kwargs :
         Optional arguments: output_file
@@ -1406,6 +1397,7 @@ def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwar
     anthropic = grass.find_file(name=anthropic_proximity, element='cell')
     if not anthropic['file']:
         grass.fatal("Raster map {name} not found".format(name=anthropic_proximity))
+
     roads = grass.find_file(name=roads_proximity, element='cell')
     if not roads['file']:
         grass.fatal("Raster map {name} not found".format(name=roads_proximity))
@@ -1413,9 +1405,9 @@ def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwar
     accessibility_expression = anthropic_accessibility_expression(anthropic_proximity, roads_proximity)
     if 'output_name' in kwargs:
         tmp_output = tmp_map_name(kwargs.get('output_name'))  # temporary maps will be removed
-
     else:
-        tmp_output = tmp_map_name('anthropic_accessibility')
+        basename = 'anthropic_accessibility'
+        tmp_output = tmp_map_name(basename)
 
     accessibility_equation = equation.format(result=tmp_output,
             expression=accessibility_expression)
@@ -1648,6 +1640,8 @@ def main():
     coastline = options['coastline']
     coast_proximity_map_name = 'coast_proximity'
     coast_geomorphology = options['coast_geomorphology']
+    neighborhood_size = 11  # this and below, required for neighborhood_function
+    neighborhood_method = 'mode'
     # coast_geomorphology_coefficients = options['geomorphology_coefficients']
     coast_geomorphology_map_name = 'coast_geomorphology'
     bathing_water = options['bathing_water']
@@ -1676,7 +1670,7 @@ def main():
 
     base = options['base']
     population = options['population']
-    cumulative_opportunity = options['cumulative_opportunity']
+    demand_distribution = options['demand_distribution']
 
     '''Outputs'''
 
@@ -1716,7 +1710,7 @@ def main():
     """Land Component
             or Suitability of Land to Support Recreation Activities (SLSRA)"""
 
-    land_component = []  # is a list, take care to use .extend() where required
+    land_component = []  # is a list, take care to use .extend() wherever required
 
     if land:
 
@@ -1742,13 +1736,12 @@ def main():
     water_components = []
 
     if water:
-        water_component = water.split(',')
-        msg = "Water component holds currently: {component}"
-        msg = msg.format(component=water_component)
-        grass.verbose(_(msg))
 
-        # Avoid going through the rest?
-        # Should water_component  AND  water_components be exclusive!
+        water_component = water.split(',')
+        msg = "Water component includes currently: {component}"
+        msg = msg.format(component=water_component)
+        grass.debug(_(msg))
+        # grass.verbose(_(msg))
 
     if lakes:
 
@@ -1762,20 +1755,11 @@ def main():
                 kappa = kappa,
                 alpha = alpha,
                 score = score,
-                output_name = lakes_proximity_map_name,
                 mask = lakes)
         del(constant)
         del(kappa)
         del(alpha)
         del(score)
-
-        # ----------------------------------------------------------
-        # what is the purpose of the 'output_name' if the
-        # `compute_attractiveness()` function creates internally a
-        # temporary map name, which will be removed at the end of the
-        # script?
-        # ----------------------------------------------------------
-
         append_map_to_component(lakes_proximity, 'water', water_components)
 
     if coastline:
@@ -1785,16 +1769,7 @@ def main():
                 constant = water_proximity_constant,
                 alpha = water_proximity_alpha,
                 kappa = water_proximity_kappa,
-                score = water_proximity_score,
-                output_name = coast_proximity_map_name)
-
-        # ----------------------------------------------------------
-        # what is the purpose of the 'output_name' if the
-        # `compute_attractiveness()` function creates internally a
-        # temporary map name, which will be removed at the end of the
-        # script?
-        # ----------------------------------------------------------
-
+                score = water_proximity_score)
         append_map_to_component(coast_proximity, 'water', water_components)
 
     if coast_geomorphology:
@@ -1807,22 +1782,13 @@ def main():
                 grass.fatal(_(msg))
 
         except NameError:
-            # print coast_proximity
             grass.fatal(_("No coast proximity"))
 
         coast_attractiveness = neighborhood_function(
                 raster=coast_geomorphology,
-                method = 'mode',
-                size = 11,
+                method = neighborhood_method,
+                size = neighborhood_size,
                 distance_map=coast_proximity)
-
-        # ----------------------------------------------------------
-        # what is the purpose of the 'output_name' if the
-        # `compute_attractiveness()` function creates internally a
-        # temporary map name, which will be removed at the end of the
-        # script?
-        # ----------------------------------------------------------
-
         append_map_to_component(coast_attractiveness, 'water', water_components)
 
     if bathing_water:
@@ -1835,19 +1801,10 @@ def main():
                 metric = euclidean,
                 constant = constant,
                 kappa = kappa,
-                alpha = alpha,
-                output_name = bathing_water_proximity_map_name)
+                alpha = alpha)
         del(constant)
         del(kappa)
         del(alpha)
-
-        # ----------------------------------------------------------
-        # what is the purpose of the 'output_name' if the
-        # `compute_attractiveness()` function creates internally a
-        # temporary map name, which will be removed at the end of the
-        # script?
-        # ----------------------------------------------------------
-
         append_map_to_component(bathing_water_proximity, 'water',
                 water_components)
 
@@ -1964,16 +1921,16 @@ def main():
         msg = "\nReclassifying '{potential}' map"
         msg = msg.format(potential=tmp_recreation_potential)
         grass.verbose(_(msg))
-        tmp_recreation_potential_classes = tmp_map_name(recreation_potential)
+        tmp_recreation_potential_categories = tmp_map_name(recreation_potential)
         classify_recreation_component(
                 component = tmp_recreation_potential,
                 rules = recreation_potential_categories,
-                output_name = tmp_recreation_potential_classes)
+                output_name = tmp_recreation_potential_categories)
 
         msg = "\nWriting '{potential}' map\n"
         msg = msg.format(potential=recreation_potential)
         grass.verbose(_(msg))
-        g.rename(raster=(tmp_recreation_potential_classes,recreation_potential),
+        g.rename(raster=(tmp_recreation_potential_categories,recreation_potential),
                 quiet=True)
 
         update_meta(recreation_potential, potential_title)
@@ -1981,7 +1938,7 @@ def main():
                 quiet=True)
 
         del(msg)
-        del(tmp_recreation_potential_classes)
+        del(tmp_recreation_potential_categories)
 
     # Infrastructure to access recreational facilities, amenities, services
     # Required for recreation opportunity and successively recreation spectrum
@@ -2010,7 +1967,7 @@ def main():
             roads_proximity = compute_anthropic_proximity(
                     raster = roads,
                     distance_categories = roads_distance_categories,
-                    output_name=roads_proximity_map_name)
+                    output_name = roads_proximity_map_name)
 
             msg = "Anthropic distance categories: {c}"
             msg = msg.format(c=anthropic_distance_categories)
@@ -2018,12 +1975,12 @@ def main():
             anthropic_proximity = compute_anthropic_proximity(
                     raster = anthropic,
                     distance_categories = anthropic_distance_categories,
-                    output_name=anthropic_proximity_map_name)
+                    output_name = anthropic_proximity_map_name)
 
             anthropic_accessibility = compute_anthropic_accessibility(
                     anthropic_proximity,
                     roads_proximity,
-                    output_name=anthropic_accessibility_map_name)
+                    output_name = anthropic_accessibility_map_name)
 
             infrastructure_components.append(anthropic_accessibility)
 
@@ -2075,13 +2032,13 @@ def main():
         # ----------------------------------------------------------------------
 
         # recode recreation_potential
-        tmp_recreation_potential_classes = tmp_map_name(tmp_recreation_potential)
+        tmp_recreation_potential_categories = tmp_map_name(tmp_recreation_potential)
         classify_recreation_component(component = tmp_recreation_potential,
                 rules = recreation_potential_categories,
-                output_name = tmp_recreation_potential_classes)
+                output_name = tmp_recreation_potential_categories)
 
         # recode opportunity_component
-        tmp_recreation_opportunity_classes = tmp_map_name(recreation_opportunity)
+        tmp_recreation_opportunity_categories = tmp_map_name(recreation_opportunity)
 
         msg = "Reclassifying '{opportunity}' map"
         grass.debug(msg.format(opportunity=recreation_opportunity))
@@ -2089,8 +2046,8 @@ def main():
 
         classify_recreation_component(
                 component = recreation_opportunity,
-                rules = recreation_opportunity_classes,
-                output_name = tmp_recreation_opportunity_classes)
+                rules = recreation_opportunity_categories,
+                output_name = tmp_recreation_opportunity_categories)
 
         if recreation_opportunity:
 
@@ -2098,7 +2055,7 @@ def main():
             grass.verbose(msg.format(opportunity=recreation_opportunity))
             del(msg)
 
-            g.copy(raster=(tmp_recreation_opportunity_classes,
+            g.copy(raster=(tmp_recreation_opportunity_categories,
                 recreation_opportunity), quiet=True)
 
             update_meta(recreation_opportunity, opportunity_title)
@@ -2107,8 +2064,8 @@ def main():
 
         # Recreation Spectrum: Potential + Opportunity [Output]
         compute_recreation_spectrum(
-                potential = tmp_recreation_potential_classes,
-                opportunity = tmp_recreation_opportunity_classes,
+                potential = tmp_recreation_potential_categories,
+                opportunity = tmp_recreation_opportunity_categories,
                 spectrum = recreation_spectrum)
 
         msg = "Writing '{spectrum}' map"
@@ -2126,7 +2083,7 @@ def main():
 
     '''Highest Recreation Spectrum == 9'''
 
-    if cumulative_opportunity:
+    if demand_distribution:
 
         expression = "if({spectrum} == 9, {spectrum}, null())"
         highest_spectrum_expression = expression.format(spectrum=recreation_spectrum)
@@ -2145,9 +2102,9 @@ def main():
                 overwrite=True)
         draw_map(distance_to_highest_spectrum)
 
-        '''Distance classes'''
+        '''Distance categories'''
 
-        distance_categories_to_highest_spectrum = distance_to_highest_spectrum + '_classes'
+        distance_categories_to_highest_spectrum = distance_to_highest_spectrum + '_categories'
         recode_map(raster=distance_to_highest_spectrum,
                 rules=spectrum_distance_categories,
                 colors=SCORE_COLORS,
@@ -2159,7 +2116,7 @@ def main():
                 separator=':')
         # r.category(distance_categories_to_highest_spectrum)
 
-        '''Combine LAU 2 and Distance Classes'''
+        '''Combine Base map and Distance Categories'''
 
         tmp_crossmap = tmp_map_name(crossmap)
         r.cross(input=(distance_categories_to_highest_spectrum,base),
@@ -2175,17 +2132,18 @@ def main():
         crossmap_equation = equation.format(result=crossmap,
                 expression=crossmap_expression)
         r.mapcalc(crossmap_equation, overwrite=True)
+        # draw_map(crossmap)
 
         r.stats_zonal(base=crossmap,
                 flags='r',
                 cover=population,
                 method='sum',
-                output=cumulative_opportunity,
+                output=demand_distribution,
                 overwrite=True)
-        draw_map(cumulative_opportunity)
+        draw_map(demand_distribution)
 
         r.category(map=tmp_crossmap)
-        r.report(map=cumulative_opportunity,
+        r.report(map=demand_distribution,
                 flags='h',
                 units=units)
 

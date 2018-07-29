@@ -19,7 +19,8 @@ from grass.gunittest.case import TestCase
 from grass.gunittest.gmodules import SimpleModule
 import grass.script as g
 
-from r.estimap import recode_map
+import restimap as restimap
+import tempfile
 
 """Globals"""
 
@@ -37,8 +38,14 @@ type: int
 multiplier: 1
 
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45"""
+# print "CORINE land cover classes:", CORINE_LAND_COVER_CLASSES
+corine_input='corine_input'
+
 CORINE_LAND_COVER_CLASSES_MINIMUM=1
+# print "Minimum category integer for CORINE land cover class :", CORINE_LAND_COVER_CLASSES_MINIMUM
+
 CORINE_LAND_COVER_CLASSES_MAXIMUM=48
+# print "Maximum category integer for CORINE land cover class:", CORINE_LAND_COVER_CLASSES_MAXIMUM
 
 CORINE_LAND_COVER_CLASSES_SUITABILITY_SCORES="""
 north:                    1
@@ -52,6 +59,10 @@ type: dcell
 multiplier: 1
 
 0 0.1 0 0 0 0 0 0 0 1 0.1 0.3 0.3 0.4 0.5 0.5 0.5 0.6 0.3 0.3 0.6 0.6 1 0.8 1 0.8 0.8 0.8 0.8 1 0.8 0.7 0 0.8 1 0.8 1 0.8 1 1 1 1 0.8 1 0.3"""
+# print "Suitability scores map:", CORINE_LAND_COVER_CLASSES_SUITABILITY_SCORES
+
+suitability_map='suitability_map'
+corine_recoded='corine_recoded'
 
 """Test Case Class"""
 
@@ -63,34 +74,76 @@ class TestCORINE(TestCase):
     TestCase.runModule(gisenv, expecting_stdout=True)
     print "Mapset: ", gisenv.outputs.stdout.strip()
 
+    # TODO: replace by unified handing of maps
+    to_remove = []
+
+    # glist = SimpleModule('g.list',
+    #                 type='raster',
+    #                 mapset='.',
+    #                 flags='p')
+
+    # TestCase.runModule(glist, expecting_stdout=True)
+    # print glist.outputs.stdout.strip()
+
+    filename = tempfile.TemporaryFile(mode='w+b',
+                                      suffix='',
+                                      prefix='tmp',
+                                      dir=None)
+    print "Filename:", filename
+
+    corine_input = 'corine_land_cover_classes.ascii'
+    suitability_map = 'suitability_scores_for_corine.ascii'
+    suitability_rules = 'suitability_of_corine_land_cover_classes.scores'
+
     @classmethod
     def setUpClass(cls):
         """
         """
+
+        try:
+            print "Trying to open file and write content"
+            ascii_file = open(cls.filename, "w")
+            ascii_file.write("Purchase Amount")
+        except IOError as e:
+            print "IOError:", e
+            return
+        finally:
+            print "Success -- Closing file"
+            ascii_file.close()
+
         # use a temporary region
+        print "Use a temporary region"
         cls.use_temp_region()
 
         # # create input raster maps
-        cls.runModule('r.in.ascii', input='-', stdin=CORINE_LAND_COVER_CLASSES,
-                output='corine_input')
+        print "Import CORINE land cover class nomenclature"
+        print "Input map name:", cls.corine_input
+        cls.runModule('r.in.ascii',
+                      input=cls.corine_input,
+                      output=corine_input,
+                      overwrite=True,
+                      verbose=True)
 
-        cls.runModule('r.in.ascii', input='-',
-                stdin=CORINE_LAND_COVER_CLASSES_SUITABILITY_SCORES,
-                output='suitability_map')
+        print "Import suitability scores map"
+        cls.runModule('r.in.ascii',
+                      input=cls.suitability_map,
+                      output=suitability_map,
+                      overwrite=True,
+                      verbose=True)
 
         # append them in list "to_remove"
-        cls.to_remove.append('corine_input')
-        cls.to_remove.append('suitability_map')
+        print "Add imported maps in list to remove"
+        cls.to_remove.append(corine_input)
+        cls.to_remove.append(suitability_map)
 
         # set region to map(s)
-        cls.runModule('g.region', raster=corine_input)
+        cls.runModule('g.region', raster=corine_input, flags='p')
 
-
-        # Needs FIXME
-        cls.runModule('recode_map',
-                raster=corine_input,
-                rules=suitability_rules,
-                colors=color_rules,
+    def test_recode_map(self):
+        """
+        """
+        restimap.recode_map(raster=corine_input,
+                rules=cls.suitability_rules,
                 output=corine_recoded)
 
     @classmethod
@@ -146,3 +199,7 @@ class TestCORINE(TestCase):
             print("{: >20} {: >25} {: >20}".format(*row))
 
         print
+
+if __name__ == '__main__':
+    from grass.gunittest.main import test
+    test()

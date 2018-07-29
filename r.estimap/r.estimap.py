@@ -144,6 +144,16 @@
 #%  excludes: land, suitability_scores
 #%end
 
+#%option G_OPT_R_INPUT
+#% key: landcover
+#% type: string
+#% key_desc: name
+#% label: Land cover map from which to derive cover percentages within zones of high recreational value
+#% description: Input to derive percentage of land classes within zones of high recreational value.
+#% required : no
+#% guisection: Land
+#%end
+
 '''Water'''
 
 #%option G_OPT_R_INPUT
@@ -273,7 +283,7 @@
 #% description: Scores for recreational value of designated areas. Expected are rules for `r.recode` that correspond to classes of the input land use map. If the 'protected' map is given and 'protected_scores' are not provided, the module will use internal rules for the IUCN categories.
 #% required : no
 #% guisection: Anthropic
-#% answer: 11:11:0\n12:12:0.6\n2:2:0.8\n3:3:0.6\n4:4:0.6\n5:5:1\n6:6:0.8\n7:7:0\n8:8:0\n9:9:0
+#% answer: 11:11:0,12:12:0.6,2:2:0.8,3:3:0.6,4:4:0.6,5:5:1,6:6:0.8,7:7:0,8:8:0,9:9:0
 #%end
 
 ##%rules
@@ -301,7 +311,7 @@
 #% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to categories of the input land use map.
 #% required : no
 #% guisection: Anthropic
-#% answer: 0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5
+#% answer: 0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5
 #%end
 
 #%rules
@@ -328,7 +338,7 @@
 #% description: Classes for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to categories of the input land use map.
 #% required : no
 #% guisection: Anthropic
-#% answer: 0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5
+#% answer: 0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5
 #%end
 
 #%rules
@@ -411,6 +421,7 @@
 #%rules
 #%  required: potential, spectrum
 #%  requires: spectrum, infrastructure, roads
+#%  requires: landcover, spectrum
 #%end
 
 #%option G_OPT_R_INPUT
@@ -493,8 +504,10 @@
 
 import os, sys, subprocess
 import datetime, time
+
+'''Fake a file-like object from an in-script hardcoded string?'''
 # import StringIO
-from cStringIO import StringIO
+# from cStringIO import StringIO
 
 import atexit
 import grass.script as grass
@@ -512,7 +525,7 @@ if "GISBASE" not in os.environ:
 
 global grass_render_directory, grass_render_file
 grass_render_directory = "/geo/grassdb/render"
-# grass_render_file = grass_render_directory + 'grass_render_file.png'  # REMOVE ME
+# grass_render_file = grass_render_directory + 'grass_render_file.png'  # REMOVEME
 
 global equation, citation, spacy_plus
 citation_recreation_potential='Zulian (2014)'
@@ -524,8 +537,11 @@ THRESHHOLD_ZERO = 0
 THRESHHOLD_0001 = 0.0001
 THRESHHOLD_0003 = 0.0003
 
-euclidean='euclidean'
-units='k'
+global EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
+EUCLIDEAN='euclidean'
+# units='k'
+NEIGHBORHOOD_SIZE = 11  # this and below, required for neighborhood_function
+NEIGHBORHOOD_METHOD = 'mode'
 water_proximity_constant=1
 water_proximity_kappa=30
 water_proximity_alpha=0.008
@@ -534,13 +550,66 @@ bathing_water_proximity_constant=1
 bathing_water_proximity_kappa=5
 bathing_water_proximity_alpha=0.1101
 
+SUITABILITY_SCORES='''1:1:0:0
+2:2:0.1:0.1
+3:9:0:0
+10:10:1:1
+11:11:0.1:0.1
+12:13:0.3:0.3
+14:14:0.4:0.4
+15:17:0.5:0.5
+18:18:0.6:0.6
+19:20:0.3:0.3
+21:22:0.6:0.6
+23:23:1:1
+24:24:0.8:0.8
+25:25:1:1
+26:29:0.8:0.8
+30:30:1:1
+31:31:0.8:0.8
+32:32:0.7:0.7
+33:33:0:0
+34:34:0.8:0.8
+35:35:1:1
+36:36:0.8:0.8
+37:37:1:1
+38:38:0.8:0.8
+39:39:1:1
+40:42:1:1
+43:43:0.8:0.8
+44:44:1:1
+45:45:0.3:0.3'''
+
 suitability_classification_categories=''
 recreation_potential_categories='''0.0:0.2:1
 0.2:0.4:2
 0.4:*:3'''
 #anthropic_distance_categories=
-#'0:500:1\n500.000001:1000:2\n1000.000001:5000:3\n5000.000001:10000:4\n10000.00001:*:5'
+#'0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5'
 recreation_opportunity_categories=recreation_potential_categories
+
+#
+## FIXME -- No hardcodings please.
+#
+SPECTRUM_DISTANCE_CATEGORY_DESCRIPTIONS='''1:0 to 1 km
+2:1 to 2 km
+3:2 to 3 km
+4:3 to 4 km
+5:>4 km
+'''
+#
+## FIXME -- No hardcodings please.
+#
+
+HIGHEST_RECREATION_CATEGORY = 9
+
+MOBILITY_CONSTANT=1
+MOBILITY_COEFFICIENTS = { 0 : (0.02350, 0.00102),
+                          1 : (0.02651, 0.00109),
+                          2 : (0.05120, 0.00098),
+                          3 : (0.10700, 0.00067),
+                          4 : (0.06930, 0.00057)}
+MOBILITY_SCORE=52
 
 SCORE_COLORS = """ # http://colorbrewer2.org/?type=diverging&scheme=RdYlGn&n=11
 0.0% 165:0:38
@@ -628,20 +697,16 @@ def tmp_map_name(**kwargs):
 def string_to_file(string, **kwargs):
     """
     """
-    print "Lines:", string
     string = string.split(',')
-    print "Lines:", string
     string = '\n'.join(string)
-    print "Lines:", string
     # string = string.splitlines()
-    # print "Lines:", string
 
+    msg = "String split in lines: {s}".format(s=string)
+    grass.debug(_(msg))
 
     if 'name' in kwargs:
         name = kwargs.get('name')
-
     filename = tmp_map_name(name=name)
-    print "Filename:", filename
 
     # # Use a file-like object instead?
     # import tempfile
@@ -652,16 +717,20 @@ def string_to_file(string, **kwargs):
         ascii_file.writelines(string)
         # ascii_file.seek(0)  # in case of a file-like object
 
-        for line in ascii_file:
-            print line.rstrip()
+    # if DEBUG, then do:
+        # for line in ascii_file:
+        #     grass.debug(_(line.rstrip()))
 
-    except IOError as e:
-        print "IOError :", e
+    except IOError as error:
+        print "IOError :", error
         return
 
     finally:
         ascii_file.close()
         return filename  # how would that work with a file-like object?
+        # Will be removed right after `.close()` -- How to possibly re-use it
+            # outside the function?
+        # Wrap complete main() in a `try` statement?
 
 def cleanup():
     """Clean up temporary maps"""
@@ -829,7 +898,7 @@ def recode_map(raster, rules, colors, output):
 
     # ------------------------------------------
     r.null(map=raster, null=0)  # Set NULLs to 0
-    msg = "Please confirm if setting the {raster} map's NULL cells to 0 is right"
+    msg = "To Do: confirm if setting the '{raster}' map's NULL cells to 0 is right"
     msg = msg.format(raster=raster)
     grass.warning(_(msg))
     # Is this right?
@@ -1264,7 +1333,6 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     
     ### FIXME
 
-    print "tmp_output", tmp_output
     normalize_map(tmp_output, output_name)
 
     ### FIXME
@@ -1551,12 +1619,10 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     opportunity :
         Name for input opportunity for recreation map
 
-    spectrum :
-        Name for Spectrum of Recreation map
-
     Returns
     -------
-        Does not return any value
+    spectrum :
+        Name for output spectrum of recreation map
 
     Examples
     --------
@@ -1580,6 +1646,7 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
     del(spectrum_expression)
     del(spectrum_equation)
+    return spectrum
 
 def update_meta(raster, title):
     """
@@ -1623,6 +1690,175 @@ def update_meta(raster, title):
     del(units)
     del(source1)
     del(source2)
+
+def build_mobility_function(constant, kappa, alpha, population, **kwargs):
+    """
+    Formula: if(L10<>0,(1+$D$3)/($D$3+exp(-$E$3*L10))*52,0)
+    Source: Excel file provided by members of the MAES Team, Land Resources, D3
+
+    -------------------------------------
+    if L<>0; then
+      # (1 + D) / (D + exp(-E * L)) * 52)
+
+      # D: Kappa
+      # E: Alpha
+      # L: Population (in boundary, in distance buffer)
+    -------------------------------------
+
+    The basic function is identical to the one used in
+    compute_attractiveness(), which is:
+
+    ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {distance}) )
+
+    ToDo:
+    -----
+        Deduplication!  The same distance function is used elsewhere.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Examples
+    --------
+    """
+
+    # DUMMY_DISTANCE='DUMMY_DISTANCE'
+    # basic formula:
+        # ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {population}) )
+
+    numerator = "{constant} + {kappa}"
+    numerator = numerator.format(constant = constant, kappa = kappa)
+
+    denominator = "{kappa} + exp({alpha} * {population})"
+    denominator = denominator.format(kappa = kappa,
+                                     alpha = alpha,
+                                     population = population)
+                                     # distance to be formatter later
+
+    function = " ( {numerator} / {denominator} )"
+    function = function.format(
+            numerator = numerator,
+            denominator = denominator)
+    grass.debug("Function without score: {f}".format(f=function))
+
+    if 'score' in kwargs:
+        score = kwargs.get('score')
+        function += " * {score}"  # need for float()?
+        function = function.format(score = score)
+    grass.debug("Function after adding score: {f}".format(f=function))
+
+    return function
+
+def compute_mobility(distance_map, constant, coefficients, population, score):
+    """
+    Parameters
+    ----------
+
+    distance_map:
+        Map of distance categories (aka 'buffer zones')
+
+    constant:
+        Constant for the mobility function
+
+    coefficients:
+        A dictionary with a set for coefficients for each distance category, as
+        (the example) presented in the following table:
+
+        |----------+---------+---------|
+        | Distance | Kappa   | Alpha   |
+        |----------+---------+---------|
+        | 0 to 1   | 0.02350 | 0.00102 |
+        |----------+---------+---------|
+        | 1 to 2   | 0.02651 | 0.00109 |
+        |----------+---------+---------|
+        | 2 to 3   | 0.05120 | 0.00098 |
+        |----------+---------+---------|
+        | 3 to 4   | 0.10700 | 0.00067 |
+        |----------+---------+---------|
+        | >4       | 0.06930 | 0.00057 |
+        |----------+---------+---------|
+
+        Note, the last distance category is not considered in deriving the
+        final "map of visits".
+
+    population:
+        A map with the distribution of the demand per distance category and
+        predefined geometric boundaries (see `r.stats.zonal` deriving the
+        'demand_distribution' map ).
+
+    score:
+        A score value for the mobility function
+
+    Returns
+    -------
+
+    mobility_expression:
+        A valid mapcalc expression to compute the mobility based on the
+        predefined function `build_mobility_function`.
+
+    Examples
+    --------
+    ...
+    """
+    expressions={}  # create a dictionary of expressions
+    for distance, coefficients in MOBILITY_COEFFICIENTS.items():
+
+        kappa, alpha = coefficients
+        expressions['{distance}'.format(distance=distance)]=build_mobility_function(
+                constant=constant,
+                kappa=kappa,
+                alpha=alpha,
+                population=population,
+                score=score)
+
+        grass.debug(_("For distance {d}:".format(d=distance)))
+        grass.debug(_(expressions['{distance}'.format(distance=distance)]))
+
+    msg = "Expressions per distance category: {e}".format(e=expressions)
+    grass.debug(_(msg))
+
+
+
+
+    # build expressions -- explicit: use the'score' kwarg!
+
+                  # ------------------------------------
+                  # Distance category 4 not used!
+                  # ' \ \n mobility_4 = {expression_4},'
+                  # ' \ \n distance_4 = {distance} == 4,'
+                  # ' \ \n if( distance_4, mobility_4,'
+                  # ------------------------------------
+
+    expression = ('eval( mobility_0 = {expression_0},'
+                  ' \ \n mobility_1 = {expression_1},'
+                  ' \ \n mobility_2 = {expression_2},'
+                  ' \ \n mobility_3 = {expression_3},'
+                  ' \ \n distance_0 = {distance} == 0,'
+                  ' \ \n distance_1 = {distance} == 1,'
+                  ' \ \n distance_2 = {distance} == 2,'
+                  ' \ \n distance_3 = {distance} == 3,'
+                  ' \ \n if( distance_0, mobility_0,'
+                  ' \ \n if( distance_1, mobility_1,'
+                  ' \ \n if( distance_2, mobility_2,'
+                  ' \ \n if( distance_3, mobility_3,'
+                  ' \ \n null() )))))')
+    grass.debug(_("Mapcalc expression: {e}".format(e=expression)))
+
+    # replace keywords appropriately
+    mobility_expression = expression.format(
+        expression_0 = expressions['0'],
+        expression_1 = expressions['1'],
+        expression_2 = expressions['2'],
+        expression_3 = expressions['3'],
+        expression_4 = expressions['4'],
+        distance = distance_map)
+
+    msg = "Big expression (after formatting): {e}".format(e=expression)
+    grass.debug(_(msg))
+
+    return mobility_expression
 
 def main():
     """
@@ -1678,18 +1914,33 @@ def main():
     '''Land components'''
 
     landuse = options['landuse']
+
+    suitability_map_name = tmp_map_name(name='suitability')
     suitability_scores = options['suitability_scores']
-    if suitability_scores:
+
+    if landuse and suitability_scores and ':' not in suitability_scores:
         msg = "Suitability scores from file: {scores}."
         msg = msg.format(scores = suitability_scores)
         grass.verbose(_(msg))
 
-    suitability_map_name = tmp_map_name(name='suitability')
     if landuse and not suitability_scores:
         msg = "Using internal rules to score land use classes in {map}"
         msg = msg.format(map=landuse)
-        g.message(_(msg))
-        suitability_scores = recreation_potential_categories
+        grass.verbose(_(msg))
+
+        suitability_scores = string_to_file(SUITABILITY_SCORES,
+                name=suitability_map_name)
+        remove_normal_files_at_exit.append(suitability_scores)
+
+    if landuse and suitability_scores and ':' in suitability_scores:
+        msg = "Using provided string of rules to score land use classes in {map}"
+        msg = msg.format(map=landuse)
+        grass.verbose(_(msg))
+        suitability_scores = string_to_file(suitability_scores,
+                name=suitability_map_name)
+        remove_normal_files_at_exit.append(suitability_scores)
+
+    landcover = options['landcover']
 
     '''Water components'''
 
@@ -1699,8 +1950,6 @@ def main():
     coastline = options['coastline']
     coast_proximity_map_name = 'coast_proximity'
     coast_geomorphology = options['coast_geomorphology']
-    neighborhood_size = 11  # this and below, required for neighborhood_function
-    neighborhood_method = 'mode'
     # coast_geomorphology_coefficients = options['geomorphology_coefficients']
     coast_geomorphology_map_name = 'coast_geomorphology'
     bathing_water = options['bathing_water']
@@ -1750,11 +1999,11 @@ def main():
     if ':' in spectrum_distance_categories:
         spectrum_distance_categories = string_to_file(spectrum_distance_categories,
                 name=recreation_spectrum)
-        # remove_at_exit.append(spectrum_distance_categories)
+        # remove_at_exit.append(spectrum_distance_categories) -- Not a map!
         remove_normal_files_at_exit.append(spectrum_distance_categories)
 
     highest_spectrum = 'highest_recreation_spectrum'
-    crossmap = 'crossmap'
+    crossmap = 'crossmap'  # REMOVEME
 
     """ First, care about the computational region"""
 
@@ -1814,7 +2063,7 @@ def main():
 
         lakes_proximity = compute_attractiveness(
                 raster = lakes,
-                metric = euclidean,
+                metric = EUCLIDEAN,
                 constant = constant,
                 kappa = kappa,
                 alpha = alpha,
@@ -1829,7 +2078,7 @@ def main():
     if coastline:
         coast_proximity = compute_attractiveness(
                 raster = coastline,
-                metric = euclidean,
+                metric = EUCLIDEAN,
                 constant = water_proximity_constant,
                 alpha = water_proximity_alpha,
                 kappa = water_proximity_kappa,
@@ -1862,7 +2111,7 @@ def main():
 
         bathing_water_proximity = compute_attractiveness(
                 raster = bathing_water,
-                metric = euclidean,
+                metric = EUCLIDEAN,
                 constant = constant,
                 kappa = kappa,
                 alpha = alpha)
@@ -1973,8 +2222,8 @@ def main():
     tmp_recreation_potential = tmp_map_name(name=recreation_potential_map_name)
     msg = "Computing an intermediate potential map '{potential}'"
     grass.debug(_(msg.format(potential=tmp_recreation_potential)))
-    msg +="\n---------------------------------------------------------------\n"
-    grass.message(_(msg.format(potential=tmp_recreation_potential)))
+    # msg +="\n---------------------------------------------------------------\n"
+    # grass.message(_(msg.format(potential=tmp_recreation_potential)))
 
     grass.verbose(_("\nNormalize 'Recreation Potential' component\n"))
     grass.debug(_("Maps: {maps}".format(maps=recreation_potential_component)))
@@ -2111,7 +2360,7 @@ def main():
         msg = "Computing recreation opportunity {opportunity}"
         msg +="\n---------------------------------------------------------------\n"
         grass.debug(msg.format(opportunity=tmp_recreation_opportunity_categories))
-        grass.message(_(msg.format(opportunity=tmp_recreation_opportunity_categories)))
+        # grass.message(_(msg.format(opportunity=tmp_recreation_opportunity_categories)))
         del(msg)
 
         classify_recreation_component(
@@ -2133,7 +2382,7 @@ def main():
                     OPPORTUNITY_COLORS, quiet=True)
 
         # Recreation Spectrum: Potential + Opportunity [Output]
-        compute_recreation_spectrum(
+        recreation_spectrum = compute_recreation_spectrum(
                 potential = tmp_recreation_potential_categories,
                 opportunity = tmp_recreation_opportunity_categories,
                 spectrum = recreation_spectrum)
@@ -2154,9 +2403,11 @@ def main():
     '''Highest Recreation Spectrum == 9'''
 
     if demand_distribution:
-
-        expression = "if({spectrum} == 9, {spectrum}, null())"
-        highest_spectrum_expression = expression.format(spectrum=recreation_spectrum)
+        
+        expression = "if({spectrum} == {highest_recreation_category}, {spectrum}, null())"
+        highest_spectrum_expression = expression.format(
+                spectrum=recreation_spectrum,
+                highest_recreation_category=HIGHEST_RECREATION_CATEGORY)
         highest_spectrum_equation = equation.format(result=highest_spectrum,
                 expression=highest_spectrum_expression)
         r.mapcalc(highest_spectrum_equation, overwrite=True)
@@ -2179,12 +2430,22 @@ def main():
                 rules=spectrum_distance_categories,
                 colors=SCORE_COLORS,
                 output=distance_categories_to_highest_spectrum)
+
+        print "Distance categories"
         draw_map(distance_categories_to_highest_spectrum)
+        g.copy(raster=(
+            distance_categories_to_highest_spectrum,
+            'distance_categories_to_highest_spectrum'),
+            quiet=True)
 
         # remove temporary file(name)
         # os.unlink(spectrum_distance_categories)
 
-        spectrum_distance_category_descriptions='/geo/projects/maes/natcapes/r.estimap/reclassification_rules/recreation_spectrum_distance_categories.descriptions'
+        spectrum_distance_category_descriptions = string_to_file(
+                SPECTRUM_DISTANCE_CATEGORY_DESCRIPTIONS,
+                name=distance_categories_to_highest_spectrum)
+        remove_normal_files_at_exit.append(spectrum_distance_category_descriptions)
+
         r.category(map=distance_categories_to_highest_spectrum,
                 rules=spectrum_distance_category_descriptions,
                 separator=':')
@@ -2193,11 +2454,6 @@ def main():
         '''Combine Base map and Distance Categories'''
 
         tmp_crossmap = tmp_map_name(name=crossmap)
-        
-        print "Distance categories map:", distance_categories_to_highest_spectrum
-        print "Base map", base
-        print
-
         r.cross(input=(distance_categories_to_highest_spectrum, base),
                 flags='z',
                 output=tmp_crossmap,
@@ -2205,13 +2461,48 @@ def main():
         draw_map(tmp_crossmap)
         remove_at_exit.append(tmp_crossmap)
 
+        # Saving the map derived via `r.cross`
         crossmap_expression = "{crossmap} = {tmp_crossmap}"
         crossmap_expression = crossmap_expression.format(crossmap=crossmap,
                 tmp_crossmap=tmp_crossmap)
         crossmap_equation = equation.format(result=crossmap,
                 expression=crossmap_expression)
         r.mapcalc(crossmap_equation, overwrite=True)
-        # draw_map(crossmap)
+        draw_map(crossmap)
+        # Saving the map derived via `r.cross`
+
+    if population:
+        grass.use_temp_region()  # to safely modify the region
+        g.region(flags='p', raster=population) # Set region to 'mask'
+        msg = "|! Computational resolution matched to {raster}"
+        msg = msg.format(raster=landuse)
+        g.message(_(msg))
+
+        population_statistics = get_univariate_statistics(population)
+        population_total = population_statistics['max']
+        msg = "Population statistics: {s}".format(s=population_total)
+        grass.verbose(_(msg))
+
+        #
+        ## Reset region resolution
+        #
+
+        # # Below is debugging
+        # print "---------------------------------------------------------------"
+        # r.stats_zonal(base=crossmap,
+        #         cover=population,
+        #         method='sum',
+        #         output=demand_distribution,
+        #         overwrite=True)
+        # g.copy(raster=(demand_distribution,'demand_map_values'))
+        # draw_map(demand_distribution)
+
+        # r.report(map=demand_distribution,
+        #         flags='h',
+        #         units=units,
+        #         quiet=True)
+        # print "---------------------------------------------------------------"
+        # # Above is debugging
 
         r.stats_zonal(base=crossmap,
                 flags='r',
@@ -2221,10 +2512,110 @@ def main():
                 overwrite=True)
         draw_map(demand_distribution)
 
-        r.category(map=tmp_crossmap)
+        r.category(map=tmp_crossmap,
+                quiet=True,
+                verbose=False)
+        # # --------------------------------- REMOVEME
+        # r.category(map=demand_distribution,
+        #         quiet=True,
+        #         verbose=False)
+        # # --------------------------------- REMOVEME
         r.report(map=demand_distribution,
                 flags='h',
-                units=units)
+                units=units,
+                quiet=True)
+
+        '''Mobility function'''
+
+        mobility_expression = compute_mobility(
+                distance_map=distance_categories_to_highest_spectrum,
+                constant=MOBILITY_CONSTANT,
+                coefficients=MOBILITY_COEFFICIENTS,
+                population=demand_distribution,
+                score=MOBILITY_SCORE)
+        grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
+
+        mobility='mobility'  # Create an output option for this TODO
+
+        mobility_equation = equation.format(result=mobility,
+                expression=mobility_expression)
+        r.mapcalc(mobility_equation, overwrite=True)
+        draw_map(mobility)
+
+
+        '''Supply Table'''
+
+        """
+        Input:
+            - Boundaries (countries, regions, etc.)
+
+            [- Land cover classes]
+            [- Areas with highest recreational value (==ROS9)]
+
+            - Land cover class percentages in ROS9
+                (this is: relative percentage)
+
+            - Map of visits (mobility function : people living inside zones 0,
+              1, 2, 3)
+
+        Output:
+            Supply table (distribution of flow for each land cover class)
+
+        """
+
+    #
+    ## Below, ALL EXPERIMENTAL
+    #
+
+    if population:
+        grass.del_temp_region()  # restoring previous region settings
+        grass.verbose("Original Region restored")
+
+        # boundary_map  # base map
+
+        # map_of_visits  # cover map
+        # land_cover_map  # base map?
+
+        r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
+
+        # land_cover_percentage per zone and land class
+
+        mobility_in_base = mobility + '_' + base
+        r.stats_zonal(base=base,
+                flags='r',
+                cover=mobility,
+                method='sum',
+                output=mobility_in_base,
+                overwrite=True)
+        draw_map(mobility_in_base)
+
+        r.report(map=mobility_in_base,
+                flags='h',
+                units=units,
+                quiet=True)
+
+        tmp_another_crossmap = tmp_map_name(name='another_crossmap')
+        r.cross(input=(highest_spectrum,base,landcover),
+                flags='z',
+                output=tmp_another_crossmap,
+                quiet=True)
+        draw_map(tmp_crossmap)
+        remove_at_exit.append(tmp_another_crossmap)
+
+        r.report(map=tmp_another_crossmap,
+                flags='h',
+                units=units,
+                quiet=True)
+
+        r.report(map=(highest_spectrum,base,landcover),
+                flags='h',
+                units=units,
+                quiet=True)
+        draw_map(landcover)
+
+    #
+    ## Above, ALL EXPERIMENTAL
+    #
 
     # restore region
     if landuse_extent:

@@ -537,7 +537,8 @@ THRESHHOLD_ZERO = 0
 THRESHHOLD_0001 = 0.0001
 THRESHHOLD_0003 = 0.0003
 
-global EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
+global COMMA, EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
+COMMA='comma'
 EUCLIDEAN='euclidean'
 # units='k'
 NEIGHBORHOOD_SIZE = 11  # this and below, required for neighborhood_function
@@ -1819,9 +1820,6 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
     msg = "Expressions per distance category: {e}".format(e=expressions)
     grass.debug(_(msg))
 
-
-
-
     # build expressions -- explicit: use the'score' kwarg!
 
                   # ------------------------------------
@@ -2542,7 +2540,6 @@ def main():
         r.mapcalc(mobility_equation, overwrite=True)
         draw_map(mobility)
 
-
         '''Supply Table'''
 
         """
@@ -2571,14 +2568,11 @@ def main():
         grass.del_temp_region()  # restoring previous region settings
         grass.verbose("Original Region restored")
 
-        # boundary_map  # base map
-
         # map_of_visits  # cover map
-        # land_cover_map  # base map?
+        # boundary_map  # base map for final zonal statistics
+        # land_cover_map  # base map for intermediate zonal statistics
 
         r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
-
-        # land_cover_percentage per zone and land class
 
         mobility_in_base = mobility + '_' + base
         r.stats_zonal(base=base,
@@ -2594,24 +2588,58 @@ def main():
                 units=units,
                 quiet=True)
 
-        tmp_another_crossmap = tmp_map_name(name='another_crossmap')
-        r.cross(input=(highest_spectrum,base,landcover),
-                flags='z',
-                output=tmp_another_crossmap,
-                quiet=True)
-        draw_map(tmp_crossmap)
-        remove_at_exit.append(tmp_another_crossmap)
+        # tmp_another_crossmap = tmp_map_name(name='another_crossmap')
+        # r.cross(input=(base,landcover),
+        #         flags='z',
+        #         output=tmp_another_crossmap,
+        #         quiet=True)
+        # draw_map(tmp_crossmap)
+        # remove_at_exit.append(tmp_another_crossmap)
 
-        r.report(map=tmp_another_crossmap,
-                flags='h',
-                units=units,
-                quiet=True)
+        # land class percentage per zone
+        categories = grass.read_command('r.category', map=base).split()
+        for category in categories:
 
-        r.report(map=(highest_spectrum,base,landcover),
-                flags='h',
-                units=units,
-                quiet=True)
-        draw_map(landcover)
+            print "Category:", category
+
+            masking = 'if( {base} == {category} && {spectrum} == 9, {landcover}, null())'
+            masking = masking.format(base=base, category=category,
+                    spectrum=highest_spectrum, landcover=landcover)
+
+            base_mask = '{spectrum}_{base}_{category}'
+            base_mask = base_mask.format(spectrum=highest_spectrum,
+                    base=base,category=category)
+            remove_at_exit.append(base_mask)
+
+            masking_equation = equation.format(result=base_mask,
+                    expression=masking)
+            grass.mapcalc(masking_equation, overwrite=True)
+
+            # set MASK to super-category
+            draw_map(base_mask)
+            r.mask(raster=base_mask, overwrite=True)
+
+            # r.report(map=tmp_another_crossmap,
+            #         flags='hn',
+            #         units=units,
+            #         quiet=True)
+
+            if info:
+                r.report(map=(base,landcover),
+                        flags='hn',
+                        units=units,
+                        quiet=True)
+
+            statistics_filename = 'statistics_' + category
+            r.stats(input=(base,landcover),
+                    output=statistics_filename,
+                    flags='ncapl',
+                    separator=COMMA,
+                    quiet=True)
+
+            # FIXME: deal with empty output files!
+
+            r.mask(flags='r')
 
     #
     ## Above, ALL EXPERIMENTAL

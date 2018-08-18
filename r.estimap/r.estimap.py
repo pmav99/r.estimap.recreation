@@ -134,8 +134,8 @@
 #% key: suitability_scores
 #% type: string
 #% key_desc: filename
-#% label: Recreational suitability scores for the classes of the 'landuse' map
-#% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to classes of the input land use map. If 'landuse' map given and 'suitability_scores' not provided, the module will use internal rules for the CORINE land classes
+#% label: Recreational suitability scores for the categories of the 'landuse' map
+#% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to categories of the input 'landuse' map. If the 'landuse' map is given and 'suitability_scores not provided, the module will use internal rules for the CORINE land classes.
 #% required: no
 #% guisection: Land
 #%end
@@ -429,9 +429,9 @@
 #%end
 
 #%rules
-#%  required: potential, spectrum
 #%  requires: spectrum, infrastructure, roads
 #%  requires: landcover, spectrum
+#%  required: landcover, landuse
 #%end
 
 #%option G_OPT_R_INPUT
@@ -454,6 +454,13 @@
 #% required : no
 #%end
 
+#%option G_OPT_V_INPUT
+#% key: base_vector
+#% key_desc: name
+#% description: Base vector map to compute zonal statistics
+#% required : no
+#%end
+
 #%option G_OPT_R_INPUT
 #% key: aggregation
 #% key_desc: name
@@ -469,7 +476,7 @@
 #%end
 
 #%option G_OPT_R_OUTPUT
-#% key: demand_distribution
+#% key: demand
 #% type: string
 #% key_desc: name
 #% label: Demand distribution output map
@@ -479,7 +486,7 @@
 #%end
 
 #%rules
-#%  requires_all: demand_distribution, population, base
+#%  requires_all: demand, population, base
 #%end
 
 #%option G_OPT_R_OUTPUT
@@ -494,6 +501,10 @@
 
 #%rules
 #%  requires_all: mobility, population, base
+#%end
+
+#%rules
+#%  required: potential, spectrum, demand, mobility
 #%end
 
 '''Various'''
@@ -725,6 +736,8 @@ MOBILITY_SCORE = 52
 MOBILITY_COLORS = 'wave'
 LANDCOVER_FRACTIONS_COLOR='wave'
 
+METHODS='sum'
+
 # helper functions
 
 def run(cmd, **kwargs):
@@ -831,6 +844,10 @@ def draw_map(mapname, **kwargs):
     """
     if flags['d']:
 
+        # Local globals
+        width = 30
+        height = 30
+
         # grass.message(_("Map name: {m}".format(m=mapname)))
         # Do not draw maps that are all 0
         minimum = grass.raster_info(mapname)['min']
@@ -852,10 +869,22 @@ def draw_map(mapname, **kwargs):
             grass.warning(_(msg))
             return
 
-        render_file = "{directory}/{name}.{extension}"
+        render_file = "{directory}/{prefix}{name}{suffix}.{extension}"
+        if 'prefix' in kwargs:
+            prefix = kwargs.get('prefix') + '_'
+        else:
+            prefix = ''
+
+        if 'suffix' in kwargs:
+            suffix = '_' + kwargs.get('suffix')
+        else:
+            suffix = ''
+
         render_file = render_file.format(
                 directory = grass_render_directory,
+                prefix=prefix,
                 name = mapname,
+                suffix=suffix,
                 extension = 'png')
 
         os.putenv("GRASS_RENDER_FILE", render_file)
@@ -867,10 +896,6 @@ def draw_map(mapname, **kwargs):
         if 'width' in kwargs and 'height' in kwargs:
             width = kwargs.get('width')
             height = kwargs.get('height')
-
-        else:
-            width = 30
-            height = 30
 
         grass.message(_(" >>> Map file: {f}".format(f=render_file)))
         command = "tycat -g {w}x{h} {filename}"
@@ -1535,7 +1560,7 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
     grass.run_command("r.grow.distance",
             input = raster,
             distance = anthropic_distances,
-            metric = euclidean,
+            metric = EUCLIDEAN,
             quiet = True,
             overwrite = True)
 
@@ -1731,6 +1756,12 @@ def recreation_spectrum_expression(potential, opportunity):
 
     expression = expression.format(potential=potential,
             opportunity=opportunity)
+
+    msg = "Recreation Spectrum expression: \n"
+    msg += expression
+    grass.debug(msg)
+    del(msg)
+
     return expression
 
 def compute_recreation_spectrum(potential, opportunity, spectrum):
@@ -1761,11 +1792,11 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     spectrum_equation = equation.format(result=spectrum,
             expression=spectrum_expression)
 
-    if info:
-        msg = "Recreation Spectrum equation: \n"
-        msg += spectrum_equation
-        g.message(msg)
-        del(msg)
+    # if info:
+    #     msg = "Recreation Spectrum equation: \n"
+    #     msg += spectrum_equation
+    #     g.message(msg)
+    #     del(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
@@ -1913,7 +1944,7 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
     population:
         A map with the distribution of the demand per distance category and
         predefined geometric boundaries (see `r.stats.zonal` deriving the
-        'demand_distribution' map ).
+        'demand' map ).
 
     score:
         A score value for the mobility function
@@ -1930,9 +1961,9 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
     ...
     """
     expressions={}  # create a dictionary of expressions
-    for distance, coefficients in MOBILITY_COEFFICIENTS.items():
+    for distance, parameters in coefficients.items():
 
-        kappa, alpha = coefficients
+        kappa, alpha = parameters
         expressions['{distance}'.format(distance=distance)]=build_mobility_function(
                 constant=constant,
                 kappa=kappa,
@@ -1983,6 +2014,116 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
     grass.debug(_(msg))
 
     return mobility_expression
+
+def compute_unmet_demand(distance_map, constant, coefficients, population, score):
+    """
+    Parameters
+    ----------
+
+    distance_map:
+        Map of distance categories (aka 'buffer zones')
+
+    constant:
+        Constant for the mobility function
+
+    coefficients:
+        A tuple with coefficients for the last distance category, as
+        (the example) presented in the following table:
+
+        |----------+---------+---------|
+        | Distance | Kappa   | Alpha   |
+        |----------+---------+---------|
+        | >4       | 0.06930 | 0.00057 |
+        |----------+---------+---------|
+
+        Note, this is the "last" distance category--see also the
+        compute_mobility() function.
+
+    population:
+        A map with the distribution of the demand per distance category and
+        predefined geometric boundaries (see `r.stats.zonal` deriving the
+        'unmet demand' map ).
+
+    score:
+        A score value for the mobility function
+
+    Returns
+    -------
+
+    mobility_expression:
+        A valid mapcalc expression to compute the mobility based on the
+        predefined function `build_mobility_function`.
+
+    Examples
+    --------
+    ...
+    """
+    distance = 4
+    kappa, alpha = coefficients
+    unmet_demand_expression = build_mobility_function(
+            constant=constant,
+            kappa=kappa,
+            alpha=alpha,
+            population=population,
+            score=score)
+
+    msg = "Expression for distance category '{d}': {e}".format(d=distance,
+            e=unmet_demand_expression)
+    grass.debug(_(msg))
+
+    # build expressions -- explicit: use the 'score' kwarg!
+    expression = ('eval( unmet_demand = {expression},'
+                  ' \ \n distance = {distance} == 4,'
+                  ' \ \n if( distance, unmet_demand,'
+                  ' \ \n null() ))')
+    grass.debug(_("Mapcalc expression: {e}".format(e=expression)))
+
+    # replace keywords appropriately
+    unmet_demand_expression = expression.format(
+        expression = unmet_demand_expression,
+        distance = distance_map)
+
+    msg = "Big expression (after formatting): {e}".format(
+            e=unmet_demand_expression)
+    grass.debug(_(msg))
+
+    return unmet_demand_expression
+
+def update_vector(vector, raster, methods, column_prefix):
+    """
+
+    Parameters
+    ----------
+    vector:
+        Vector map whose attribute table to update with results of the
+        v.rast.stats call
+
+    raster:
+        Source raster map for statistics
+
+    methods:
+        Descriptive statistics for the `v.rast.stats` call
+
+    column_prefix:
+        Prefix for the names of the columns created by the `v.rast.stats` call
+
+    Returns
+    -------
+        This helper function executes `v.rast.stats`. It does not return any
+        value.
+
+    Examples
+    --------
+    ..
+    """
+    run('v.rast.stats',
+            map=vector,
+            flags='c',
+            raster=raster,
+            method=methods,
+            column_prefix=raster,
+            overwrite=True)
+    grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
 
 def main():
     """
@@ -2063,7 +2204,16 @@ def main():
                 name=suitability_map_name)
         remove_normal_files_at_exit.append(suitability_scores)
 
-    landcover = options['landcover']
+    if not options['landcover']:
+        landcover = landuse
+        msg = "Land cover map 'landcover' not given. "
+        msg += "Using the '{landuse}' map to derive areal statistics"
+        msg = msg.format(landuse=landuse)
+        grass.verbose(_(msg))
+
+    else:
+        landcover = options['landcover']
+
     maes_landcover = 'maes_land_classes'
     landcover_reclassification_rules = options['land_classes']
     if landcover and landcover_reclassification_rules and ':' not in landcover_reclassification_rules:
@@ -2079,9 +2229,6 @@ def main():
         landcover_reclassification_rules = string_to_file(
                 URBAN_ATLAS_TO_MAES_NOMENCLATURE,
                 name=maes_landcover)
-        print "Rules:", landcover_reclassification_rules
-        print
-
         remove_normal_files_at_exit.append(landcover_reclassification_rules)
 
     if landuse and landcover_reclassification_rules and ':' in landcover_reclassification_rules:
@@ -2129,9 +2276,13 @@ def main():
     devaluation = options['devaluation']
 
     base = options['base']
+    base_vector = options['base_vector']
     aggregation = options['aggregation']
     population = options['population']
-    demand_distribution = options['demand_distribution']
+    if options['demand']:
+        demand = options['demand']
+    else:
+        demand = 'demand'
 
     '''Outputs'''
 
@@ -2144,7 +2295,10 @@ def main():
     recreation_opportunity_map_name='recreation_opportunity'
 
     spectrum_title = "Recreation spectrum"
-    recreation_spectrum = options['spectrum']  # output
+    if options['spectrum']:
+        recreation_spectrum = options['spectrum']  # output
+    else:
+        recreation_spectrum = 'recreation_spectrum'
     # recreation_spectrum_component_map_name =
     #       tmp_map_name(name='recreation_spectrum_component_map')
 
@@ -2255,8 +2409,8 @@ def main():
 
         coast_attractiveness = neighborhood_function(
                 raster=coast_geomorphology,
-                method = neighborhood_method,
-                size = neighborhood_size,
+                method = NEIGHBORHOOD_METHOD,
+                size = NEIGHBORHOOD_SIZE,
                 distance_map=coast_proximity)
         append_map_to_component(coast_attractiveness, 'water', water_components)
 
@@ -2289,7 +2443,6 @@ def main():
         natural_component = natural.split(',')
 
     if protected:
-
         msg = "Scoring protected areas '{protected}' based on '{rules}'"
         grass.verbose(_(msg.format(protected=protected, rules=protected_scores)))
         draw_map(protected)
@@ -2472,7 +2625,7 @@ def main():
 
     """ Recreation Spectrum """
 
-    if recreation_spectrum:
+    if recreation_spectrum or demand or mobility:
 
         recreation_opportunity_component = []
 
@@ -2553,9 +2706,16 @@ def main():
         r.colors(map=recreation_spectrum, rules='-', stdin = SPECTRUM_COLORS,
                 quiet=True)
 
+        if base_vector:
+            update_vector(vector=base_vector,
+                    raster=recreation_spectrum,
+                    methods=METHODS,
+                    column_prefix='spectrum')
+
+
     """Valuation Tables"""
 
-    if demand_distribution:
+    if demand or mobility:
 
         '''Highest Recreation Spectrum == 9'''
 
@@ -2582,11 +2742,13 @@ def main():
 
         distance_categories_to_highest_spectrum = 'categories_of_'
         distance_categories_to_highest_spectrum += distance_to_highest_spectrum
+        remove_at_exit.append(distance_categories_to_highest_spectrum)
 
         recode_map(raster=distance_to_highest_spectrum,
                 rules=spectrum_distance_categories,
                 colors=SCORE_COLORS,
                 output=distance_categories_to_highest_spectrum)
+
         draw_map(distance_categories_to_highest_spectrum)
 
         spectrum_distance_category_descriptions = string_to_file(
@@ -2621,10 +2783,10 @@ def main():
     if population:
 
         grass.use_temp_region()  # to safely modify the region
-        g.region(flags='p', raster=population)  # Set region to 'mask'
+        g.region(raster=population)  # Set region to 'mask'
         msg = "|! Computational extent & resolution matched to {raster}"
         msg = msg.format(raster=landuse)
-        g.message(_(msg))
+        grass.verbose(_(msg))
 
         population_statistics = get_univariate_statistics(population)
         population_total = population_statistics['sum']
@@ -2639,18 +2801,27 @@ def main():
                 flags='r',
                 cover=population,
                 method='sum',
-                output=demand_distribution,
-                overwrite=True)
-        draw_map(demand_distribution)
-
-        r.category(map=tmp_crossmap,
-                quiet=True,
-                verbose=False)
-
-        r.report(map=demand_distribution,
-                flags='h',
-                units=units,
+                output=demand,
+                overwrite=True,
                 quiet=True)
+        draw_map(demand)
+
+        if base_vector:
+            update_vector(vector=base_vector,
+                    raster=demand,
+                    methods=METHODS,
+                    column_prefix='demand')
+
+        # Some verbosity to support debugging
+
+        # r.category(map=tmp_crossmap,
+        #         quiet=True,
+        #         verbose=False)
+
+        # r.report(map=demand,
+        #         flags='h',
+        #         units=units,
+        #         quiet=True)
 
         '''Mobility function'''
 
@@ -2658,7 +2829,7 @@ def main():
                 distance_map=distance_categories_to_highest_spectrum,
                 constant=MOBILITY_CONSTANT,
                 coefficients=MOBILITY_COEFFICIENTS,
-                population=demand_distribution,
+                population=demand,
                 score=MOBILITY_SCORE)
         grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
 
@@ -2666,6 +2837,31 @@ def main():
                 expression=mobility_expression)
         r.mapcalc(mobility_equation, overwrite=True)
         draw_map(mobility_map_name, width='45', height='45')
+
+        if base_vector:
+            update_vector(vector=base_vector,
+                    raster=mobility_map_name,
+                    methods=METHODS,
+                    column_prefix='mobility')
+
+        '''Unmet Demand'''
+        unmet_demand_expression = compute_unmet_demand(
+                distance_map=distance_categories_to_highest_spectrum,
+                constant=MOBILITY_CONSTANT,
+                coefficients=MOBILITY_COEFFICIENTS[4],
+                population=demand,
+                score=MOBILITY_SCORE)
+        grass.debug(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
+
+        #
+        unmet_demand = 'unmet_demand'
+        #
+
+        unmet_demand_equation = equation.format(result=unmet_demand,
+                expression=unmet_demand_expression)
+        r.mapcalc(unmet_demand_equation, overwrite=True)
+        draw_map(unmet_demand, width='45', height='45')
+
 
         '''Supply Table'''
 
@@ -2707,6 +2903,7 @@ def main():
         grass.verbose("Original Region restored")
 
         r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
+        grass.verbose(_("MASKing areas of high recreational value"))
 
         mobility_in_base = mobility + '_' + base
         r.stats_zonal(base=base,
@@ -2721,10 +2918,10 @@ def main():
             quiet=True)
         draw_map(mobility_in_base)
 
-        r.report(map=mobility_in_base,
-                flags='h',
-                units=units,
-                quiet=True)
+        # r.report(map=mobility_in_base,
+        #         flags='h',
+        #         units=units,
+        #         quiet=True)
 
         '''Save mobility map?'''
 
@@ -2747,20 +2944,23 @@ def main():
         # draw_map(tmp_crossmap)
         # remove_at_exit.append(tmp_another_crossmap)
 
-        print "Rules:", landcover_reclassification_rules
-        print
         r.reclass(input=landcover,
                 rules=landcover_reclassification_rules,
-                output=maes_landcover)
-        r.category(map=maes_landcover)
+                output=maes_landcover,
+                title="MAES land cover nomenclature",
+                quiet=True)
+        # r.category(map=maes_landcover)
         draw_map(maes_landcover)
 
         # land class percentage per zone
         landcover_fragment_patches = []
-        categories = grass.read_command('r.category', map=base).split()
+
+        # Don't break if categories are labeled!
+        categories = grass.read_command('r.category', map=base).split('\n')[:-1]
         for category in categories:
 
-            print "Category:", category
+            category = category.split('\t')[0]
+            grass.debug(_("Base map category: {c}".format(c=category)))
 
             masking = 'if( {base} == {category} && '
             masking += '{spectrum} == {highest_spectrum}, '
@@ -2784,9 +2984,9 @@ def main():
             grass.mapcalc(masking_equation, overwrite=True)
 
             # set MASK to super-category
-            print "This will be set as a MASK now!"
+            grass.verbose(_("Setting map '{r}' as a MASK".format(r=base_mask)))
             draw_map(base_mask)
-            r.mask(raster=base_mask, overwrite=True)
+            r.mask(raster=base_mask, overwrite=True, quiet=True)
 
             # r.report(map=tmp_another_crossmap,
             #         flags='hn',
@@ -2799,21 +2999,21 @@ def main():
                         units=units,
                         quiet=True)
 
-            statistics_filename = 'statistics_' + category
-
-            # REMOVEME
-            r.stats(input=(base,maes_landcover),
-                    flags='ncapl',
-                    separator=COMMA,
-                    quiet=True)
-            # REMOVEME
+            # # REMOVEME
+            # r.stats(input=(base,maes_landcover),
+            #         flags='ncapl',
+            #         separator=COMMA,
+            #         quiet=True)
+            # # REMOVEME
 
             # FIXME
+            statistics_filename = 'statistics_' + base + '_' + category
             r.stats(input=(base,maes_landcover),
                     output=statistics_filename,
                     flags='ncapl',
                     separator=COMMA,
                     quiet=True)
+            del(statistics_filename)
 
             # FIXME: deal with empty output files!
 
@@ -2831,13 +3031,14 @@ def main():
             r.mapcalc(fragment_equation, overwrite=True)
             draw_map(landcover_fragment)
 
-            r.category(map=landcover_fragment, raster=maes_landcover)
+            r.category(map=landcover_fragment,
+                    raster=maes_landcover,
+                    quiet=True)
 
-            r.mask(flags='r')
+            r.mask(flags='r', quiet=True)
 
 
-        print "Aggregate per region"
-        print
+        '''Aggregate per region'''
 
         r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
 
@@ -2854,42 +3055,48 @@ def main():
             quiet=True)
         draw_map(mobility_in_landcover)
 
-        r.report(map=mobility_in_landcover,
-                flags='h',
-                units=units,
-                quiet=True)
+        # r.report(map=mobility_in_landcover,
+        #         flags='h',
+        #         units=units,
+        #         quiet=True)
 
         region_fragment_patches = []  # FIXME REMOVEME
 
         regions = grass.read_command('r.category', map=aggregation).split()
         for region in regions:
 
-            print "Region:", region
+            grass.debug(_("Region: {r}".format(r=region)))
 
             # grass.use_temp_region()  # to safely modify the region
 
-            g.region(flags='p', raster=aggregation)  # Set region to 'mask'
+            g.region(raster=aggregation, quiet=True)  # Set region to 'mask'
             msg = "|! Computational resolution matched to {raster} [{region}]"
             msg = msg.format(raster=aggregation, region=region)
-            g.message(_(msg))
+            grass.debug(_(msg))
 
             # MASK region
-            print "This will be set as a MASK now!"
-            r.mask(raster=aggregation, maskcats=region, overwrite=True)
-
-            # g.region zoom=MASK
-            g.region(flags='p', zoom='MASK')
-
-            # r.stats mobility_per_land_class -cap
-            draw_map(mobility_in_landcover)  # FIXME Give a unique name!
-
-            r.stats(input=mobility_in_landcover,
-                    flags='nacp',
-                    separator=COMMA,
+            grass.verbose(_("Setting map '{r}' as a MASK".format(r=aggregation)))
+            r.mask(raster=aggregation,
+                    maskcats=region,
+                    overwrite=True,
                     quiet=True)
 
+            # g.region zoom=MASK
+            g.region(zoom='MASK', quiet=True)
+
+            # r.stats mobility_per_land_class -cap
+            draw_map(mobility_in_landcover, suffix=region)
+
+            statistics_filename = 'statistics_' + mobility_in_landcover + '_' + region
+            r.stats(input=mobility_in_landcover,
+                    output=statistics_filename,
+                    flags='nacpl',
+                    separator=COMMA,
+                    quiet=True)
+            del(statistics_filename)
+
             # remove MASK
-            r.mask(flags='r')
+            r.mask(flags='r', quiet=True)
 
             # print "Here the statistics:"
             # landcover_fragment_patches.append(landcover_fractions)

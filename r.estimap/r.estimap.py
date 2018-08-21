@@ -62,7 +62,7 @@
 #% key: land
 #% type: string
 #% key_desc: name
-#% label: Map scoring access to and suitability of land resources for recreation
+#% label: Input map scoring access to and suitability of land resources for recreation
 #% description: Arbitrary number of maps scoring access to and land resources suitability of land use classes to support recreation activities
 #% required : no
 #% guisection: Components
@@ -71,7 +71,7 @@
 #%option G_OPT_R_INPUTS
 #% key: natural
 #% key_desc: name
-#% label: Maps scoring access to and quality of inland natural resources
+#% label: Input maps scoring access to and quality of inland natural resources
 #% description: Arbitrary number of maps scoring access to and quality of inland natural resources
 #% required : no
 #% guisection: Components
@@ -80,7 +80,7 @@
 #%option G_OPT_R_INPUTS
 #% key: water
 #% key_desc: name
-#% label: Maps scoring access to and quality of water resources
+#% label: Input maps scoring access to and quality of water resources
 #% description: Arbitrary number of maps scoring access to and quality of water resources such as lakes, sea, bathing waters and riparian zones
 #% required : no
 #% guisection: Components
@@ -89,7 +89,7 @@
 #%option G_OPT_R_INPUTS
 #% key: urban
 #% key_desc: name
-#% description: Maps scoring recreational value of urban surfaces
+#% description: Input maps scoring recreational value of urban surfaces
 #% required : no
 #% guisection: Components
 #%end
@@ -98,7 +98,7 @@
 #% key: infrastructure
 #% type: string
 #% key_desc: name
-#% label: Maps scoring infrastructure to reach locations of recreation activities
+#% label: Input maps scoring infrastructure to reach locations of recreation activities
 #% description: Infrastructure to reach locations of recreation activities [required to derive recreation spectrum map]
 #% required: no
 #% guisection: Components
@@ -108,7 +108,7 @@
 #% key: recreation
 #% type: string
 #% key_desc: name
-#% label: Maps scoring recreational facilities, amenities and services
+#% label: Input maps scoring recreational facilities, amenities and services
 #% description: Recreational opportunities facilities, amenities and services [required to derive recreation spectrum map]
 #% required: no
 #% guisection: Components
@@ -120,21 +120,21 @@
 #% key: landuse
 #% type: string
 #% key_desc: name
-#% label: Land use map from which to derive suitability for recreation
+#% label: Input land featurs map from which to derive suitability for recreation
 #% description: Input to derive suitability of land use classes to support recreation activities. Requires scores, overrides suitability.
 #% required : no
 #% guisection: Land
 #%end
 
 #%rules
-#%  exclusive: land, landuse
+#%  exclusive: land
 #%end
 
 #%option G_OPT_F_INPUT
 #% key: suitability_scores
 #% type: string
 #% key_desc: filename
-#% label: Recreational suitability scores for the categories of the 'landuse' map
+#% label: Input recreational suitability scores for the categories of the 'landuse' map
 #% description: Scores for suitability of land to support recreation activities. Expected are rules for `r.recode` that correspond to categories of the input 'landuse' map. If the 'landuse' map is given and 'suitability_scores not provided, the module will use internal rules for the CORINE land classes.
 #% required: no
 #% guisection: Land
@@ -148,7 +148,7 @@
 #% key: landcover
 #% type: string
 #% key_desc: name
-#% label: Land cover map from which to derive cover percentages within zones of high recreational value
+#% label: Input land cover map from which to derive cover percentages within zones of high recreational value
 #% description: Input to derive percentage of land classes within zones of high recreational value.
 #% required : no
 #% guisection: Land
@@ -158,8 +158,8 @@
 #% key: land_classes
 #% type: string
 #% key_desc: filename
-#% label: Reclassification rules for the classes of the 'landcover' map
-#% description: Reclassification rules for the classes of the 'landcover' map. Expected are rules for `r.reclass` that correspond to classes of the input 'landcover' map. If 'landcover' map is given and 'land_classess' not provided, the module will use internal rules for the Urban Atlas land classes
+#% label: Input reclassification rules for the classes of the 'landcover' map
+#% description: Expected are rules for `r.reclass` that correspond to classes of the input 'landcover' map. If 'landcover' map is given and 'land_classess' not provided, the module will use internal rules for the Urban Atlas land classes
 #% required: no
 #% guisection: Land
 #%end
@@ -169,7 +169,7 @@
 #%option G_OPT_R_INPUT
 #% key: lakes
 #% key_desc: name
-#% label: Map of inland waters resources for which to score accessibility
+#% label: Input map of inland waters resources for which to score accessibility
 #% description: Map of inland water resources to compute proximity for, score accessibility based on a distance function
 #% required : no
 #% guisection: Water
@@ -179,7 +179,7 @@
 #% key: lakes_coefficients
 #% type: string
 #% key_desc: Coefficients
-#% label: Distance function coefficients for the 'lakes' map
+#% label: Input distance function coefficients for the 'lakes' map
 #% description: Distance function coefficients to compute proximity: distance metric, constant, kappa, alpha and score. Refer to the manual for details.
 #% multiple: yes
 #% required: no
@@ -194,7 +194,7 @@
 #%option G_OPT_R_INPUT
 #% key: coastline
 #% key_desc: name
-#% label: Sea coast map for which to compute proximity
+#% label: Input sea coast map for which to compute proximity
 #% description: Input map to compute coast proximity, scored based on a distance function
 #% required : no
 #% guisection: Water
@@ -203,7 +203,7 @@
 #%option
 #% key: coastline_coefficients
 #% key_desc: Coefficients
-#% label: Distance function coefficients for the 'coastline' map
+#% label: Input distance function coefficients for the 'coastline' map
 #% description: Distance function coefficients to compute proximity: distance metric, constant, kappa, alpha and score. Refer to the manual for details.
 #% multiple: yes
 #% required: no
@@ -218,7 +218,7 @@
 #%option G_OPT_R_INPUT
 #% key: coast_geomorphology
 #% key_desc: name
-#% label: Map scoring recreation potential in coast
+#% label: Input map scoring recreation potential in coast
 #% description: Coastal geomorphology, scored as suitable to support recreation activities
 #% required : no
 #% guisection: Water
@@ -231,7 +231,7 @@
 ##%option
 ##% key: geomorphology_coefficients
 ##% key_desc: Coefficients
-##% label: Distance function coefficients
+##% label: Input distance function coefficients
 ##% description: Distance function coefficients to compute proximity: distance metric, constant, kappa, alpha and score. Refer to the manual for details.
 ##% multiple: yes
 ##% required: no
@@ -245,9 +245,9 @@
 
 #%option G_OPT_R_INPUT
 #% key: bathing_water
-#% key_desc: filename
-#% label: Bathing water quality
-#% description: Bathing Water Quality Index. The higher, the greater is the recreational value.
+#% key_desc: name
+#% label: Input bathing water quality map
+#% description: Bathing water quality index. The higher, the greater is the recreational value.
 #% required : no
 #% guisection: Water
 #%end
@@ -256,7 +256,7 @@
 #% key: bathing_coefficients
 #% type: string
 #% key_desc: Coefficients
-#% label: Distance function coefficients for the 'bathing_water' map
+#% label: Input distance function coefficients for the 'bathing_water' map
 #% description: Distance function coefficients to compute proximity to bathing waters: distance metric, constant, kappa and alpha. Refer to the manual for details.
 #% multiple: yes
 #% required: no
@@ -279,8 +279,8 @@
 #%option G_OPT_R_INPUT
 #% key: protected
 #% key_desc: filename
-#% label: Protected areas
-#% description: Natural Protected Areas
+#% label: Input protected areas map
+#% description: Input map depicting natural protected areas
 #% required : no
 #% guisection: Natural
 #%end
@@ -289,7 +289,7 @@
 #% key: protected_scores
 #% type: string
 #% key_desc: rules
-#% label: Recreational value scores for the classes of the 'protected' map
+#% label: Input recreational value scores for the classes of the 'protected' map
 #% description: Scores for recreational value of designated areas. Expected are rules for `r.recode` that correspond to classes of the input land use map. If the 'protected' map is given and 'protected_scores' are not provided, the module will use internal rules for the IUCN categories.
 #% required : no
 #% guisection: Anthropic
@@ -307,7 +307,7 @@
 #%option G_OPT_R_INPUT
 #% key: anthropic
 #% key_desc: name
-#% label: Map of artificial surfaces
+#% label: Input map of artificial surfaces
 #% description: Partial input map to compute anthropic areas proximity, scored via a distance function
 #% required : no
 #% guisection: Water
@@ -317,7 +317,7 @@
 #% key: anthropic_distances
 #% type: string
 #% key_desc: rules
-#% label: Distance classification rules
+#% label: Input distance classification rules
 #% description: Categories for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to distance values in the 'anthropic' map
 #% required : no
 #% guisection: Anthropic
@@ -333,7 +333,7 @@
 #%option G_OPT_R_INPUT
 #% key: roads
 #% key_desc: name
-#% label: Primary road network
+#% label: Input map of primary road network
 #% description: Input map to compute roads proximity, scored based on a distance function
 #% required : no
 #% guisection: Infrastructure
@@ -344,7 +344,7 @@
 ##% key: roads_scores
 #% type: string
 #% key_desc: rules
-#% label: Distance classification rules
+#% label: Input distance classification rules
 #% description: Categories for distance to roads. Expected are rules for `r.recode` that correspond to distance values in the roads map
 #% required : no
 #% guisection: Anthropic
@@ -384,7 +384,7 @@
 #%option G_OPT_R_INPUTS
 #% key: devaluation
 #% key_desc: name
-#% label: Devaluing elements
+#% label: Input map of devaluing elements
 #% description: Maps hindering accessibility to and degrading quality of various resources or infrastructure relating to recreation
 #% required : no
 #% guisection: Devaluation
@@ -404,7 +404,7 @@
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: name
-#% label: Recreation potential output map
+#% label: Output map of ecreation potential
 #% description: Recreation potential map classified in 3 categories
 #% required: no
 #% guisection: Output
@@ -413,16 +413,20 @@
 #%option G_OPT_R_OUTPUT
 #% key: opportunity
 #% key_desc: name
-#% label: Recreation opportunity output map
-#% description: Recreation opportunity map classified in 3 categories
+#% label: Output intermediate map of recreation opportunity
+#% description: Intermediate step in deriving the 'spectrum' map, classified in 3 categories
 #% required: no
 #% guisection: Output
+#%end
+
+#%rules
+#%  requires: opportunity, infrastructure, roads
 #%end
 
 #%option G_OPT_R_OUTPUT
 #% key: spectrum
 #% key_desc: name
-#% label: Recreation spectrum output map
+#% label: Output map of recreation spectrum
 #% description: Recreation spectrum map classified by default in 9 categories
 #% required: no
 #% guisection: Output
@@ -431,14 +435,14 @@
 #%rules
 #%  requires: spectrum, infrastructure, roads
 #%  requires: landcover, spectrum
-#%  required: landcover, landuse
+#%  required: land, landcover, landuse
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: spectrum_distances
 #% type: string
 #% key_desc: rules
-#% label: Distance classification rules for the 'spectrum' map
+#% label: Input distance classification rules for the 'spectrum' map
 #% description: Classes for distance to areas of high recreational spectrum. Expected are rules for `r.recode` that correspond to classes of the input spectrum of recreation use map.
 #% required : no
 #% guisection: Output
@@ -450,28 +454,28 @@
 #%option G_OPT_R_INPUT
 #% key: base
 #% key_desc: name
-#% description: Base map to compute zonal statistics
+#% description: Input base map for zonal statistics
 #% required : no
 #%end
 
 #%option G_OPT_V_INPUT
 #% key: base_vector
 #% key_desc: name
-#% description: Base vector map to compute zonal statistics
+#% description: Input base vector map for zonal statistics
 #% required : no
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: aggregation
 #% key_desc: name
-#% description: Map for final aggregation of actual flow
+#% description: Input map of regions over which to aggregate the actual flow
 #% required : no
 #%end
 
 #%option G_OPT_R_INPUT
 #% key: population
 #% key_desc: name
-#% description: Population density
+#% description: Input map of population density
 #% required : no
 #%end
 
@@ -479,7 +483,7 @@
 #% key: demand
 #% type: string
 #% key_desc: name
-#% label: Demand distribution output map
+#% label: Output map of demand distribution
 #% description: Demand distribution output map: population density per Local Administrative Unit and areas of high recreational value
 #% required : no
 #% guisection: Output
@@ -489,7 +493,7 @@
 #% key: unmet
 #% type: string
 #% key_desc: name
-#% label: Unmet demand distribution output map
+#% label: Output map unmet demand distribution
 #% description: Unmet demand distribution output map: population density per Local Administrative Unit and areas of high recreational value
 #% required : no
 #% guisection: Output
@@ -504,7 +508,7 @@
 #% key: mobility
 #% type: string
 #% key_desc: name
-#% label: Mobility output map
+#% label: Output map of mobility
 #% description: Mobility output map: population (per Local Administrative Unit) near areas of high recreational value
 #% required : no
 #% guisection: Output
@@ -519,7 +523,7 @@
 #% key: supply
 #% key_desc: prefix
 #% type: string
-#% label: Prefix for the supply table CSV output file name
+#% label: Output prefix for the file name of the supply table CSV
 #% description: Supply table CSV output file names will get this prefix
 #% multiple: no
 #% required: no
@@ -527,12 +531,14 @@
 #%end
 
 #%rules
-#%  required_all: supply, population
-#%  requires: supply, base, base_vector, aggregation
+#%  requires: opportunity, spectrum, demand, mobility, supply
+#%  required: potential, spectrum, demand, mobility, supply
 #%end
 
 #%rules
-#%  required: potential, opportunity, spectrum, demand, mobility, supply
+#%  requires_all: supply, population
+#%  requires: supply, base, base_vector, aggregation
+#%  requires: supply, landcover, landuse
 #%end
 
 '''Various'''
@@ -651,6 +657,47 @@ SUITABILITY_SCORES='''1:1:0:0
 44:44:1:1
 45:45:0.3:0.3'''
 
+URBAN_ATLAS_CATEGORIES = '''11100
+11200
+12100
+12200
+12300
+12400
+13100
+13200
+13300
+14100
+14200
+21100
+21200
+21300
+22100
+22200
+22300
+23100
+24100
+24200
+24300
+24400
+31100
+31200
+31300
+32100
+32200
+32300
+32400
+33100
+33200
+33300
+33400
+33500
+41100
+41200
+42100
+42200
+42300
+'''
+
 URBAN_ATLAS_TO_MAES_NOMENCLATURE='''
 11100 = 1 Urban
 11210 = 1 Urban
@@ -680,7 +727,7 @@ URBAN_ATLAS_TO_MAES_NOMENCLATURE='''
 50000 = 5 Heathland and shrub
 '''
 
-recreation_potential_categories='''0.0:0.2:1
+recreation_potential_categories = '''0.0:0.2:1
 0.2:0.4:2
 0.4:*:3'''
 #anthropic_distance_categories=
@@ -690,12 +737,32 @@ recreation_opportunity_categories=recreation_potential_categories
 #
 ## FIXME -- No hardcodings please.
 #
-SPECTRUM_DISTANCE_CATEGORY_DESCRIPTIONS='''1:0 to 1 km
+
+POTENTIAL_CATEGORY_LABELS = '''1:Near
+2:Midrange
+3:Far
+'''
+
+OPPORTUNITY_CATEGORY_LABELS = POTENTIAL_CATEGORY_LABELS
+
+SPECTRUM_CATEGORY_LABELS = '''1:Low provision (far)
+2:Low provision (midrange)
+3:Low provision (near)
+4:Moderate provision (far)
+5:Moderate provision (midrange)
+6:Moderate provision (near)
+7:High provision (far)
+8:High provision (midrange)
+9:High provision (near)
+'''
+
+SPECTRUM_DISTANCE_CATEGORY_LABELS = '''1:0 to 1 km
 2:1 to 2 km
 3:2 to 3 km
 4:3 to 4 km
 5:>4 km
 '''
+
 #
 ## FIXME -- No hardcodings please.
 #
@@ -842,8 +909,9 @@ def cleanup():
             pattern='tmp.{pid}*'.format(pid=os.getpid()),
             quiet=True)
 
-    g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
-            quiet=True)
+    if remove_at_exit:
+        g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
+                quiet=True)
 
     if grass.find_file(name='MASK', element='cell')['file']:
         r.mask(flags='r', verbose=True)
@@ -2170,6 +2238,7 @@ def compute_supply_table(base, landcover, reclassification_rules,
 
     landcover:
         Land cover map to use as a base map for intermediate zonal statistics
+        ? FIXME
 
     reclassification_rules:
         Reclassification rules for the input landcover map
@@ -2217,12 +2286,12 @@ def compute_supply_table(base, landcover, reclassification_rules,
             cover=mobility,
             method='sum',
             output=mobility_in_base,
-            overwrite=True)
+            overwrite=True,
+            quiet=True)
 
     r.colors(map=mobility_in_base,
         color=MOBILITY_COLORS,
         quiet=True)
-
     draw_map(mobility_in_base)
 
     '''Save mobility map?'''
@@ -2238,11 +2307,8 @@ def compute_supply_table(base, landcover, reclassification_rules,
             output=reclassified_landcover,
             title=title,
             quiet=True)
-    print "Here: ", reclassified_landcover
-
     remove_at_exit.append(reclassified_landcover)
 
-    # r.category(map=maes_landcover)
     draw_map(reclassified_landcover)
 
     # land class percentage per zone
@@ -2381,6 +2447,15 @@ def main():
     '''Land components'''
 
     landuse = options['landuse']
+    if landuse:
+        # Check datatype: a land use map should be categorical, i.e. of type CELL
+        landuse_datatype = grass.raster.raster_info(landuse)['datatype']
+        if landuse_datatype != 'CELL':
+            msg = ("The '{landuse}' input map "
+                    "should be a categorical one "
+                    "and of type 'CELL'. "
+                    "Perhaps you meant to use the 'land' input option instead?")
+            grass.fatal(_(msg.format(landuse=landuse)))
 
     suitability_map_name = tmp_map_name(name='suitability')
     suitability_scores = options['suitability_scores']
@@ -2391,9 +2466,9 @@ def main():
         grass.verbose(_(msg))
 
     if landuse and not suitability_scores:
-        msg = "Using internal rules to score land use classes in {map}"
+        msg = "Using internal rules to score land use classes in '{map}'"
         msg = msg.format(map=landuse)
-        grass.verbose(_(msg))
+        grass.message(_(msg))
 
         suitability_scores = string_to_file(SUITABILITY_SCORES,
                 name=suitability_map_name)
@@ -2407,10 +2482,18 @@ def main():
                 name=suitability_map_name)
         remove_normal_files_at_exit.append(suitability_scores)
 
-    if not options['landcover']:
+
+    # FIXME -----------------------------------------------------------------
+
+    # Use one landcover input if supply is requested
+    # Use one set of land cover reclassification rules
+
+    landcover = options['landcover']
+
+    if not landcover:
         landcover = landuse
         msg = "Land cover map 'landcover' not given. "
-        msg += "Using the '{landuse}' map to derive areal statistics"
+        msg += "Attempt to use the '{landuse}' map to derive areal statistics"
         msg = msg.format(landuse=landuse)
         grass.verbose(_(msg))
 
@@ -2419,12 +2502,22 @@ def main():
 
     maes_landcover = 'maes_land_classes'
     landcover_reclassification_rules = options['land_classes']
+
+    # if 'land_classes' is a file
     if landcover and landcover_reclassification_rules and ':' not in landcover_reclassification_rules:
         msg = "Land cover reclassification rules from file: {rules}."
-        msg = msg.format(scores = landcover_reclassification_rules)
+        msg = msg.format(rules = landcover_reclassification_rules)
         grass.verbose(_(msg))
 
+    # if 'land_classes' not given
     if landcover and not landcover_reclassification_rules:
+
+        # if 'landcover' is not the MAES land cover,
+        # then use internal reclassification rules
+        # how to test:
+            # 1. landcover is not a "MAES" land cover
+            # 2. landcover is an Urban Atlas one?
+
         msg = "Using internal rules to reclassify the '{map}' map"
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
@@ -2433,6 +2526,8 @@ def main():
                 URBAN_ATLAS_TO_MAES_NOMENCLATURE,
                 name=maes_landcover)
         remove_normal_files_at_exit.append(landcover_reclassification_rules)
+
+        # if landcover is a "MAES" land cover, no need to reclassify!
 
     if landuse and landcover_reclassification_rules and ':' in landcover_reclassification_rules:
         msg = "Using provided string of rules to reclassify the '{map}' map"
@@ -2443,6 +2538,7 @@ def main():
                 name=maes_land_classes)
         remove_normal_files_at_exit.append(landcover_reclassification_rules)
 
+    # FIXME -----------------------------------------------------------------
 
     '''Water components'''
 
@@ -2559,13 +2655,14 @@ def main():
 
     if land:
 
+        draw_map(land)
         land_component = land.split(',')
 
     if landuse and suitability_scores:
 
         draw_map(landuse)
         msg = "Deriving land suitability from '{landuse}' based on '{rules}'"
-        g.message(msg.format(landuse=landuse, rules=suitability_scores))
+        grass.verbose(msg.format(landuse=landuse, rules=suitability_scores))
 
         # suitability = suitability_map_name
         recode_map(raster=landuse,
@@ -2583,12 +2680,21 @@ def main():
     if water:
 
         water_component = water.split(',')
+
+        if len(water_component) > 1:
+            for component in water_component:
+                draw_map(component)
+        if len(water_component) == 1:
+            draw_map(water_component)
+
         msg = "Water component includes currently: {component}"
         msg = msg.format(component=water_component)
         grass.debug(_(msg))
         # grass.verbose(_(msg))
 
     if lakes:
+
+        draw_map(lakes)
 
         if lakes_coefficients:
             metric, constant, kappa, alpha, score = get_coefficients(lakes_coefficients)
@@ -2608,6 +2714,8 @@ def main():
         append_map_to_component(lakes_proximity, 'water', water_components)
 
     if coastline:
+
+        draw_map(coastline)
         coast_proximity = compute_attractiveness(
                 raster = coastline,
                 metric = EUCLIDEAN,
@@ -2638,6 +2746,8 @@ def main():
 
     if bathing_water:
 
+        draw_map(bathing_water)
+
         if bathing_water_coefficients:
             metric, constant, kappa, alpha = get_coefficients(bathing_water_coefficients)
 
@@ -2662,7 +2772,14 @@ def main():
     natural_components = []
 
     if natural:
+
         natural_component = natural.split(',')
+
+        if len(natural_component) > 1:
+            for component in natural_component:
+                draw_map(component)
+        if len(natural_component) == 1:
+            draw_map(natural_component)
 
     if protected:
         msg = "Scoring protected areas '{protected}' based on '{rules}'"
@@ -2772,6 +2889,20 @@ def main():
                 component = tmp_recreation_potential,
                 rules = recreation_potential_categories,
                 output_name = tmp_recreation_potential_categories)
+
+        # Update category labels ---------------------------------
+        potential_categories = 'categories_of_'
+        potential_categories += recreation_potential
+        # remove_normal_files_at_exit.append(potential_categories)
+
+        potential_category_descriptions = string_to_file(
+                POTENTIAL_CATEGORY_LABELS,
+                name=potential_categories)
+
+        r.category(map=tmp_recreation_potential_categories,
+                rules=potential_category_descriptions,
+                separator=':')
+        # --------------------------------------------------------
 
         msg = "\nWriting '{potential}' map\n"
         msg = msg.format(potential=recreation_potential)
@@ -2906,6 +3037,20 @@ def main():
             grass.verbose(msg.format(opportunity=recreation_opportunity))
             del(msg)
 
+            # Update category labels -----------------------------------
+            opportunity_categories = 'categories_of_'
+            opportunity_categories += recreation_opportunity
+            # remove_normal_files_at_exit.append(opportunity_categories)
+
+            opportunity_category_descriptions = string_to_file(
+                    OPPORTUNITY_CATEGORY_LABELS,
+                    name=opportunity_categories)
+
+            r.category(map=tmp_recreation_opportunity_categories,
+                    rules=opportunity_category_descriptions,
+                    separator=':')
+            # ---------------------------------------------------------
+
             g.copy(raster=(tmp_recreation_opportunity_categories,
                 recreation_opportunity), quiet=True)
 
@@ -2929,6 +3074,20 @@ def main():
         grass.verbose(_(msg))
         del(msg)
         get_univariate_statistics(recreation_spectrum)
+
+        # Update category labels --------------------------------
+        spectrum_categories = 'categories_of_'
+        spectrum_categories += recreation_spectrum
+        # remove_normal_files_at_exit.append(spectrum_categories)
+
+        spectrum_category_labels = string_to_file(
+                SPECTRUM_CATEGORY_LABELS,
+                name=spectrum_categories)
+
+        r.category(map=recreation_spectrum,
+                rules=spectrum_category_labels,
+                separator=':')
+        # -------------------------------------------------------
 
         update_meta(recreation_spectrum, spectrum_title)
         r.colors(map=recreation_spectrum, rules='-', stdin = SPECTRUM_COLORS,
@@ -2969,7 +3128,7 @@ def main():
 
         distance_categories_to_highest_spectrum = 'categories_of_'
         distance_categories_to_highest_spectrum += distance_to_highest_spectrum
-        remove_at_exit.append(distance_categories_to_highest_spectrum)
+        remove_at_exit.append(distance_categories_to_highest_spectrum)  # FIXME
 
         recode_map(raster=distance_to_highest_spectrum,
                 rules=spectrum_distance_categories,
@@ -2979,7 +3138,7 @@ def main():
         draw_map(distance_categories_to_highest_spectrum)
 
         spectrum_distance_category_descriptions = string_to_file(
-                SPECTRUM_DISTANCE_CATEGORY_DESCRIPTIONS,
+                SPECTRUM_DISTANCE_CATEGORY_LABELS,
                 name=distance_categories_to_highest_spectrum)
         remove_normal_files_at_exit.append(spectrum_distance_category_descriptions)
 

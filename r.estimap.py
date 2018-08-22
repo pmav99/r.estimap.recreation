@@ -904,6 +904,7 @@ def string_to_file(string, **kwargs):
 
 def cleanup():
     """Clean up temporary maps"""
+    # add a condition here?  FIXME
     g.message("Removing temporary intermediate maps")
     g.remove(flags='f', type="raster", 
             pattern='tmp.{pid}*'.format(pid=os.getpid()),
@@ -1023,7 +1024,7 @@ def save_map(mapname):
     # run('g.copy', raster=(mapname, 'DebuggingMap'))
 
     #
-    # Needs re-design!
+    # Needs re-design! FIXME
     #
 
     newname = mapname
@@ -1215,6 +1216,71 @@ def get_coefficients(coefficients_string):
     grass.verbose(_(msg))
     return metric, constant, kappa, alpha
 
+def build_distance_function(constant, kappa, alpha, variable, **kwargs):
+    """
+    Build a valid `r.mapcalc` expression based on the following "space-time"
+    function:
+
+        ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {variable}) )
+
+    Parameters
+    ----------
+    constant :
+        1
+
+    kappa :
+        A constant named 'K'
+
+    alpha :
+        A constant named 'a'
+
+    variable :
+        The main input variable: for 'attractiveness' it is 'distance', for
+        'mobility' it is 'population'
+
+    kwargs :
+        More keyword arguments such as: 'score', 'suitability'
+
+    Returns
+    -------
+    function:
+        A valid `r.mapcalc` expression
+
+    Examples
+    --------
+    ..
+    """
+    numerator = "{constant} + {kappa}"
+    numerator = numerator.format(constant = constant, kappa = kappa)
+
+    denominator = "{kappa} + exp({alpha} * {variable})"
+    denominator = denominator.format(
+            kappa = kappa,
+            alpha = alpha,
+            variable = variable)  # variable "formatted" by a caller function
+
+    function = " ( {numerator} / {denominator} )"
+    function = function.format(
+            numerator = numerator,
+            denominator = denominator)
+    grass.debug("Function without score: {f}".format(f=function))
+
+    if 'score' in kwargs:
+        score = kwargs.get('score')
+        function += " * {score}"  # need for float()?
+        function = function.format(score=score)
+    grass.debug(_("Function after adding 'score': {f}".format(f=function)))
+    grass.message(_("Function after adding 'score': {f}".format(f=function)))
+
+    if 'suitability' in kwargs:
+        suitability = kwargs.get('suitability')
+        function += " * {suitability}"  # FIXME : Confirm Correctness
+        function = function.format(suitability=suitability)
+    grass.debug(_("Function after adding 'suitability': {f}".format(f=function)))
+    grass.message(_("Function after adding 'suitability': {f}".format(f=function)))
+
+    return function
+
 def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     """
     Compute a raster map whose values follow an (euclidean) distance function
@@ -1227,18 +1293,20 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     constant : 1
 
     kappa :
-        Another constant named K
+        A constant named 'K'
 
     alpha :
+        A constant named 'a'
 
     distance :
-        A distance map based on the input raster.
+        A distance map based on the input raster
 
     score :
+        A score term to multiply the distance function
 
-    kwargs : output_name, optional
-        Optional keyword arguments, such as output name for the computed
-        proximity_name.
+    kwargs :
+        Optional keyword arguments, such as 'output' to name the computed
+        proximity
 
     Returns
     -------
@@ -1282,23 +1350,32 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
 
     draw_map(tmp_distance)
 
-    numerator = "{constant} + {kappa}"
-    numerator = numerator.format(constant = constant, kappa = kappa)
+    # ------------------------------------------------------ REMOVEME
+    # numerator = "{constant} + {kappa}"
+    # numerator = numerator.format(constant = constant, kappa = kappa)
 
-    denominator = "{kappa} + exp({alpha} * {distance})"
-    denominator = denominator.format(kappa = kappa,
-                                     alpha = alpha,
-                                     distance = tmp_distance)
+    # denominator = "{kappa} + exp({alpha} * {distance})"
+    # denominator = denominator.format(kappa = kappa,
+    #                                  alpha = alpha,
+    #                                  distance = tmp_distance)
 
-    distance_function = " ( {numerator} / {denominator} )"
-    distance_function = distance_function.format(
-            numerator = numerator,
-            denominator = denominator)
+    # distance_function = " ( {numerator} / {denominator} )"
+    # distance_function = distance_function.format(
+    #         numerator = numerator,
+    #         denominator = denominator)
 
-    if 'score' in kwargs:
-        score = kwargs.get('score')
-        distance_function += " * {score}"  # need for float()?
-        distance_function = distance_function.format(score = score)
+    # if 'score' in kwargs:
+    #     score = kwargs.get('score')
+    #     distance_function += " * {score}"  # need for float()?
+    #     distance_function = distance_function.format(score = score)
+    # ------------------------------------------------------ REMOVEME
+
+    distance_function = build_distance_function(
+            constant=constant,
+            kappa=kappa,
+            alpha=alpha,
+            variable=tmp_distance,
+            score=score)
 
     # temporary maps will be removed
     if 'output_name' in kwargs:
@@ -1367,7 +1444,7 @@ def neighborhood_function(raster, method, size, distance_map):
             size=size,
             overwrite=True)
 
-    # ---------------------------------------------------------------
+    # ----------------------------------------------------- REMOVEME
     msg = "In neighborhood_function(), output of r.neighbors: {name}"
     msg = msg.format(name=neighborhood_output)
     grass.debug(_(neighborhood_output))
@@ -1378,7 +1455,7 @@ def neighborhood_function(raster, method, size, distance_map):
             neighborhood=neighborhood_output,
             distance=distance_map)
 
-    # ---------------------------------------------------------------
+    # ----------------------------------------------------- REMOVEME
     msg = "Scoring function: {f}".format(f=scoring_function)
     grass.debug(_(msg))
     # ---------------------------------------------------------------
@@ -1386,7 +1463,7 @@ def neighborhood_function(raster, method, size, distance_map):
     filtered_output = distance_map
     filtered_output += '_' + method + '_' + str(size)
 
-    # ---------------------------------------------------------------
+    # ----------------------------------------------------- REMOVEME
     msg = "Filtered output: {o}".format(o=filtered_output)
     grass.debug(_(msg))
     # ---------------------------------------------------------------
@@ -1950,73 +2027,30 @@ def update_meta(raster, title):
     del(source1)
     del(source2)
 
-def build_mobility_function(constant, kappa, alpha, population, **kwargs):
+def compute_mobility(distance, constant, coefficients, population, score,
+        suitability):
     """
-    Formula: if(L10<>0,(1+$D$3)/($D$3+exp(-$E$3*L10))*52,0)
-    Source: Excel file provided by members of the MAES Team, Land Resources, D3
+    The following 'mobility' function, is identical to the one used in
+    `compute_attractiveness()`, excluding, however, the 'score' term:
 
-    -------------------------------------
+        if(L10<>0,(1+$D$3)/($D$3+exp(-$E$3*L10))*52,0)
+
+    Source: Excel file provided by the MAES Team, Land Resources, D3
+
+    ------------------------------------------------------------------
     if L<>0; then
       # (1 + D) / (D + exp(-E * L)) * 52)
 
       # D: Kappa
       # E: Alpha
-      # L: Population (in boundary, in distance buffer)
-    -------------------------------------
-
-    The basic function is identical to the one used in
-    compute_attractiveness(), which is:
-
-    ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {distance}) )
-
-    ToDo:
-    -----
-        Deduplication!  The same distance function is used elsewhere.
+      # L: Population (within boundary, within distance buffer)
+    ------------------------------------------------------------------
 
     Parameters
     ----------
 
-    Returns
-    -------
-
-    Examples
-    --------
-    """
-
-    # DUMMY_DISTANCE='DUMMY_DISTANCE'
-    # basic formula:
-        # ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {population}) )
-
-    numerator = "{constant} + {kappa}"
-    numerator = numerator.format(constant = constant, kappa = kappa)
-
-    denominator = "{kappa} + exp({alpha} * {population})"
-    denominator = denominator.format(kappa = kappa,
-                                     alpha = alpha,
-                                     population = population)
-                                     # distance to be formatter later
-
-    function = " ( {numerator} / {denominator} )"
-    function = function.format(
-            numerator = numerator,
-            denominator = denominator)
-    grass.debug("Function without score: {f}".format(f=function))
-
-    if 'score' in kwargs:
-        score = kwargs.get('score')
-        function += " * {score}"  # need for float()?
-        function = function.format(score = score)
-    grass.debug("Function after adding score: {f}".format(f=function))
-
-    return function
-
-def compute_mobility(distance_map, constant, coefficients, population, score):
-    """
-    Parameters
-    ----------
-
-    distance_map:
-        Map of distance categories (aka 'buffer zones')
+    distance:
+        Map of distance categories
 
     constant:
         Constant for the mobility function
@@ -2055,7 +2089,7 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
 
     mobility_expression:
         A valid mapcalc expression to compute the mobility based on the
-        predefined function `build_mobility_function`.
+        predefined function `build_distance_function`.
 
     Examples
     --------
@@ -2065,15 +2099,18 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
     for distance, parameters in coefficients.items():
 
         kappa, alpha = parameters
-        expressions['{distance}'.format(distance=distance)]=build_mobility_function(
+        distance_category = '{distance}'.format(distance=distance)
+
+        expressions[distance_category]=build_distance_function(
                 constant=constant,
                 kappa=kappa,
                 alpha=alpha,
-                population=population,
-                score=score)
+                variable=population,
+                score=score,
+                suitability=suitability)
 
-        grass.debug(_("For distance {d}:".format(d=distance)))
-        grass.debug(_(expressions['{distance}'.format(distance=distance)]))
+        grass.debug(_("For distance '{d}':".format(d=distance)))
+        grass.debug(_(expressions[distance_category]))
 
     msg = "Expressions per distance category: {e}".format(e=expressions)
     grass.debug(_(msg))
@@ -2109,20 +2146,21 @@ def compute_mobility(distance_map, constant, coefficients, population, score):
         expression_2 = expressions['2'],
         expression_3 = expressions['3'],
         expression_4 = expressions['4'],
-        distance = distance_map)
+        distance = distance)
 
     msg = "Big expression (after formatting): {e}".format(e=expression)
     grass.debug(_(msg))
 
     return mobility_expression
 
-def compute_unmet_demand(distance_map, constant, coefficients, population, score):
+def compute_unmet_demand(distance, constant, coefficients, population, score,
+        suitability):
     """
     Parameters
     ----------
 
-    distance_map:
-        Map of distance categories (aka 'buffer zones')
+    distance:
+        Map of distance categories
 
     constant:
         Constant for the mobility function
@@ -2153,36 +2191,38 @@ def compute_unmet_demand(distance_map, constant, coefficients, population, score
 
     mobility_expression:
         A valid mapcalc expression to compute the mobility based on the
-        predefined function `build_mobility_function`.
+        predefined function `build_distance_function`.
 
     Examples
     --------
     ...
     """
-    distance = 4
+    distance_category = 4  # Hardcoded! FIXME
     kappa, alpha = coefficients
-    unmet_demand_expression = build_mobility_function(
+    unmet_demand_expression = build_distance_function(
             constant=constant,
             kappa=kappa,
             alpha=alpha,
-            population=population,
-            score=score)
+            variable=population,
+            score=score,
+            suitability=suitability)
 
-    msg = "Expression for distance category '{d}': {e}".format(d=distance,
-            e=unmet_demand_expression)
+    msg = "Expression for distance category '{d}': {e}"
+    msg = msg.format(d=distance_category, e=unmet_demand_expression)
     grass.debug(_(msg))
 
     # build expressions -- explicit: use the 'score' kwarg!
     expression = ('eval( unmet_demand = {expression},'
-                  ' \ \n distance = {distance} == 4,'
+                  ' \ \n distance = {distance} == {distance_category},'
                   ' \ \n if( distance, unmet_demand,'
                   ' \ \n null() ))')
     grass.debug(_("Mapcalc expression: {e}".format(e=expression)))
 
     # replace keywords appropriately
     unmet_demand_expression = expression.format(
-        expression = unmet_demand_expression,
-        distance = distance_map)
+            expression = unmet_demand_expression,
+            distance = distance,
+            distance_category = distance_category)
 
     msg = "Big expression (after formatting): {e}".format(
             e=unmet_demand_expression)
@@ -2664,7 +2704,7 @@ def main():
         msg = "Deriving land suitability from '{landuse}' based on '{rules}'"
         grass.verbose(msg.format(landuse=landuse, rules=suitability_scores))
 
-        # suitability = suitability_map_name
+        # suitability is the 'suitability_map_name'
         recode_map(raster=landuse,
                 rules=suitability_scores,
                 colors=SCORE_COLORS,
@@ -2813,10 +2853,12 @@ def main():
             manually subsetting the input map is required.
             '''
 
-            # remove and add later after processing
+            # remove 'land_map' from 'land_component'
+            # add it back after processing
             land_map = land_component.pop(0)
             suitability_map = tmp_map_name(name=land_map)
 
+            # REMOVEME
             msg = "Subsetting {subset} map".format(subset=suitability_map)
             grass.debug(_(msg))
             del(msg)
@@ -2824,18 +2866,23 @@ def main():
             subset_land = equation.format(result = suitability_map,
                     expression = land_map)
 
+            # REMOVEME
             msg = "Expression for Suitability map: {expression}"
             msg = msg.format(expression = subset_land)
             grass.debug(_(msg))
             del(msg)
+
             r.mapcalc(subset_land)
 
-            grass.debug(_("Setting NULL cells to 0"))
+            grass.debug(_("Setting NULL cells to 0"))  # REMOVEME ?
             r.null(map=suitability_map, null=0)  # Set NULLs to 0
 
-            msg = "\nAdding land suitability map '{suitability}' to 'Recreation Potential' component\n"
+            msg = "\nAdding land suitability map '{suitability}' "
+            msg += "to 'Recreation Potential' component\n"
             msg = msg.format(suitability = suitability_map)
             grass.verbose(_(msg))
+
+            # add 'suitability_map' to 'land_component'
             land_component.append(suitability_map)
 
     if len(land_component) > 1:
@@ -3153,6 +3200,7 @@ def main():
                 flags='z',
                 output=tmp_crossmap,
                 quiet=True)
+
         draw_map(tmp_crossmap)
         remove_at_exit.append(tmp_crossmap)
 
@@ -3163,11 +3211,14 @@ def main():
         crossmap_equation = equation.format(result=crossmap,
                 expression=crossmap_expression)
         r.mapcalc(crossmap_equation, overwrite=True)
+
         draw_map(crossmap)
+        remove_at_exit.append(crossmap)
         # Saving the map derived via `r.cross`--------------------------------
 
         grass.use_temp_region()  # to safely modify the region
-        g.region(raster=population)  # Resolution should match 'population'
+        g.region(raster=population,
+                flags='p')  # Resolution should match 'population'
         msg = "|! Computational extent & resolution matched to {raster}"
         msg = msg.format(raster=landuse)
         grass.verbose(_(msg))
@@ -3203,11 +3254,12 @@ def main():
         '''Mobility function'''
 
         mobility_expression = compute_mobility(
-                distance_map=distance_categories_to_highest_spectrum,
+                distance=distance_categories_to_highest_spectrum,
                 constant=MOBILITY_CONSTANT,
                 coefficients=MOBILITY_COEFFICIENTS,
                 population=demand,
-                score=MOBILITY_SCORE)
+                score=MOBILITY_SCORE,
+                suitability=suitability_map)
         grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
 
         mobility_equation = equation.format(result=mobility_map_name,
@@ -3224,14 +3276,21 @@ def main():
 
         if unmet_demand:
 
+            print "Here"
+            draw_map(demand)
+            draw_map(distance_categories_to_highest_spectrum)
+            g.region(flags='p')
+
             '''Unmet Demand'''
             unmet_demand_expression = compute_unmet_demand(
-                    distance_map=distance_categories_to_highest_spectrum,
+                    distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
                     coefficients=MOBILITY_COEFFICIENTS[4],
                     population=demand,
-                    score=MOBILITY_SCORE)
+                    score=MOBILITY_SCORE,
+                    suitability=suitability_map)
             grass.debug(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
+            grass.message(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
 
             unmet_demand_equation = equation.format(result=unmet_demand,
                     expression=unmet_demand_expression)
@@ -3290,7 +3349,9 @@ def main():
 
             # grass.use_temp_region()  # to safely modify the region
 
-            g.region(raster=aggregation, quiet=True)  # Set region to 'mask'
+            g.region(raster=aggregation,
+                    flags='a',
+                    quiet=True)  # Set region to 'mask'
             msg = "|! Computational resolution matched to {raster} [{region}]"
             msg = msg.format(raster=aggregation, region=region)
             grass.debug(_(msg))

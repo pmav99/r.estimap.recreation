@@ -146,8 +146,11 @@ r.estimap  land=land_suitability  potential=potential
 <img src="potential.png" alt="Example of a recreation potential output map">
 </center>
 
-Note, this will process the input map <code>land_suitability</code> over the
-extent defined via <code>g.region</code>.
+Note,
+this will process the input map
+<code>land_suitability</code>
+over the extent defined previously via
+<code>g.region</code>.
 
 <p>
 To exclude certain areas from the
@@ -162,15 +165,27 @@ r.estimap  land=land_suitability  mask=area_of_interest potential=potential_1
 <img src="potential_1.png" alt="Example of a recreation potential output map while using a MASK">
 </center>
 
-The use of a mask (in GRASS GIS' terminology known as <strong>MASK</strong>)
+The use of a mask
+(in GRASS GIS' terminology known as <strong>MASK</strong>)
 will ignore areas of <strong>No Data</strong>
-(pixels in the <code>area_of_interest</code> map assigned the NULL value).
+(pixels in the
+<code>area_of_interest</code>
+map assigned the NULL value).
 Successively,
-these areas will be empty in the output map <code>potential_1</code>.
+these areas will be empty in the output map
+<code>potential_1</code>.
+
+Actually,
+the same effect can be achieved
+by using GRASS GIS' native mask creation module `r.mask`
+and feed it with a raster map of interest.
+The result will be a raster map named <strong>MASK</strong>
+whose presence acts as a filter.
 
 In the following examples,
 it becomes obvious that
-if a single input map features such <strong>No Data</strong> areas,
+if a single input map
+features such <strong>No Data</strong> areas,
 they will be propagated in the output map.
 
 <p>
@@ -179,8 +194,11 @@ when one needs to ensure
 the exclusion of undesired areas
 from any computations.
 
-Also, note the `--o` flag: it is required to overwrite the already existing map
-named <code>potential_1</code>.
+Also,
+note the `--o` flag:
+it is required to overwrite
+the already existing map named
+<code>potential_1</code>.
 
 Next, we add a water component and execute again, without a mask:
 
@@ -206,15 +224,22 @@ while using a MASK, a land suitability map, a water resources map and a natural
 resources map">
 </center>
 
-While the <code>land</code> option accepts only one map as an input, both the
-<code>water</code> and the <code>natural</code> options accept multiple maps as
-inputs.
+While the <code>land</code> option
+accepts only one map as an input,
+both the <code>water</code> and the <code>natural</code> options
+accept multiple maps as inputs.
 
-In example, we may add a map of <code>bathing_water_quality</code> to the water
-component:
+In example,
+we add a second map of
+<code>bathing_water_quality</code>
+to the water component:
 <div class="code"><pre>
 r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  potential=potential_4
 </pre></div>
+
+We may add any arbitrary number of maps,
+separated by a comma,
+to options that accept multiple inputs.
 
 <p>
 <center>
@@ -228,9 +253,9 @@ The output maps
 <code>potential_2</code>,
 <code>potential_3</code>
 and <code>potential_4</code>
-range within [0,3],
-yet differ in the distribution of values
-due to the differen set of input maps.
+range within [0,3].
+Yet, they differ in the distribution of values
+due to the different set of input maps.
 
 <p>
 All of the above examples
@@ -238,9 +263,8 @@ base upon pre-processed maps
 that score the access to and quality of
 land, water and natural resources.
 
-For using <i>raw</i>, unprocessed maps, see further section <b>Using
-unprocessed maps</b>.
-
+For using <i>raw</i>, unprocessed maps,
+read section <b>Using unprocessed maps</b>.
 
 <h4>Spectrum</h4>
 

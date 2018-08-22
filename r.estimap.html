@@ -157,7 +157,7 @@ To exclude certain areas from the
 computations, we may use a raster map as a mask:
 
 <div class="code"><pre>
-r.estimap  land=land_suitability  mask=area_of_interest potential=potential_1
+r.estimap  land=land_suitability  mask=area_of_interest  potential=potential_1
 </pre></div>
 
 <p>
@@ -237,9 +237,10 @@ to the water component:
 r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  potential=potential_4
 </pre></div>
 
-We may add any arbitrary number of maps,
-separated by a comma,
-to options that accept multiple inputs.
+<p>
+In general, arbitrary number of maps,
+separated by comma,
+may be added to options that accept multiple inputs.
 
 <p>
 <center>
@@ -247,6 +248,17 @@ to options that accept multiple inputs.
 while using a MASK, a land suitability map, two water resources maps and a natural
 resources map">
 </center>
+
+<p>
+This example, features also a title and a legend, so as to make sense of the
+map.
+
+<div class="code"><pre>
+d.rast  potential_4
+d.legend  -c  -b  potential_4  at=0,15,0,1  border_color=white
+d.text  text="Potential"  bgcolor=white
+</pre></div>
+
 
 The output maps
 <code>potential_1</code>,
@@ -294,6 +306,49 @@ resources map">
 Missing to define the
 <code>infrastructure</code> map,
 the command will abort and inform about.
+
+<p>
+The image above, was produced via the following native GRASS GIS commands
+<div class="code"><pre>
+d.rast  spectrum
+d.legend  -c  -b  spectrum  at=0,30,0,1  border_color=white
+d.text  text="Spectrum"  bgcolor=white
+</pre></div>
+
+<h5>Opportunity</h5>
+
+The <code>opportunity</code> map
+is actually an intermediate step
+of the algorithm.
+The option to output this map
+is meant for expert users
+who want to explore
+the fundamentals of the processing steps.
+Hence,
+it requires to define
+the <code>spectrum</code>
+map as well.
+
+Building upon the previous command, we add the <code>opportunity</code> output
+option:
+
+<div class="code"><pre>
+r.estimap  \
+  land=land_suitability \
+  water=water_resources,bathing_water_quality \
+  natural=protected_areas \
+  spectrum=spectrum  \
+  infrastructure=distance_to_infrastructure
+  opportunity=opportunity \
+</pre></div>
+
+<p>
+<center>
+<img src="opportunity.png" alt="Example of a recreation spectrum output map
+while using a MASK, a land suitability map, a water resources map and a natural
+resources map">
+</center>
+
 
 <h4>More input maps</h4>
 
@@ -404,18 +459,33 @@ and base">
 
 Of course it is possible to derive all output maps with one call:
 <div class="code"><pre>
-r.estimap --o \
-  mask=area_of_interest \
-  land=land_suitability \
-  water=water_resources,bathing_water_quality \
-  natural=protected_areas \
-  infrastructure=distance_to_infrastructure \
-  demand=demand \
-  unmet=unmet_demand \
-  mobility=mobility \
-  population=population_2015 \
+r.estimap --o  \
+  mask=area_of_interest  \
+  land=land_suitability  \
+  water=water_resources,bathing_water_quality  \
+  natural=protected_areas  \
+  infrastructure=distance_to_infrastructure  \
+  potential=potential  \
+  opportunity=opportunity  \
+  spectrum=spectrum  \
+  demand=demand  \
+  unmet=unmet_demand  \
+  mobility=mobility  \
+  population=population_2015  \
   base=local_administrative_units
+  timestamp='2018'
 </pre></div>
+
+<p>
+Note the use of
+the <code>timestamp</code>
+parameter!
+This concerns the <code>spectrum</code> map.
+If plans
+include working with GRASS GIS' temporal framework
+on time-series,
+this will be useful.
+
 <h3>Using unprocessed input maps</h3>
 
 <p>

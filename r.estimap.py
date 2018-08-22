@@ -414,7 +414,7 @@
 #% key: opportunity
 #% key_desc: name
 #% label: Output intermediate map of recreation opportunity
-#% description: Intermediate step in deriving the 'spectrum' map, classified in 3 categories
+#% description: Intermediate step in deriving the 'spectrum' map, classified in 3 categories, meant for expert use
 #% required: no
 #% guisection: Output
 #%end
@@ -502,6 +502,7 @@
 #%rules
 #%  requires_all: demand, population, base
 #%  requires: demand, infrastructure, anthropic, roads
+#%  requires: unmet, demand
 #%end
 
 #%option G_OPT_R_OUTPUT
@@ -1270,14 +1271,12 @@ def build_distance_function(constant, kappa, alpha, variable, **kwargs):
         function += " * {score}"  # need for float()?
         function = function.format(score=score)
     grass.debug(_("Function after adding 'score': {f}".format(f=function)))
-    grass.message(_("Function after adding 'score': {f}".format(f=function)))
 
     if 'suitability' in kwargs:
         suitability = kwargs.get('suitability')
         function += " * {suitability}"  # FIXME : Confirm Correctness
         function = function.format(suitability=suitability)
     grass.debug(_("Function after adding 'suitability': {f}".format(f=function)))
-    grass.message(_("Function after adding 'suitability': {f}".format(f=function)))
 
     return function
 
@@ -2096,10 +2095,10 @@ def compute_mobility(distance, constant, coefficients, population, score,
     ...
     """
     expressions={}  # create a dictionary of expressions
-    for distance, parameters in coefficients.items():
+
+    for distance_category, parameters in coefficients.items():
 
         kappa, alpha = parameters
-        distance_category = '{distance}'.format(distance=distance)
 
         expressions[distance_category]=build_distance_function(
                 constant=constant,
@@ -2116,22 +2115,14 @@ def compute_mobility(distance, constant, coefficients, population, score,
     grass.debug(_(msg))
 
     # build expressions -- explicit: use the'score' kwarg!
-
-                  # ------------------------------------
-                  # Distance category 4 not used!
-                  # ' \ \n mobility_4 = {expression_4},'
-                  # ' \ \n distance_4 = {distance} == 4,'
-                  # ' \ \n if( distance_4, mobility_4,'
-                  # ------------------------------------
-
     expression = ('eval( mobility_0 = {expression_0},'
                   ' \ \n mobility_1 = {expression_1},'
                   ' \ \n mobility_2 = {expression_2},'
                   ' \ \n mobility_3 = {expression_3},'
-                  ' \ \n distance_0 = {distance} == 0,'
-                  ' \ \n distance_1 = {distance} == 1,'
-                  ' \ \n distance_2 = {distance} == 2,'
-                  ' \ \n distance_3 = {distance} == 3,'
+                  ' \ \n distance_0 = {distance} == {distance_category_0},'
+                  ' \ \n distance_1 = {distance} == {distance_category_1},'
+                  ' \ \n distance_2 = {distance} == {distance_category_2},'
+                  ' \ \n distance_3 = {distance} == {distance_category_3},'
                   ' \ \n if( distance_0, mobility_0,'
                   ' \ \n if( distance_1, mobility_1,'
                   ' \ \n if( distance_2, mobility_2,'
@@ -2140,13 +2131,20 @@ def compute_mobility(distance, constant, coefficients, population, score,
     grass.debug(_("Mapcalc expression: {e}".format(e=expression)))
 
     # replace keywords appropriately
+        # 'distance' is a map
+        # 'distance_category' is a value
+        # hence: 'distance' != 'distance_category'
     mobility_expression = expression.format(
-        expression_0 = expressions['0'],
-        expression_1 = expressions['1'],
-        expression_2 = expressions['2'],
-        expression_3 = expressions['3'],
-        expression_4 = expressions['4'],
-        distance = distance)
+            expression_0 = expressions[0],
+            expression_1 = expressions[1],
+            expression_2 = expressions[2],
+            expression_3 = expressions[3],
+            distance_category_0 = 0,
+            distance_category_1 = 1,
+            distance_category_2 = 2,
+            distance_category_3 = 3,
+            distance = distance)
+    # FIXME Make the above more elegant?
 
     msg = "Big expression (after formatting): {e}".format(e=expression)
     grass.debug(_(msg))
@@ -2198,6 +2196,7 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
     ...
     """
     distance_category = 4  # Hardcoded! FIXME
+
     kappa, alpha = coefficients
     unmet_demand_expression = build_distance_function(
             constant=constant,
@@ -2508,7 +2507,7 @@ def main():
     if landuse and not suitability_scores:
         msg = "Using internal rules to score land use classes in '{map}'"
         msg = msg.format(map=landuse)
-        grass.message(_(msg))
+        grass.warning(_(msg))
 
         suitability_scores = string_to_file(SUITABILITY_SCORES,
                 name=suitability_map_name)
@@ -2627,6 +2626,9 @@ def main():
     '''Population'''
 
     population = options['population']
+    if population:
+        population_ns_resolution = grass.raster_info(population)['nsres']
+        population_ew_resolution = grass.raster_info(population)['ewres']
 
     '''Outputs'''
 
@@ -2667,13 +2669,13 @@ def main():
     #     unmet_demand = 'unmet_demand'
 
     mobility = options['mobility']
-    if mobility:
-        demand = 'demand'
     mobility_map_name = 'mobility'
 
     supply = options['supply']  # use as CSV filename prefix
-
     """ First, care about the computational region"""
+
+    if any([mobility, supply]) and not demand:
+        demand = 'demand'
 
     if mask:
         msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
@@ -2847,28 +2849,21 @@ def main():
 
         for dummy_index in land_component:
 
+            # remove 'land_map' from 'land_component'
+            # process and add it back afterwards
+            land_map = land_component.pop(0)
+
             '''
             This section sets NULL cells to 0.
             Because `r.null` operates on the complete input raster map,
             manually subsetting the input map is required.
             '''
-
-            # remove 'land_map' from 'land_component'
-            # add it back after processing
-            land_map = land_component.pop(0)
             suitability_map = tmp_map_name(name=land_map)
-
-            # REMOVEME
-            msg = "Subsetting {subset} map".format(subset=suitability_map)
-            grass.debug(_(msg))
-            del(msg)
-
             subset_land = equation.format(result = suitability_map,
                     expression = land_map)
 
             # REMOVEME
-            msg = "Expression for Suitability map: {expression}"
-            msg = msg.format(expression = subset_land)
+            msg = "Subsetting '{subset}' map".format(subset=suitability_map)
             grass.debug(_(msg))
             del(msg)
 
@@ -3217,8 +3212,9 @@ def main():
         # Saving the map derived via `r.cross`--------------------------------
 
         grass.use_temp_region()  # to safely modify the region
-        g.region(raster=population,
-                flags='p')  # Resolution should match 'population'
+        g.region(nsres=population_ns_resolution,
+                 ewres=population_ew_resolution,
+                 flags='a')  # Resolution should match 'population' FIXME
         msg = "|! Computational extent & resolution matched to {raster}"
         msg = msg.format(raster=landuse)
         grass.verbose(_(msg))
@@ -3228,11 +3224,9 @@ def main():
         msg = "|i Population statistics: {s}".format(s=population_total)
         grass.verbose(_(msg))
 
-        #
-        ## Reset region resolution
-        #
+        g.region(raster=crossmap, res=1000)
+
         if not demand and supply:
-            demand = 'demand'
             remove_at_exit.append(demand)
 
         r.stats_zonal(base=crossmap,
@@ -3251,37 +3245,10 @@ def main():
                     methods=METHODS,
                     column_prefix='demand')
 
-        '''Mobility function'''
-
-        mobility_expression = compute_mobility(
-                distance=distance_categories_to_highest_spectrum,
-                constant=MOBILITY_CONSTANT,
-                coefficients=MOBILITY_COEFFICIENTS,
-                population=demand,
-                score=MOBILITY_SCORE,
-                suitability=suitability_map)
-        grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
-
-        mobility_equation = equation.format(result=mobility_map_name,
-                expression=mobility_expression)
-        r.mapcalc(mobility_equation, overwrite=True)
-        draw_map(mobility_map_name, width='45', height='45')
-
-        if base_vector:
-
-            update_vector(vector=base_vector,
-                    raster=mobility_map_name,
-                    methods=METHODS,
-                    column_prefix='mobility')
+        '''Unmet Demand'''
 
         if unmet_demand:
 
-            print "Here"
-            draw_map(demand)
-            draw_map(distance_categories_to_highest_spectrum)
-            g.region(flags='p')
-
-            '''Unmet Demand'''
             unmet_demand_expression = compute_unmet_demand(
                     distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
@@ -3290,7 +3257,6 @@ def main():
                     score=MOBILITY_SCORE,
                     suitability=suitability_map)
             grass.debug(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
-            grass.message(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
 
             unmet_demand_equation = equation.format(result=unmet_demand,
                     expression=unmet_demand_expression)
@@ -3303,6 +3269,37 @@ def main():
                         raster=unmet_demand,
                         methods=METHODS,
                         column_prefix='unmet')
+
+        '''Mobility function'''
+
+        if not mobility and supply:
+            mobility = mobility_map_name
+            print "Mobility", mobility
+            remove_at_exit.append(mobility)
+            print "Mobility will be removed"
+
+        if mobility or supply:
+
+            mobility_expression = compute_mobility(
+                    distance=distance_categories_to_highest_spectrum,
+                    constant=MOBILITY_CONSTANT,
+                    coefficients=MOBILITY_COEFFICIENTS,
+                    population=demand,
+                    score=MOBILITY_SCORE,
+                    suitability=suitability_map)
+            grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
+
+            mobility_equation = equation.format(result=mobility,
+                    expression=mobility_expression)
+            r.mapcalc(mobility_equation, overwrite=True)
+            draw_map(mobility_map_name, width='45', height='45')
+
+            if base_vector:
+
+                update_vector(vector=base_vector,
+                        raster=mobility_map_name,
+                        methods=METHODS,
+                        column_prefix='mobility')
 
     '''Supply Table'''
 

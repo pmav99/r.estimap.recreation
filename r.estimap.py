@@ -905,16 +905,27 @@ def string_to_file(string, **kwargs):
 
 def cleanup():
     """Clean up temporary maps"""
-    # add a condition here?  FIXME
-    g.message("Removing temporary intermediate maps")
-    g.remove(flags='f', type="raster", 
+
+    # get list of temporary maps
+    temporary_raster_maps = grass.list_strings(type='raster',
+            pattern='tmp.{pid}*'.format(pid=os.getpid()))
+
+    # inform
+    if any([temporary_raster_maps, remove_at_exit]):
+        g.message("Removing temporary intermediate maps")
+
+    # remove temporary maps
+    if temporary_raster_maps:
+        g.remove(flags='f', type="raster", 
             pattern='tmp.{pid}*'.format(pid=os.getpid()),
             quiet=True)
 
+    # remove using handcrafted list
     if remove_at_exit:
         g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
                 quiet=True)
 
+    # remove MASK ? FIXME
     if grass.find_file(name='MASK', element='cell')['file']:
         r.mask(flags='r', verbose=True)
 
@@ -1345,29 +1356,8 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
         grass.verbose(_(msg))
         r.mask(raster=mask, flags='i', overwrite=True, quiet=True)
-        # draw_map(mask)
 
-    draw_map(tmp_distance)
-
-    # ------------------------------------------------------ REMOVEME
-    # numerator = "{constant} + {kappa}"
-    # numerator = numerator.format(constant = constant, kappa = kappa)
-
-    # denominator = "{kappa} + exp({alpha} * {distance})"
-    # denominator = denominator.format(kappa = kappa,
-    #                                  alpha = alpha,
-    #                                  distance = tmp_distance)
-
-    # distance_function = " ( {numerator} / {denominator} )"
-    # distance_function = distance_function.format(
-    #         numerator = numerator,
-    #         denominator = denominator)
-
-    # if 'score' in kwargs:
-    #     score = kwargs.get('score')
-    #     distance_function += " * {score}"  # need for float()?
-    #     distance_function = distance_function.format(score = score)
-    # ------------------------------------------------------ REMOVEME
+    draw_map(tmp_distance)  # REMOVEME
 
     distance_function = build_distance_function(
             constant=constant,
@@ -1824,7 +1814,6 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     expression = expression.format(anthropic=anthropic_proximity,
             roads=roads_proximity)
     return expression
-
 
 def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwargs):
     """Compute anthropic proximity
@@ -3386,12 +3375,6 @@ def main():
     if info:
         citation = 'Citation: ' + citation_recreation_potential
         g.message(citation)
-
-    # if remove_at_exit:
-    #     g.message("Removing temporary intermediate maps")
-    #     g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
-    #             quiet=True)
-    #     g.message("*** Please remove the grass_render_file ***")
 
     if remove_normal_files_at_exit:
         for item in remove_normal_files_at_exit:

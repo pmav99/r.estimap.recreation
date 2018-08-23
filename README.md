@@ -1,9 +1,8 @@
-*r.estimap* is an implementation of the ESTIMAP recreation algorithm to
-support mapping and modelling of ecosystem services (Zulian, 2014).
-
-
 DESCRIPTION
 -----------
+
+*r.estimap* is an implementation of the ESTIMAP recreation algorithm to
+support mapping and modelling of ecosystem services (Zulian, 2014).
 
 The algorithm estimates the capacity of ecosystems to provide
 opportunities for nature-based recreation and leisure (recreation
@@ -14,9 +13,36 @@ support for outdoor recreation (potential recreation). Second, it
 implements a proximity-remoteness concept to integrate the recreation
 potential and the existing infrastructure.
 
-The following equation represents the logic behind ESTIMAP:
+##### Terminology
 
-    Recreation Spectrum = Recreation Potential + Recreation Opportunity
+First, an overview of the terminology
+
+ Recreation Potential
+:   is ...
+
+ Recreation Opportunity
+:   is ...
+
+ Recreation (Opportunity) Spectrum
+:   is ...
+
+ Demand Distribution
+:   is ...
+
+ Unmet Demand Distribution
+:   is ...
+
+ Mobidtty
+:   is ...
+
+ Flow
+:   is ...
+
+ Supply
+:   is ...
+
+ Use
+:   is ...
 
 ##### Recreation Potential
 
@@ -37,11 +63,32 @@ the algorithm. For example, a CORINE land cover map may be given to the
 correspond to the CORINE nomenclature. The latter is fed as an ASCII
 file to the 'suitability\_scores' input option.
 
+##### Recreation Opportunity
+
+...
+
 ##### Recreation Spectrum
 
 The recreation (opportunity) spectrum map, derives by combining the
 recreation potential and maps that depict access (i.e. infrastructure)
 and/or areas that provide opportunities for recreational activities.
+
+**Explain here** significance of areas with the *Highest Recreation
+Spectrum*.
+
+<div class="code">
+
+        |-------------------------+------+----------+-----|
+        | Potential / Opportunity | Near | Midrange | Far |
+        |-------------------------+------+----------+-----|
+        | Near                    | 1    | 2        | 3   |
+        |-------------------------+------+----------+-----|
+        | Midrange                | 4    | 5        | 6   |
+        |-------------------------+------+----------+-----|
+        | Far                     | 7    | 8        | 9   |
+        |-------------------------+------+----------+-----|
+
+</div>
 
 ##### Flow, Supply and Use
 
@@ -49,35 +96,41 @@ By integrating maps of regions of interest and population, the module
 supports the production of a series of *demand* and *mobility* maps as
 well as exporting related *supply* and *use* tables.
 
-### TERMINOLOGY
+### Mathematical Background
 
--   Recreation Potential
--   Recreation Opportunity
--   Recreation (Opportunity) Spectrum
--   Demand
--   Mobility
--   Flow
--   Supply
--   Use
+The following equation represents the logic behind ESTIMAP:
 
-EXAMPLES
---------
+    Recreation Spectrum = Recreation Potential + Recreation Opportunity
 
-Before anything, we need to define the extent of interest using
+##### Remoteness and Proximity
+
+The base *distance* function to quantify *attractiveness*, is:
 
 <div class="code">
 
-    g.region raster=area_of_interest
+    ( {Constant} + {Kappa} ) / ( {Kappa} + exp({alpha} * {Variable}) )
 
 </div>
 
-### Using pre-processed maps
+where
 
-The first four options are meant for pre-processed input maps that
-classify as either `land`, `natural`, `water` and `infrastructure`
-resources.
+-   Constant
+-   Coefficients
+    -   Kappa
+    -   Alpha
+-   Variable
 
-#### Potential
+##### Accessibility
+
+##### Normalization
+
+Each *component* is normalized. That is, all maps listed in a given
+component are summed up and normalised. Normalizing any raster map, be
+it a single map or the sum of a series of maps, is performed by
+subtracting its minimum value and dividing by its range.
+
+EXAMPLES
+--------
 
 For the sake of demonstrating the usage of the module, we use the
 following "component" maps
@@ -98,6 +151,22 @@ following "component" maps
 of a protected areas input map](protected_areas.png)
 
 </div>
+
+Before anything, we need to define the extent of interest using
+
+<div class="code">
+
+    g.region raster=area_of_interest
+
+</div>
+
+### Using pre-processed maps
+
+The first four options are meant for pre-processed input maps that
+classify as either `land`, `natural`, `water` and `infrastructure`
+resources.
+
+#### Potential
 
 A simple call is to use a map that depicts the suitability of different
 land types to support for recreation:
@@ -315,6 +384,31 @@ infrastructure, population and base](unmet_demand.png)
 
 #### Mobility
 
+The *mobility* bases upon the same function used to quantify the
+attractiveness of locations for their recreational value. It includes an
+extra *score* term.
+
+The computation involves a *distance* map, reclassified in 5 categories
+as shown in the following table. For each distance category, a unique
+pair of coefficient values is assigned to the basic equation.
+
+<div class="tg-wrap">
+
+  Distance   Kappa     Alpha
+  ---------- --------- ---------
+  0 to 1     0.02350   0.00102
+  1 to 2     0.02651   0.00109
+  2 to 3     0.05120   0.00098
+  3 to 4     0.10700   0.00067
+  &gt;4      0.06930   0.00057
+
+</div>
+
+Note, the last distance category is not considered in deriving the final
+"map of visits". The output is essentially a raster map with the
+distribution of the demand per distance category and within predefined
+geometric boundaries
+
 <div class="code">
 
     r.estimap --o \
@@ -501,6 +595,11 @@ provide an alternative scoring scheme, all what is required is either of
 
 -   provide a new "rules" file with the desired set of scoring rules
 -   provide a string to the `suitability_scores` option
+
+REFERENCES
+----------
+
+-   http://publications.jrc.ec.europa.eu/repository/bitstream/JRC87585/lb-na-26474-en-n.pd
 
 SEE ALSO
 --------

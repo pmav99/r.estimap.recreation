@@ -24,14 +24,34 @@ to integrate
 the recreation potential
 and the existing infrastructure.
 
-<p>
-The following equation represents the logic behind ESTIMAP:
-<pre>
-Recreation <strong>Spectrum</strong> = Recreation <strong>Potential</strong> + Recreation <strong>Opportunity</strong>
-</pre>
+<h5>Terminology</h5>
+
+First, an overview of the terminology
+
+<dl>
+  <dt> Recreation Potential</dt>
+  <dd> is ... </dd>
+  <dt> Recreation Opportunity</dt>
+  <dd> is ... </dd>
+  <dt> Recreation (Opportunity) Spectrum</dt>
+  <dd> is ... </dd>
+  <dt> Demand Distribution</dt>
+  <dd> is ... </dd>
+  <dt> Unmet Demand Distribution</dt>
+  <dd> is ... </dd>
+  <dt> Mobidtty</dt>
+  <dd> is ... </dd>
+  <dt> Flow</dt>
+  <dd> is ... </dd>
+  <dt> Supply</dt>
+  <dd> is ... </dd>
+  <dt> Use</dt>
+  <dd> is ... </dd>
+</dl>
 
 <h5>Recreation Potential</h5>
 
+<p>
 The recreation potential map,
 derives by adding and normalizing
 maps of natural <i>components</i>
@@ -47,6 +67,7 @@ that score access to or quality of resources such as:
   <li> urban</li>
 </ul>
 
+<p>
 Alternatively,
 the module treats unprocessed maps,
 by providing a set of relevant scores or coefficients,
@@ -59,15 +80,40 @@ that correspond to the CORINE nomenclature.
 The latter is fed as an ASCII file
 to the 'suitability_scores' input option.
 
+<h5>Recreation Opportunity</h5>
+
+<p>
+...
+
 <h5>Recreation Spectrum</h5>
 
+<p>
 The recreation (opportunity) spectrum map,
 derives by combining the recreation potential
 and maps that depict access (i.e. infrastructure) and/or
 areas that provide opportunities for recreational activities.
 
+<p>
+<strong>Explain here</strong>
+significance of areas with the
+<em>Highest Recreation Spectrum</em>.
+
+<p>
+<div class="code"><pre>
+    |-------------------------+------+----------+-----|
+    | Potential / Opportunity | Near | Midrange | Far |
+    |-------------------------+------+----------+-----|
+    | Near                    | 1    | 2        | 3   |
+    |-------------------------+------+----------+-----|
+    | Midrange                | 4    | 5        | 6   |
+    |-------------------------+------+----------+-----|
+    | Far                     | 7    | 8        | 9   |
+    |-------------------------+------+----------+-----|
+</pre></div>
+
 <h5>Flow, Supply and Use</h5>
 
+<p>
 By integrating
 maps of
 regions of interest
@@ -80,38 +126,56 @@ and <i>mobility</i> maps
 as well as exporting
 related <i>supply</i> and <i>use</i> tables.
 
-<h3>TERMINOLOGY</h3>
+<h3>Mathematical Background</h3>
 
-<ul>
-  <li> Recreation Potential</li>
-  <li> Recreation Opportunity</li>
-  <li> Recreation (Opportunity) Spectrum</li>
-  <li> Demand</li>
-  <li> Mobility</li>
-  <li> Flow</li>
-  <li> Supply</li>
-  <li> Use</li>
-</ul>
+<p>
+The following equation represents the logic behind ESTIMAP:
+<pre>
+Recreation <strong>Spectrum</strong> = Recreation <strong>Potential</strong> + Recreation <strong>Opportunity</strong>
+</pre>
 
-<h2>EXAMPLES</h2>
+<h5>Remoteness and Proximity</h5>
 
-Before anything, we need to define the extent of interest using
+The base
+<em>distance</em>
+function
+to quantify
+<em>attractiveness</em>, is:
+
 <div class="code"><pre>
-g.region raster=area_of_interest
+( {Constant} + {Kappa} ) / ( {Kappa} + exp({alpha} * {Variable}) )
 </pre></div>
 
+where
 
-<h3>Using pre-processed maps</h3>
+<ul>
+  <li>Constant</li>
+  <li>Coefficients
+    <ul>
+      <li>Kappa</li>
+      <li>Alpha</li>
+    </ul>
+  </li>
+  <li>Variable</li>
+</ul>
 
-The first four options are meant for pre-processed input maps
-that classify as either
-<code>land</code>,
-<code>natural</code>,
-<code>water</code>
-and <code>infrastructure</code>
-resources.
+<h5>Accessibility</h5>
 
-<h4>Potential</h4>
+<h5>Normalization</h5>
+
+Each <em>component</em> is normalized.
+
+That is,
+all maps listed in a given component
+are summed up and normalised.
+Normalizing any raster map,
+be it a single map
+or the sum of a series of maps,
+is performed by
+subtracting its minimum value
+and dividing by its range.
+
+<h2>EXAMPLES</h2>
 
 For the sake of demonstrating the usage of the module,
 we use the following "component" maps
@@ -132,6 +196,25 @@ to derive a recreation <i>potential</i> map.
   <img src="protected_areas.png" alt="Example of a protected areas input map">
 </center>
 </div>
+
+
+Before anything, we need to define the extent of interest using
+<div class="code"><pre>
+g.region raster=area_of_interest
+</pre></div>
+
+
+<h3>Using pre-processed maps</h3>
+
+The first four options are meant for pre-processed input maps
+that classify as either
+<code>land</code>,
+<code>natural</code>,
+<code>water</code>
+and <code>infrastructure</code>
+resources.
+
+<h4>Potential</h4>
 
 <p>
 A simple call is to use a map that depicts the suitability of
@@ -430,6 +513,68 @@ and base">
 
 <h4>Mobility</h4>
 
+The
+<i>mobility</i>
+bases upon the same function
+used to quantify the attractiveness
+of locations for their recreational value.
+It includes an extra
+<em>score</em>
+term.
+
+<p>
+The computation involves a
+<em>distance</em> map,
+reclassified in 5 categories
+as shown in the following table.
+
+For each distance category,
+a unique pair of coefficient values
+is assigned to the basic equation.
+
+<div class="tg-wrap"><table>
+  <tr>
+    <th>Distance</th>
+    <th>Kappa</th>
+    <th>Alpha</th>
+  </tr>
+  <tr>
+    <td>0 to 1</td>
+    <td>0.02350</td>
+    <td>0.00102</td>
+  </tr>
+  <tr>
+    <td>1 to 2</td>
+    <td>0.02651</td>
+    <td>0.00109</td>
+  </tr>
+  <tr>
+    <td>2 to 3</td>
+    <td>0.05120</td>
+    <td>0.00098</td>
+  </tr>
+  <tr>
+    <td>3 to 4</td>
+    <td>0.10700</td>
+    <td>0.00067</td>
+  </tr>
+  <tr>
+    <td>&gt;4</td>
+    <td>0.06930</td>
+    <td>0.00057</td>
+  </tr>
+</table></div>
+
+<p>
+Note, the last distance category is not considered in deriving the final "map
+of visits".
+
+The output is essentially
+a raster map
+with the distribution of the demand
+per distance category and within predefined geometric boundaries
+
+<p>
 <div class="code"><pre>
 r.estimap --o \
   mask=area_of_interest \
@@ -636,7 +781,11 @@ what is required is either of
   <li>provide a string to the <code>suitability_scores</code> option</li>
 </ul>
 
+<h2>REFERENCES</h2>
 
+<ul>
+  <li>http://publications.jrc.ec.europa.eu/repository/bitstream/JRC87585/lb-na-26474-en-n.pd</li>
+</ul>
 
 <h2>SEE ALSO</h2>
 

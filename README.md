@@ -48,7 +48,7 @@ First, an overview of the terminology
 
 The recreation potential map, derives by adding and normalizing maps of
 natural *components* that may provide recreation opportunities.
-Components are user defined, pre-processed, input raster maps, that
+Components are user-defined, pre-processed, input raster maps, that
 score access to or quality of resources such as:
 
 -   land

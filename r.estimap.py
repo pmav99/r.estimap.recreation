@@ -580,6 +580,8 @@
 
 import os, sys, subprocess
 import datetime, time
+import csv
+import heapq
 
 '''Fake a file-like object from an in-script hardcoded string?'''
 # import StringIO
@@ -739,12 +741,14 @@ recreation_opportunity_categories=recreation_potential_categories
 ## FIXME -- No hardcodings please.
 #
 
-POTENTIAL_CATEGORY_LABELS = '''1:Near
-2:Midrange
-3:Far
+POTENTIAL_CATEGORY_LABELS = '''1:Low
+2:Moderate
+3:High
 '''
-
-OPPORTUNITY_CATEGORY_LABELS = POTENTIAL_CATEGORY_LABELS
+OPPORTUNITY_CATEGORY_LABELS = '''1:Far
+2:Midrange
+3:Near
+'''
 
 SPECTRUM_CATEGORY_LABELS = '''1:Low provision (far)
 2:Low provision (midrange)
@@ -865,6 +869,36 @@ def tmp_map_name(**kwargs):
         temporary_filename = temporary_filename + '.' + str(name)
     return temporary_filename
 
+def cleanup():
+    """Clean up temporary maps"""
+
+    # get list of temporary maps
+    temporary_raster_maps = grass.list_strings(type='raster',
+            pattern='tmp.{pid}*'.format(pid=os.getpid()))
+
+    # print "Temporary maps:", temporary_raster_maps
+    # print
+    # print "Remove at exit?", remove_at_exit
+
+    # inform
+    if any([temporary_raster_maps, remove_at_exit]):
+        g.message("Removing temporary intermediate maps")
+
+        # remove temporary maps
+        if temporary_raster_maps:
+            g.remove(flags='f', type="raster", 
+                pattern='tmp.{pid}*'.format(pid=os.getpid()),
+                quiet=True)
+
+        # remove using handcrafted list
+        if remove_at_exit:
+            g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
+                    quiet=True)
+
+    # remove MASK ? FIXME
+    if grass.find_file(name='MASK', element='cell')['file']:
+        r.mask(flags='r', verbose=True)
+
 def string_to_file(string, **kwargs):
     """
     """
@@ -902,32 +936,6 @@ def string_to_file(string, **kwargs):
         # Will be removed right after `.close()` -- How to possibly re-use it
             # outside the function?
         # Wrap complete main() in a `try` statement?
-
-def cleanup():
-    """Clean up temporary maps"""
-
-    # get list of temporary maps
-    temporary_raster_maps = grass.list_strings(type='raster',
-            pattern='tmp.{pid}*'.format(pid=os.getpid()))
-
-    # inform
-    if any([temporary_raster_maps, remove_at_exit]):
-        g.message("Removing temporary intermediate maps")
-
-    # remove temporary maps
-    if temporary_raster_maps:
-        g.remove(flags='f', type="raster", 
-            pattern='tmp.{pid}*'.format(pid=os.getpid()),
-            quiet=True)
-
-    # remove using handcrafted list
-    if remove_at_exit:
-        g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
-                quiet=True)
-
-    # remove MASK ? FIXME
-    if grass.find_file(name='MASK', element='cell')['file']:
-        r.mask(flags='r', verbose=True)
 
 def draw_map(mapname, **kwargs):
     """
@@ -1044,6 +1052,15 @@ def save_map(mapname):
         newname = 'output_' + mapname
         run('g.rename', raster=(mapname, newname))
     return newname
+
+def write_dictionary_to_csv(filename, dictionary):
+    f = open(filename, "wb")
+    w = csv.writer(f)
+    for key, value in dictionary.items():
+        if value is None or value == '':
+            continue
+        w.writerow([key, value])
+    f.close()
 
 def append_map_to_component(raster, component_name, component_list):
     """Appends raster map to given list of components
@@ -1878,15 +1895,15 @@ def recreation_spectrum_expression(potential, opportunity):
     Build and return a valid mapcalc expression for deriving
     the Recreation Opportunity Spectrum
 
-    |-------------------------+------+----------+-----|
-    | Potential / Opportunity | Near | Midrange | Far |
-    |-------------------------+------+----------+-----|
-    | Near                    | 1    | 2        | 3   |
-    |-------------------------+------+----------+-----|
-    | Midrange                | 4    | 5        | 6   |
-    |-------------------------+------+----------+-----|
-    | Far                     | 7    | 8        | 9   |
-    |-------------------------+------+----------+-----|
+    |-------------------------+-----+----------+------|
+    | Potential / Opportunity | Far | Midrange | Near |
+    |-------------------------+-----+----------+------|
+    | Low                     | 1   | 2        | 3    |
+    |-------------------------+-----+----------+------|
+    | Moderate                | 4   | 5        | 6    |
+    |-------------------------+-----+----------+------|
+    | High                    | 7   | 8        | 9    |
+    |-------------------------+-----+----------+------|
 
     Questions:
 
@@ -2389,12 +2406,35 @@ def compute_supply_table(base, landcover, reclassification_rules,
             prefix = kwargs.get('prefix') + '_'
             statistics_filename = prefix + statistics_filename
 
-        r.stats(input=(base,reclassified_landcover),
-                output=statistics_filename,
-                flags='ncapl',
+        statistics = grass.parse_command(
+                'r.stats',
+                input=(base,reclassified_landcover),
+                output='-',
+                flags='nlcap',
                 separator=COMMA,
-                quiet=True)
+                quiet=True,
+                delimiter=',')
+        write_dictionary_to_csv(statistics_filename, statistics)
+
+        # --------------------------------------------------------- FIXME
+        # Copied from r.neighborhoodmatrix.py
+
+        # # Now merge all r.stats outputs (which are already sorted)
+        # # into one file
+        # for tf in iter(result_queue.get, 'STOP'):
+        #     filenames.append(tf)
+        # files = map(open, filenames)
+        # outfile = gscript.tempfile()
+
+        # # This code comes from https://stackoverflow.com/a/1001625
+        # with open(outfile, 'wb') as outf:
+        #     for line in heapq.merge(*[decorated_file(f, keyfunc) for f in files]):
+        #         outf.write(line[1])
+
+        # --------------------------------------------------------- FIXME
+
         del(statistics_filename)
+        del(statistics)
         # FIXME: deal with empty output files!
 
         # derive statistics map
@@ -2876,7 +2916,7 @@ def main():
         recreation_potential_component.extend(land_component)
     else:
         recreation_potential_component.extend(land_component)
-    remove_at_exit.extend(land_component)
+    # remove_at_exit.extend(land_component)
 
     if len(water_component) > 1:
         grass.verbose(_("\nNormalize 'Water' component\n"))
@@ -2885,7 +2925,7 @@ def main():
         recreation_potential_component.append(water_component_map_name)
     else:
         recreation_potential_component.extend(water_component)
-    remove_at_exit.append(water_component_map_name)
+    # remove_at_exit.append(water_component_map_name)
 
     if len(natural_component) > 1:
         grass.verbose(_("\nNormalize 'Natural' component\n"))
@@ -2894,7 +2934,7 @@ def main():
         recreation_potential_component.append(natural_component_map_name)
     else:
         recreation_potential_component.extend(natural_component)
-    remove_at_exit.append(natural_component_map_name)
+    # remove_at_exit.append(natural_component_map_name)
 
     """ Recreation Potential [Output] """
 
@@ -3018,7 +3058,7 @@ def main():
         zerofy_and_normalise_component(infrastructure_component,
                 THRESHHOLD_ZERO, infrastructure_component_map_name)
         recreation_opportunity_component.append(infrastructure_component_map_name)
-        remove_at_exit.append(infrastructure_component_map_name)
+        # remove_at_exit.append(infrastructure_component_map_name)
 
         # # input
         # print "Recreation component:", recreation_component
@@ -3186,19 +3226,19 @@ def main():
                 quiet=True)
 
         draw_map(tmp_crossmap)
-        remove_at_exit.append(tmp_crossmap)
+        # remove_at_exit.append(tmp_crossmap)
 
-        # Saving the map derived via `r.cross` -------------------------------
-        crossmap_expression = "{crossmap} = {tmp_crossmap}"
-        crossmap_expression = crossmap_expression.format(crossmap=crossmap,
-                tmp_crossmap=tmp_crossmap)
-        crossmap_equation = equation.format(result=crossmap,
-                expression=crossmap_expression)
-        r.mapcalc(crossmap_equation, overwrite=True)
+        # # Saving the map derived via `r.cross` -------------------------------
+        # crossmap_expression = "{crossmap} = {tmp_crossmap}"
+        # crossmap_expression = crossmap_expression.format(crossmap=crossmap,
+        #         tmp_crossmap=tmp_crossmap)
+        # crossmap_equation = equation.format(result=crossmap,
+        #         expression=crossmap_expression)
+        # r.mapcalc(crossmap_equation, overwrite=True)
 
-        draw_map(crossmap)
-        remove_at_exit.append(crossmap)
-        # Saving the map derived via `r.cross`--------------------------------
+        # draw_map(crossmap)
+        # remove_at_exit.append(crossmap)
+        # # Saving the map derived via `r.cross`--------------------------------
 
         grass.use_temp_region()  # to safely modify the region
         g.region(nsres=population_ns_resolution,
@@ -3213,12 +3253,12 @@ def main():
         msg = "|i Population statistics: {s}".format(s=population_total)
         grass.verbose(_(msg))
 
-        g.region(raster=crossmap, res=1000)
+        # g.region(raster=crossmap, res=1000)
 
         if not demand and supply:
             remove_at_exit.append(demand)
 
-        r.stats_zonal(base=crossmap,
+        r.stats_zonal(base=tmp_crossmap,
                 flags='r',
                 cover=population,
                 method='sum',
@@ -3263,9 +3303,7 @@ def main():
 
         if not mobility and supply:
             mobility = mobility_map_name
-            print "Mobility", mobility
             remove_at_exit.append(mobility)
-            print "Mobility will be removed"
 
         if mobility or supply:
 
@@ -3355,6 +3393,7 @@ def main():
             # r.stats mobility_per_land_class -cap
             draw_map(mobility_in_landcover, suffix=region)
 
+            # write out as CSV -- FIXME
             statistics_filename = 'statistics_' + mobility_in_landcover + '_' + region
             r.stats(input=mobility_in_landcover,
                     output=statistics_filename,

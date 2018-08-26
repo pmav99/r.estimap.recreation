@@ -872,17 +872,18 @@ def tmp_map_name(**kwargs):
 def cleanup():
     """Clean up temporary maps"""
 
+    if rename_at_exit:
+        if demand in rename_at_exit:
+            g.rename(raster=(demand_copy,demand))
+
     # get list of temporary maps
     temporary_raster_maps = grass.list_strings(type='raster',
             pattern='tmp.{pid}*'.format(pid=os.getpid()))
 
-    # print "Temporary maps:", temporary_raster_maps
-    # print
-    # print "Remove at exit?", remove_at_exit
-
     # inform
-    if any([temporary_raster_maps, remove_at_exit]):
-        g.message("Removing temporary intermediate maps")
+    if any([temporary_raster_maps, remove_at_exit,
+        remove_normal_files_at_exit]):
+        g.message("Removing temporary files")
 
         # remove temporary maps
         if temporary_raster_maps:
@@ -894,6 +895,10 @@ def cleanup():
         if remove_at_exit:
             g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
                     quiet=True)
+
+        if remove_normal_files_at_exit:
+            for item in remove_normal_files_at_exit:
+                os.unlink(item)
 
     # remove MASK ? FIXME
     if grass.find_file(name='MASK', element='cell')['file']:
@@ -2475,9 +2480,10 @@ def main():
     global timestamp
     timestamp = options['timestamp']
 
-    global remove_at_exit, remove_normal_files_at_exit
+    global remove_at_exit, remove_normal_files_at_exit, rename_at_exit
     remove_at_exit = []
     remove_normal_files_at_exit = []
+    rename_at_exit = []
 
     global metric, units
     metric = options['metric']
@@ -2687,24 +2693,14 @@ def main():
     highest_spectrum = 'highest_recreation_spectrum'
     crossmap = 'crossmap'  # REMOVEME
 
-    # if options['demand']:
     demand = options['demand']
-    # else:
-    #     demand = 'demand'
-
-    # if options['unmet']:
     unmet_demand = options['unmet']
-    # else:
-    #     unmet_demand = 'unmet_demand'
 
     mobility = options['mobility']
     mobility_map_name = 'mobility'
 
     supply = options['supply']  # use as CSV filename prefix
     """ First, care about the computational region"""
-
-    if any([mobility, supply]) and not demand:
-        demand = 'demand'
 
     if mask:
         msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
@@ -3172,7 +3168,7 @@ def main():
 
     """Valuation Tables"""
 
-    if demand or mobility or supply:
+    if any([demand, mobility, supply]):
 
         '''Highest Recreation Spectrum == 9'''
 
@@ -3226,19 +3222,6 @@ def main():
                 quiet=True)
 
         draw_map(tmp_crossmap)
-        # remove_at_exit.append(tmp_crossmap)
-
-        # # Saving the map derived via `r.cross` -------------------------------
-        # crossmap_expression = "{crossmap} = {tmp_crossmap}"
-        # crossmap_expression = crossmap_expression.format(crossmap=crossmap,
-        #         tmp_crossmap=tmp_crossmap)
-        # crossmap_equation = equation.format(result=crossmap,
-        #         expression=crossmap_expression)
-        # r.mapcalc(crossmap_equation, overwrite=True)
-
-        # draw_map(crossmap)
-        # remove_at_exit.append(crossmap)
-        # # Saving the map derived via `r.cross`--------------------------------
 
         grass.use_temp_region()  # to safely modify the region
         g.region(nsres=population_ns_resolution,
@@ -3253,10 +3236,10 @@ def main():
         msg = "|i Population statistics: {s}".format(s=population_total)
         grass.verbose(_(msg))
 
-        # g.region(raster=crossmap, res=1000)
+        '''Demand Distribution'''
 
-        if not demand and supply:
-            remove_at_exit.append(demand)
+        if any([mobility, supply]) and not demand:
+            demand = tmp_map_name(name='demand')
 
         r.stats_zonal(base=tmp_crossmap,
                 flags='r',
@@ -3265,14 +3248,32 @@ def main():
                 output=demand,
                 overwrite=True,
                 quiet=True)
+
         draw_map(demand)
 
-        if base_vector:
+        # write 'reclassed' as 'normal' map (r.mapcalc)
+            # so as to enable removal of it and its 'base' map
+        demand_copy = demand + '_copy'
+        copy_expression = "{input_raster}"
+        copy_expression = copy_expression.format(input_raster=demand)
+        copy_equation = equation.format(result=demand_copy,
+                expression=copy_expression)
+        r.mapcalc(copy_equation, overwrite=True)
 
-            update_vector(vector=base_vector,
-                    raster=demand,
-                    methods=METHODS,
-                    column_prefix='demand')
+        # remove the reclassed map 'demand'
+        g.remove(flags='f', type='raster', name=demand, quiet=True)
+
+        # rename back to 'demand'
+        g.rename(raster=(demand_copy,demand), quiet=True)
+
+        if supply:
+
+            if base_vector:
+
+                update_vector(vector=base_vector,
+                        raster=demand,
+                        methods=METHODS,
+                        column_prefix='demand')
 
         '''Unmet Demand'''
 
@@ -3302,6 +3303,7 @@ def main():
         '''Mobility function'''
 
         if not mobility and supply:
+
             mobility = mobility_map_name
             remove_at_exit.append(mobility)
 
@@ -3414,10 +3416,6 @@ def main():
     if info:
         citation = 'Citation: ' + citation_recreation_potential
         g.message(citation)
-
-    if remove_normal_files_at_exit:
-        for item in remove_normal_files_at_exit:
-            os.unlink(item)
 
 if __name__ == "__main__":
     options, flags = grass.parser()

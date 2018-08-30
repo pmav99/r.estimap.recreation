@@ -1058,13 +1058,35 @@ def save_map(mapname):
         run('g.rename', raster=(mapname, newname))
     return newname
 
+def merge_two_dictionaries(a, b):
+    """Merge two dictionaries in via shallow copy.
+    Source: https://stackoverflow.com/a/26853961/1172302"""
+    merged_dictionary = a.copy()
+    merged_dictionary.update(b)
+    return merged_dictionary
+
 def write_dictionary_to_csv(filename, dictionary):
+    """Write out a Python dictionary as CSV named 'filename'
+
+    Parameters
+    ----------
+    filename :
+        Name for output file
+
+    dictionary :
+        Name of the input Python dictionary
+    """
     f = open(filename, "wb")
     w = csv.writer(f)
+
     for key, value in dictionary.items():
+        # encode ... ?
+        value = value.encode('utf-8')
+
         if value is None or value == '':
             continue
         w.writerow([key, value])
+
     f.close()
 
 def append_map_to_component(raster, component_name, component_list):
@@ -1175,7 +1197,7 @@ def recode_map(raster, rules, colors, output):
     #     tmp_output = save_map(output)
 
     grass.verbose(_("Scored map {name}:".format(name=raster)))
-    draw_map(output)
+    draw_map(output)  # REMOVEME
 
 def float_to_integer(double):
     """Converts an FCELL or DCELL raster map into a CELL raster map
@@ -1350,8 +1372,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     ...
 
     """
-    draw_map(raster)
-
+    draw_map(raster)  # REMOVEME
     distance_terms = [str(raster),
                       str(metric),
                       'distance',
@@ -1414,7 +1435,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     del(distance_function)
 
     tmp_output = save_map(tmp_distance_map)
-    draw_map(tmp_distance_map)
+    draw_map(tmp_distance_map)  # REMOVEME
     return tmp_distance_map
 
 def neighborhood_function(raster, method, size, distance_map):
@@ -1486,7 +1507,7 @@ def neighborhood_function(raster, method, size, distance_map):
     # ---------------------------------------------------------------
     grass.mapcalc(neighborhood_function, overwrite=True)
 
-    draw_map(filtered_output)
+    draw_map(filtered_output)  # REMOVEME
 
     # tmp_distance_map = filtered_output
 
@@ -1549,7 +1570,6 @@ def normalize_map (raster, output_name):
     --------
     ...
     """
-
     # grass.debug(_("Input to normalize: {name}".format(name=raster)))
     # grass.debug(_("Ouput: {name}".format(name=output_name)))
 
@@ -1580,8 +1600,7 @@ def normalize_map (raster, output_name):
     normalisation = normalisation.format(raster=raster, minimum=minimum,
             maximum=maximum)
 
-    # Maybe this can go in the parent function? The 'raster' names are too
-    # long!
+    # Maybe this can go in the parent function? 'raster' names are too long!
     if info:
         msg = "Normalization expression: "
         msg += normalisation
@@ -1592,7 +1611,7 @@ def normalize_map (raster, output_name):
         expression=normalisation)
     grass.mapcalc(normalisation_equation, overwrite=True)
 
-    draw_map(output_name)
+    draw_map(output_name)  # REMOVEME
     get_univariate_statistics(output_name)
 
     del(minimum)
@@ -1671,7 +1690,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     # grass.verbose(_("Temporary map name: {name}".format(name=tmp_output)))
     grass.debug(_("Output map name: {name}".format(name=output_name)))
     # r.info(map=tmp_output, flags='gre')
-    
+
     ### FIXME
 
     normalize_map(tmp_output, output_name)
@@ -1715,7 +1734,7 @@ def classify_recreation_component(component, rules, output_name):
             rules='-',
             stdin=rules,
             output=output_name)
-    draw_map(output_name)
+    draw_map(output_name)  # REMOVEME
 
 def compute_anthropic_proximity(raster, distance_categories, **kwargs):
     """
@@ -1776,8 +1795,7 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
 #     else:
 #         grass.message(_("Output map {name}:".format(name=tmp_output)))
 
-    draw_map(tmp_output)
-
+    draw_map(tmp_output)  # REMOVEME
     return tmp_output
 
 def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
@@ -1786,20 +1804,19 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     anthropic surfaces based on the following accessibility classification
     rules for anthropic surfaces:
 
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | Anthropic / Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | < 500             | 1     | 1          | 2           | 3            | 4       |
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | 500 - 1000        | 1     | 1          | 2           | 3            | 4       |
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | 1000 - 5000       | 2     | 2          | 2           | 4            | 5       |
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | 5000 - 10000      | 3     | 3          | 4           | 5            | 5       |
-    |-------------------+-------+------------+-------------+--------------+---------|
-    | > 10000           | 3     | 4          | 4           | 5            | 5       |
-    |-------------------+-------+------------+-------------+--------------+---------|
-
+|-------------------+-------+------------+-------------+--------------+---------|
+| Anthropic / Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
+|-------------------+-------+------------+-------------+--------------+---------|
+| < 500             | 1     | 1          | 2           | 3            | 4       |
+|-------------------+-------+------------+-------------+--------------+---------|
+| 500 - 1000        | 1     | 1          | 2           | 3            | 4       |
+|-------------------+-------+------------+-------------+--------------+---------|
+| 1000 - 5000       | 2     | 2          | 2           | 4            | 5       |
+|-------------------+-------+------------+-------------+--------------+---------|
+| 5000 - 10000      | 3     | 3          | 4           | 5            | 5       |
+|-------------------+-------+------------+-------------+--------------+---------|
+| > 10000           | 3     | 4          | 4           | 5            | 5       |
+|-------------------+-------+------------+-------------+--------------+---------|
 
     Parameters
     ----------
@@ -1890,7 +1907,7 @@ def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwar
     del(accessibility_expression)
     del(accessibility_equation)
 
-    draw_map(tmp_output)
+    draw_map(tmp_output)  # REMOVEME
     output = save_map(tmp_output)
 
     return output
@@ -1988,8 +2005,7 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
-    draw_map(spectrum)
-
+    draw_map(spectrum)  # REMOVEME
     del(spectrum_expression)
     del(spectrum_equation)
     return spectrum
@@ -2342,8 +2358,7 @@ def compute_supply_table(base, landcover, reclassification_rules,
     r.colors(map=mobility_in_base,
         color=MOBILITY_COLORS,
         quiet=True)
-    draw_map(mobility_in_base)
-
+    draw_map(mobility_in_base)  # REMOVEME
     '''Save mobility map?'''
 
     # if mobility:
@@ -2359,10 +2374,13 @@ def compute_supply_table(base, landcover, reclassification_rules,
             quiet=True)
     remove_at_exit.append(reclassified_landcover)
 
-    draw_map(reclassified_landcover)
-
+    draw_map(reclassified_landcover)  # REMOVEME
     # land class percentage per zone
     landcover_fragment_patches = []
+
+    # dictionary to hold statistics
+    global statistics_dictionary
+    statistics_dictionary = {}
 
     # Don't break if categories are labeled!
     categories = grass.read_command('r.category', map=base).split('\n')[:-1]
@@ -2394,7 +2412,7 @@ def compute_supply_table(base, landcover, reclassification_rules,
 
         # set MASK to super-category
         grass.verbose(_("Setting map '{r}' as a MASK".format(r=base_mask)))
-        draw_map(base_mask)
+        draw_map(base_mask)  # REMOVEME
         r.mask(raster=base_mask, overwrite=True, quiet=True)
 
         if info:
@@ -2402,14 +2420,6 @@ def compute_supply_table(base, landcover, reclassification_rules,
                     flags='hn',
                     units=units,
                     quiet=True)
-
-        # FIXME
-        statistics_filename = 'statistics_' + base + '_' + category
-
-        # add prefix to output filename
-        if 'prefix' in kwargs:
-            prefix = kwargs.get('prefix') + '_'
-            statistics_filename = prefix + statistics_filename
 
         statistics = grass.parse_command(
                 'r.stats',
@@ -2419,51 +2429,52 @@ def compute_supply_table(base, landcover, reclassification_rules,
                 separator=COMMA,
                 quiet=True,
                 delimiter=',')
-        write_dictionary_to_csv(statistics_filename, statistics)
 
-        # --------------------------------------------------------- FIXME
-        # Copied from r.neighborhoodmatrix.py
-
-        # # Now merge all r.stats outputs (which are already sorted)
-        # # into one file
-        # for tf in iter(result_queue.get, 'STOP'):
-        #     filenames.append(tf)
-        # files = map(open, filenames)
-        # outfile = gscript.tempfile()
-
-        # # This code comes from https://stackoverflow.com/a/1001625
-        # with open(outfile, 'wb') as outf:
-        #     for line in heapq.merge(*[decorated_file(f, keyfunc) for f in files]):
-        #         outf.write(line[1])
-
-        # --------------------------------------------------------- FIXME
-
-        del(statistics_filename)
+        # merge the iteration's output with the global 'statistics' dictionary
+        statistics_dictionary = merge_two_dictionaries(statistics_dictionary,
+                statistics)
         del(statistics)
-        # FIXME: deal with empty output files!
-
-        # derive statistics map
-        landcover_fragment = reclassified_landcover + '_' + base_mask
-        remove_at_exit.append(landcover_fragment)  # NOTE
-
-        # build expression
-        expression_fragment = "{fragment} = {landcover}"
-        expression_fragment = expression_fragment.format(
-                fragment=landcover_fragment,
-                landcover=reclassified_landcover)
-        fragment_equation = equation.format(result=landcover_fragment,
-                expression=expression_fragment)
-
-        # compute
-        r.mapcalc(fragment_equation, overwrite=True)
-        draw_map(landcover_fragment)
-
-        # assign categories
-        r.category(map=landcover_fragment,
-                raster=reclassified_landcover,
-                quiet=True)
 
         r.mask(flags='r', quiet=True)
+
+
+    # csv output filename and prefix
+    statistics_filename = 'statistics_' + base + '.csv'
+
+    if 'prefix' in kwargs:
+        prefix = kwargs.get('prefix') + '_'
+        statistics_filename = prefix + statistics_filename
+    write_dictionary_to_csv(statistics_filename, statistics_dictionary)
+
+    del(statistics_filename)
+    del(statistics_dictionary)
+
+    # FIXME REMOVEME ---------------------------------------------------------
+
+    # # derive statistics map
+    # landcover_fragment = reclassified_landcover + '_' + base_mask
+    # remove_at_exit.append(landcover_fragment)  # NOTE
+
+    # # build expression
+    # expression_fragment = "{fragment} = {landcover}"
+    # expression_fragment = expression_fragment.format(
+    #         fragment=landcover_fragment,
+    #         landcover=reclassified_landcover)
+    # fragment_equation = equation.format(result=landcover_fragment,
+    #         expression=expression_fragment)
+
+    # # compute
+    # r.mapcalc(fragment_equation, overwrite=True)
+    # draw_map(landcover_fragment)
+
+    # # assign categories
+    # r.category(map=landcover_fragment,
+    #         raster=reclassified_landcover,
+    #         quiet=True)
+
+    # r.mask(flags='r', quiet=True)
+
+    # FIXME REMOVEME ---------------------------------------------------------
 
 def main():
     """
@@ -2706,7 +2717,7 @@ def main():
         msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
         grass.verbose(_(msg))
         r.mask(raster=mask, overwrite=True, quiet=True)
-        draw_map(mask)
+        draw_map(mask)  # REMOVEME
 
     if landuse_extent:
         grass.use_temp_region()  # to safely modify the region
@@ -2722,12 +2733,12 @@ def main():
 
     if land:
 
-        draw_map(land)
+        draw_map(land)  # REMOVEME
         land_component = land.split(',')
 
     if landuse and suitability_scores:
 
-        draw_map(landuse)
+        draw_map(landuse)  # REMOVEME
         msg = "Deriving land suitability from '{landuse}' based on '{rules}'"
         grass.verbose(msg.format(landuse=landuse, rules=suitability_scores))
 
@@ -2750,9 +2761,9 @@ def main():
 
         if len(water_component) > 1:
             for component in water_component:
-                draw_map(component)
+                draw_map(component)  # REMOVEME
         if len(water_component) == 1:
-            draw_map(water_component)
+            draw_map(water_component)  # REMOVEME
 
         msg = "Water component includes currently: {component}"
         msg = msg.format(component=water_component)
@@ -2761,8 +2772,7 @@ def main():
 
     if lakes:
 
-        draw_map(lakes)
-
+        draw_map(lakes)  # REMOVEME
         if lakes_coefficients:
             metric, constant, kappa, alpha, score = get_coefficients(lakes_coefficients)
 
@@ -2782,7 +2792,7 @@ def main():
 
     if coastline:
 
-        draw_map(coastline)
+        draw_map(coastline)  # REMOVEME
         coast_proximity = compute_attractiveness(
                 raster = coastline,
                 metric = EUCLIDEAN,
@@ -2813,7 +2823,7 @@ def main():
 
     if bathing_water:
 
-        draw_map(bathing_water)
+        draw_map(bathing_water)  # REMOVEME
 
         if bathing_water_coefficients:
             metric, constant, kappa, alpha = get_coefficients(bathing_water_coefficients)
@@ -2844,14 +2854,14 @@ def main():
 
         if len(natural_component) > 1:
             for component in natural_component:
-                draw_map(component)
+                draw_map(component)  # REMOVEME
         if len(natural_component) == 1:
-            draw_map(natural_component)
+            draw_map(natural_component)  # REMOVEME
 
     if protected:
         msg = "Scoring protected areas '{protected}' based on '{rules}'"
         grass.verbose(_(msg.format(protected=protected, rules=protected_scores)))
-        draw_map(protected)
+        draw_map(protected)  # REMOVEME
 
         protected_areas = protected_areas_map_name
 
@@ -2937,8 +2947,6 @@ def main():
     tmp_recreation_potential = tmp_map_name(name=recreation_potential_map_name)
     msg = "Computing an intermediate potential map '{potential}'"
     grass.debug(_(msg.format(potential=tmp_recreation_potential)))
-    # msg +="\n---------------------------------------------------------------\n"
-    # grass.message(_(msg.format(potential=tmp_recreation_potential)))
 
     grass.verbose(_("\nNormalize 'Recreation Potential' component\n"))
     grass.debug(_("Maps: {maps}".format(maps=recreation_potential_component)))
@@ -2948,7 +2956,7 @@ def main():
 
     if recreation_potential:
 
-        msg = "\nReclassifying '{potential}' map"
+        msg = "\nClassifying '{potential}' map"
         msg = msg.format(potential=tmp_recreation_potential)
         grass.verbose(_(msg))
         tmp_recreation_potential_categories = tmp_map_name(name=recreation_potential)
@@ -2957,19 +2965,20 @@ def main():
                 rules = recreation_potential_categories,
                 output_name = tmp_recreation_potential_categories)
 
-        # Update category labels ---------------------------------
+        # get categories and labels
         potential_categories = 'categories_of_'
         potential_categories += recreation_potential
-        # remove_normal_files_at_exit.append(potential_categories)
-
-        potential_category_descriptions = string_to_file(
+        potential_category_labels = string_to_file(
                 POTENTIAL_CATEGORY_LABELS,
                 name=potential_categories)
 
+        # add to list for removal
+        remove_normal_files_at_exit.append(potential_category_labels)
+
+        # apply categories and description
         r.category(map=tmp_recreation_potential_categories,
-                rules=potential_category_descriptions,
+                rules=potential_category_labels,
                 separator=':')
-        # --------------------------------------------------------
 
         msg = "\nWriting '{potential}' map\n"
         msg = msg.format(potential=recreation_potential)
@@ -3000,7 +3009,7 @@ def main():
         infrastructure_components = []
 
         if infrastructure:
-            draw_map(infrastructure)
+            draw_map(infrastructure)  # REMOVEME
             infrastructure_component.append(infrastructure)
 
         '''Anthropic surfaces (includung Roads)'''
@@ -3054,28 +3063,25 @@ def main():
         zerofy_and_normalise_component(infrastructure_component,
                 THRESHHOLD_ZERO, infrastructure_component_map_name)
         recreation_opportunity_component.append(infrastructure_component_map_name)
-        # remove_at_exit.append(infrastructure_component_map_name)
 
         # # input
-        # print "Recreation component:", recreation_component
-        # print
-
         # zerofy_and_normalise_component(recreation_component,
         #         THRESHHOLD_0001, recreation_component_map_name)
         # recreation_opportunity_component.append(recreation_component_map_name)
         # remove_at_exit.append(recreation_component_map_name)
 
         # intermediate
-        # ----------------------------------------------------------------------
-        # Why threshhold 0.0003? How and why it differs from 0.0001?
+
+        # REVIEW --------------------------------------------------------------
         if not recreation_opportunity:
-            recreation_opportunity = recreation_opportunity_map_name
+            recreation_opportunity = tmp_map_name(name=recreation_opportunity_map_name)
 
         zerofy_and_normalise_component(
                 recreation_opportunity_component,
                 THRESHHOLD_0003,
                 recreation_opportunity)
-        # ----------------------------------------------------------------------
+        # Why threshhold 0.0003? How and why it differs from 0.0001?
+        # -------------------------------------------------------------- REVIEW
 
         # recode recreation_potential
         tmp_recreation_potential_categories = tmp_map_name(name=tmp_recreation_potential)
@@ -3084,42 +3090,41 @@ def main():
                 output_name = tmp_recreation_potential_categories)
 
         # recode opportunity_component
-        tmp_recreation_opportunity_categories = tmp_map_name(name=recreation_opportunity)
-
         msg = "Reclassifying '{opportunity}' map"
         msg = "Computing recreation opportunity {opportunity}"
         msg +="\n---------------------------------------------------------------\n"
-        grass.debug(msg.format(opportunity=tmp_recreation_opportunity_categories))
-        # grass.message(_(msg.format(opportunity=tmp_recreation_opportunity_categories)))
+        grass.debug(msg.format(opportunity=recreation_opportunity))
+        # grass.message(_(msg.format(opportunity=recreation_opportunity)))
         del(msg)
 
         classify_recreation_component(
                 component = recreation_opportunity,
                 rules = recreation_opportunity_categories,
-                output_name = tmp_recreation_opportunity_categories)
+                output_name = recreation_opportunity)
 
         if recreation_opportunity:
+
+            # get category labels
+            opportunity_categories = 'categories_of_'
+            opportunity_categories += recreation_opportunity
+            opportunity_category_labels = string_to_file(
+                    OPPORTUNITY_CATEGORY_LABELS,
+                    name=opportunity_categories)
+
+            # add ascii file to removal list
+            remove_normal_files_at_exit.append(opportunity_category_labels)
+
+            # update category labels
+            r.category(map=recreation_opportunity,
+                    rules=opportunity_category_labels,
+                    separator=':')
 
             msg = "Writing '{opportunity}' map"
             grass.verbose(msg.format(opportunity=recreation_opportunity))
             del(msg)
 
-            # Update category labels -----------------------------------
-            opportunity_categories = 'categories_of_'
-            opportunity_categories += recreation_opportunity
-            # remove_normal_files_at_exit.append(opportunity_categories)
-
-            opportunity_category_descriptions = string_to_file(
-                    OPPORTUNITY_CATEGORY_LABELS,
-                    name=opportunity_categories)
-
-            r.category(map=tmp_recreation_opportunity_categories,
-                    rules=opportunity_category_descriptions,
-                    separator=':')
-            # ---------------------------------------------------------
-
-            g.copy(raster=(tmp_recreation_opportunity_categories,
-                recreation_opportunity), quiet=True)
+            # modify temporary map name too
+            tmp_recreation_opportunity_categories = recreation_opportunity
 
             update_meta(recreation_opportunity, opportunity_title)
             r.colors(map=recreation_opportunity, rules='-', stdin =
@@ -3128,7 +3133,7 @@ def main():
         # Recreation Spectrum: Potential + Opportunity [Output]
 
         if not recreation_spectrum and any([demand, mobility, supply]):
-            recreation_spectrum = 'recreation_spectrum'
+            recreation_spectrum = tmp_map_name(name='recreation_spectrum')
             remove_at_exit.append(recreation_spectrum)
 
         recreation_spectrum = compute_recreation_spectrum(
@@ -3142,19 +3147,21 @@ def main():
         del(msg)
         get_univariate_statistics(recreation_spectrum)
 
-        # Update category labels --------------------------------
+        # get category labels
         spectrum_categories = 'categories_of_'
         spectrum_categories += recreation_spectrum
-        # remove_normal_files_at_exit.append(spectrum_categories)
-
         spectrum_category_labels = string_to_file(
                 SPECTRUM_CATEGORY_LABELS,
                 name=spectrum_categories)
 
+        # add to list for removal
+        remove_normal_files_at_exit.append(spectrum_category_labels)
+
+        # update category labels
+        spectrum_categories = 'categories_of_'
         r.category(map=recreation_spectrum,
                 rules=spectrum_category_labels,
                 separator=':')
-        # -------------------------------------------------------
 
         update_meta(recreation_spectrum, spectrum_title)
         r.colors(map=recreation_spectrum, rules='-', stdin = SPECTRUM_COLORS,
@@ -3179,7 +3186,7 @@ def main():
         highest_spectrum_equation = equation.format(result=highest_spectrum,
                 expression=highest_spectrum_expression)
         r.mapcalc(highest_spectrum_equation, overwrite=True)
-        draw_map(highest_spectrum)
+        draw_map(highest_spectrum)  # REMOVEME
 
         '''Distance map'''
 
@@ -3189,7 +3196,7 @@ def main():
                 metric=metric,
                 quiet=True,
                 overwrite=True)
-        draw_map(distance_to_highest_spectrum)
+        draw_map(distance_to_highest_spectrum)  # REMOVEME
 
         '''Distance categories'''
 
@@ -3202,15 +3209,15 @@ def main():
                 colors=SCORE_COLORS,
                 output=distance_categories_to_highest_spectrum)
 
-        draw_map(distance_categories_to_highest_spectrum)
+        draw_map(distance_categories_to_highest_spectrum)  # REMOVEME
 
-        spectrum_distance_category_descriptions = string_to_file(
+        spectrum_distance_category_labels = string_to_file(
                 SPECTRUM_DISTANCE_CATEGORY_LABELS,
                 name=distance_categories_to_highest_spectrum)
-        remove_normal_files_at_exit.append(spectrum_distance_category_descriptions)
+        remove_normal_files_at_exit.append(spectrum_distance_category_labels)
 
         r.category(map=distance_categories_to_highest_spectrum,
-                rules=spectrum_distance_category_descriptions,
+                rules=spectrum_distance_category_labels,
                 separator=':')
 
         '''Combine Base map and Distance Categories'''
@@ -3221,7 +3228,7 @@ def main():
                 output=tmp_crossmap,
                 quiet=True)
 
-        draw_map(tmp_crossmap)
+        draw_map(tmp_crossmap)  # REMOVEME
 
         grass.use_temp_region()  # to safely modify the region
         g.region(nsres=population_ns_resolution,
@@ -3249,9 +3256,9 @@ def main():
                 overwrite=True,
                 quiet=True)
 
-        draw_map(demand)
+        draw_map(demand)  # REMOVEME
 
-        # write 'reclassed' as 'normal' map (r.mapcalc)
+        # copy 'reclassed' as 'normal' map (r.mapcalc)
             # so as to enable removal of it and its 'base' map
         demand_copy = demand + '_copy'
         copy_expression = "{input_raster}"
@@ -3269,7 +3276,6 @@ def main():
         if supply:
 
             if base_vector:
-
                 update_vector(vector=base_vector,
                         raster=demand,
                         methods=METHODS,
@@ -3279,6 +3285,7 @@ def main():
 
         if unmet_demand:
 
+            # compute unmet demand
             unmet_demand_expression = compute_unmet_demand(
                     distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
@@ -3291,10 +3298,10 @@ def main():
             unmet_demand_equation = equation.format(result=unmet_demand,
                     expression=unmet_demand_expression)
             r.mapcalc(unmet_demand_equation, overwrite=True)
-            draw_map(unmet_demand, width='45', height='45')
+
+            draw_map(unmet_demand, width='45', height='45')  # REMOVEME
 
             if base_vector:
-
                 update_vector(vector=base_vector,
                         raster=unmet_demand,
                         methods=METHODS,
@@ -3321,7 +3328,8 @@ def main():
             mobility_equation = equation.format(result=mobility,
                     expression=mobility_expression)
             r.mapcalc(mobility_equation, overwrite=True)
-            draw_map(mobility_map_name, width='45', height='45')
+
+            draw_map(mobility_map_name, width='45', height='45')  # REMOVEME
 
             if base_vector:
 
@@ -3364,8 +3372,7 @@ def main():
         r.colors(map=mobility_in_landcover,
             color=MOBILITY_COLORS,
             quiet=True)
-        draw_map(mobility_in_landcover)
-
+        draw_map(mobility_in_landcover)  # REMOVEME
         region_fragment_patches = []  # FIXME REMOVEME
 
         regions = grass.read_command('r.category', map=aggregation).split()
@@ -3373,7 +3380,8 @@ def main():
 
             grass.debug(_("Region: {r}".format(r=region)))
 
-            # grass.use_temp_region()  # to safely modify the region
+            # to safely modify the region?
+            # grass.use_temp_region()
 
             g.region(raster=aggregation,
                     flags='a',
@@ -3393,7 +3401,7 @@ def main():
             g.region(zoom='MASK', quiet=True)
 
             # r.stats mobility_per_land_class -cap
-            draw_map(mobility_in_landcover, suffix=region)
+            draw_map(mobility_in_landcover, suffix=region)  # REMOVEME
 
             # write out as CSV -- FIXME
             statistics_filename = 'statistics_' + mobility_in_landcover + '_' + region

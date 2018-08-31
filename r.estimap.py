@@ -1066,7 +1066,7 @@ def merge_two_dictionaries(a, b):
     return merged_dictionary
 
 def write_dictionary_to_csv(filename, dictionary):
-    """Write out a Python dictionary as CSV named 'filename'
+    """Write out a nested Python dictionary as CSV named 'filename'
 
     Parameters
     ----------
@@ -1079,13 +1079,25 @@ def write_dictionary_to_csv(filename, dictionary):
     f = open(filename, "wb")
     w = csv.writer(f)
 
-    for key, value in dictionary.items():
-        # encode ... ?
-        value = value.encode('utf-8')
+    # terminology: from 'base' and 'cover' maps
+    for base_key, inner_dictionary in dictionary.items():
+        base_category = base_key[0]
+        base_label = base_key[1]  # .decode('utf-8')
 
-        if value is None or value == '':
-            continue
-        w.writerow([key, value])
+        for cover_category, inner_value in inner_dictionary.items():
+            if inner_value is None or inner_value == '':
+                continue
+            cover_label = inner_value[0]
+            area = inner_value[1]
+            pixel_count = inner_value[2]
+            pixel_percentage = inner_value[3]
+            w.writerow([base_category,
+                base_label,
+                cover_category,
+                cover_label,
+                area,
+                pixel_count,
+                pixel_percentage])
 
     f.close()
 
@@ -2359,13 +2371,6 @@ def compute_supply_table(base, landcover, reclassification_rules,
         color=MOBILITY_COLORS,
         quiet=True)
     draw_map(mobility_in_base)  # REMOVEME
-    '''Save mobility map?'''
-
-    # if mobility:
-
-    #     g.rename(raster=(mobility_in_base,mobility))
-    #     save_map(mobility)
-    '''-----------------------------------------------------------------'''
 
     r.reclass(input=landcover,
             rules=reclassification_rules,
@@ -2375,6 +2380,7 @@ def compute_supply_table(base, landcover, reclassification_rules,
     remove_at_exit.append(reclassified_landcover)
 
     draw_map(reclassified_landcover)  # REMOVEME
+
     # land class percentage per zone
     landcover_fragment_patches = []
 
@@ -2382,13 +2388,14 @@ def compute_supply_table(base, landcover, reclassification_rules,
     global statistics_dictionary
     statistics_dictionary = {}
 
-    # Don't break if categories are labeled!
-    categories = grass.read_command('r.category', map=base).split('\n')[:-1]
-    for category in categories:
+    # read categories and labels
+    categories = grass.parse_command('r.category', map=base, delimiter='\t')
 
-        category = category.split('\t')[0]
+    for category, label in categories.items():
+
         grass.debug(_("Base map category: {c}".format(c=category)))
 
+        # build a raster based on 'category'
         masking = 'if( {base} == {category} && '
         masking += '{spectrum} == {highest_spectrum}, '
         masking += '{landcover}, null())'
@@ -2410,42 +2417,58 @@ def compute_supply_table(base, landcover, reclassification_rules,
                 expression=masking)
         grass.mapcalc(masking_equation, overwrite=True)
 
-        # set MASK to super-category
+        # set built raster map as MASK
         grass.verbose(_("Setting map '{r}' as a MASK".format(r=base_mask)))
         draw_map(base_mask)  # REMOVEME
         r.mask(raster=base_mask, overwrite=True, quiet=True)
 
+        # get statistics
         if info:
             r.report(map=(base,reclassified_landcover),
                     flags='hn',
                     units=units,
                     quiet=True)
 
-        statistics = grass.parse_command(
+        statistics = grass.read_command(
                 'r.stats',
                 input=(base,reclassified_landcover),
                 output='-',
                 flags='nlcap',
-                separator=COMMA,
-                quiet=True,
-                delimiter=',')
+                separator='|',
+                quiet=True)
+        statistics = statistics.split('\n')[:-1]
+
+        dictionary = dict()
+        for row in statistics:
+            row = row.split('|')
+            outer_key = ( row[0], row[1])
+            inner_key = row[2]
+            inner_value = row[3:]
+            inner_dictionary = {inner_key: inner_value}
+
+            try:
+                dictionary[outer_key][inner_key] = inner_value
+            except KeyError:
+                dictionary[outer_key] = { inner_key : inner_value}
 
         # merge the iteration's output with the global 'statistics' dictionary
         statistics_dictionary = merge_two_dictionaries(statistics_dictionary,
-                statistics)
-        del(statistics)
+                dictionary)
+        del(dictionary)
 
+        # remove MASK
         r.mask(flags='r', quiet=True)
-
 
     # csv output filename and prefix
     statistics_filename = 'statistics_' + base + '.csv'
 
+    # export to csv
     if 'prefix' in kwargs:
         prefix = kwargs.get('prefix') + '_'
         statistics_filename = prefix + statistics_filename
     write_dictionary_to_csv(statistics_filename, statistics_dictionary)
 
+    # clean up
     del(statistics_filename)
     del(statistics_dictionary)
 
@@ -3323,7 +3346,12 @@ def main():
                     population=demand,
                     score=MOBILITY_SCORE,
                     suitability=suitability_map)
-            grass.debug(_("Mobility function: {f}".format(f=mobility_expression)))
+
+            msg = "Mobility function: {f}"
+            grass.debug(_(msg.format(f=mobility_expression)))
+            del(msg)
+
+            '''Mobility map'''
 
             mobility_equation = equation.format(result=mobility,
                     expression=mobility_expression)
@@ -3332,7 +3360,6 @@ def main():
             draw_map(mobility_map_name, width='45', height='45')  # REMOVEME
 
             if base_vector:
-
                 update_vector(vector=base_vector,
                         raster=mobility_map_name,
                         methods=METHODS,

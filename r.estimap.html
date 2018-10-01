@@ -217,8 +217,9 @@ resources.
 <h4>Potential</h4>
 
 <p>
-A simple call is to use a map that depicts the suitability of
-different land types to support for recreation:
+A simple command is to use a map that depicts the suitability of different land
+types to support for recreation (here <code>land_suitability<code>) and feed it
+to the <code>land<code> input option:
 
 <div class="code"><pre>
 r.estimap  land=land_suitability  potential=potential
@@ -417,12 +418,13 @@ option:
 
 <div class="code"><pre>
 r.estimap  \
+  mask=area_of_interest \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
   natural=protected_areas \
   spectrum=spectrum  \
-  infrastructure=distance_to_infrastructure
-  opportunity=opportunity \
+  infrastructure=distance_to_infrastructure \
+  opportunity=opportunity
 </pre></div>
 
 <p>

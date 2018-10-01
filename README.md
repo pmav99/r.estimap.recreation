@@ -314,12 +314,13 @@ we add the `opportunity` output option:
 <div class="code">
 
     r.estimap  \
+      mask=area_of_interest \
       land=land_suitability \
       water=water_resources,bathing_water_quality \
       natural=protected_areas \
       spectrum=spectrum  \
-      infrastructure=distance_to_infrastructure
-      opportunity=opportunity \
+      infrastructure=distance_to_infrastructure \
+      opportunity=opportunity
 
 </div>
 

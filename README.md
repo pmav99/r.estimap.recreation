@@ -168,8 +168,9 @@ resources.
 
 #### Potential
 
-A simple call is to use a map that depicts the suitability of different
-land types to support for recreation:
+A simple command is to use a map that depicts the suitability of
+different land types to support for recreation (here
+`land_suitability) and feed it to the land input option: `
 
 <div class="code">
 

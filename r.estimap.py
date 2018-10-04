@@ -395,7 +395,7 @@
 #%option G_OPT_R_INPUT
 #% key: mask
 #% key_desc: name
-#% description: A raster map to apply as an inverted MASK
+#% description: A raster map to apply as a MASK
 #% required : no
 #%end
 

@@ -56,6 +56,11 @@
 #%  description: Print out citation and other information
 #%end
 
+#%flag
+#%  key: p
+#%  description: Print out results (i.e. supply table), don't export to file
+#%end
+
 '''Components section'''
 
 #%option G_OPT_R_INPUT
@@ -120,7 +125,7 @@
 #% key: landuse
 #% type: string
 #% key_desc: name
-#% label: Input land featurs map from which to derive suitability for recreation
+#% label: Input land features map from which to derive suitability for recreation
 #% description: Input to derive suitability of land use classes to support recreation activities. Requires scores, overrides suitability.
 #% required : no
 #% guisection: Land
@@ -395,7 +400,7 @@
 #%option G_OPT_R_INPUT
 #% key: mask
 #% key_desc: name
-#% description: A raster map to apply as an inverted MASK
+#% description: A raster map to apply as a MASK
 #% required : no
 #%end
 
@@ -404,7 +409,7 @@
 #%option G_OPT_R_OUTPUT
 #% key: potential
 #% key_desc: name
-#% label: Output map of ecreation potential
+#% label: Output map of recreation potential
 #% description: Recreation potential map classified in 3 categories
 #% required: no
 #% guisection: Output
@@ -2545,32 +2550,396 @@ def compute_supply_table(base, landcover, reclassification_rules,
     del(statistics_filename)
     del(statistics_dictionary)
 
-    # FIXME REMOVEME ---------------------------------------------------------
+def compute_supply(
+        recreation_spectrum,
+        highest_spectrum,
+        landmap,
+        land_reclassification_rules,
+        reclassified_landmap,
+        reclassified_landmap_title,
+        mobility,
+        mobility_map_name,
+        aggregation,
+        ns_resolution,
+        ew_resolution,
+        csv_prefix,
+        csv_basename,
+        **kwargs):
+    """
+    # In comparison to 'supply':
+        # here:     base = 'ecosystem_types'
+        # supply:   base = 'local_administrative_units'
 
-    # # derive statistics map
-    # landcover_fragment = reclassified_landcover + '_' + base_mask
-    # remove_at_exit.append(landcover_fragment)  # NOTE
+    Parameters
+    ----------
+    recreation_spectrum:
+        Map classifying recreation quality ?
 
-    # # build expression
-    # expression_fragment = "{fragment} = {landcover}"
-    # expression_fragment = expression_fragment.format(
-    #         fragment=landcover_fragment,
-    #         landcover=reclassified_landcover)
-    # fragment_equation = equation.format(result=landcover_fragment,
-    #         expression=expression_fragment)
+    highest_spectrum:
 
-    # # compute
-    # r.mapcalc(fragment_equation, overwrite=True)
-    # draw_map(landcover_fragment)
+    landmap:
 
-    # # assign categories
-    # r.category(map=landcover_fragment,
-    #         raster=reclassified_landcover,
-    #         quiet=True)
+    land_reclassification_rules:
 
-    # r.mask(flags='r', quiet=True)
+    reclassified_landmap,
 
-    # FIXME REMOVEME ---------------------------------------------------------
+    reclassified_landmap_title,
+
+    ecosystem_types:
+
+    mobility:
+
+    mobility_map_name:
+
+    aggregation:
+
+    ns_resolution:
+
+    ew_resolution:
+
+    statistics_filename:
+
+    Returns
+    -------
+
+    Examples
+    --------
+    """
+    # Inputs
+    mobility_in_landmap = mobility + '_' + landmap
+    landmap_scores = landmap + '.scores'
+
+    csv_basename += '_' + reclassified_landmap
+    csv_basename += '_' + aggregation
+
+    # Define lists and dictionaries to hold intermediate data
+    weighted_extents = {}
+    flows = {}
+
+    # MASK areas of high quality recreation
+    r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
+
+    # Reclassify land cover map to MAES ecosystem types
+    # ------------------------------------------------------------ REMOVEME
+    msg = "Land cover reclassified rules: {r}"
+    msg = msg.format(r=land_reclassification_rules)
+    grass.debug(_(msg))
+    with open(land_reclassification_rules) as f:
+            grass.debug(f.read())
+    # ------------------------------------------------------------ REMOVEME
+    r.reclass(input=landmap,
+            rules=land_reclassification_rules,
+            output=reclassified_landmap,
+            quiet=True)
+    remove_at_exit.append(reclassified_landmap)
+
+    draw_map(reclassified_landmap)  # REMOVEME
+
+    # Count flow within each land cover category
+    r.stats_zonal(base=landmap,
+            flags='r',
+            cover=mobility_map_name,
+            method='sum',
+            output=mobility_in_landmap,
+            overwrite=True,
+            quiet=True)
+
+    # Set colors for "flow" map
+    r.colors(map=mobility_in_landmap,
+        color=MOBILITY_COLORS,
+        quiet=True)
+
+    draw_map(mobility_in_landmap)  # REMOVEME
+
+    # Parse aggregation raster categories and labels
+    categories = grass.parse_command('r.category',
+            map=aggregation,
+            delimiter='\t')
+
+    for category in categories:
+
+        # Intermediate names
+        cells = highest_spectrum + '.cells' + '.' + category
+        extent = highest_spectrum + '.extent' + '.' + category
+        weighted = highest_spectrum + '.weighted' + '.' + category
+        fractions = landmap + '.fractions' + '.' + category
+        flow = landmap + '.flow' + '.' + category
+        flow_in_reclassified_landmap = reclassified_landmap + '.flow' + '.' + category
+
+        # Output names
+
+        msg = "Processing aggregation raster category: {r}"
+        msg = msg.format(r=category)
+        grass.debug(_(msg))
+        # g.message(_(msg))
+        del(msg)
+
+        # First, set region to extent of the aggregation map
+            # and resolution to the one of the population map
+        # Note the `-a` flag to g.region: ?
+        # To safely modify the region: grass.use_temp_region()  # FIXME
+        g.region(raster=aggregation,
+                nsres=ns_resolution,
+                ewres=ew_resolution,
+                flags='a',
+                quiet=True)
+
+        msg = "|! Computational resolution matched to {raster}"
+        msg = msg.format(raster=aggregation)
+        grass.debug(_(msg))
+        del(msg)
+
+        # Build MASK for current category & high quality recreation areas
+        masking = 'if( {spectrum} == {highest_quality_category} && '
+        masking += '{aggregation} == {category}, '
+        masking += '1, null() )'
+        masking = masking.format(
+                spectrum=recreation_spectrum,
+                highest_quality_category=HIGHEST_RECREATION_CATEGORY,
+                aggregation=aggregation,
+                category=category)
+
+        masking_equation = equation.format(
+                result='MASK',
+                expression = masking)
+
+        grass.mapcalc(masking_equation, overwrite=True)
+
+        del(masking)
+        del(masking_equation)
+
+        # zoom to MASK
+        g.region(zoom='MASK',
+                nsres=ns_resolution,
+                ewres=ew_resolution,
+                quiet=True)
+
+        msg = "Setting category '{c}' of '{m}' as a MASK"
+        grass.verbose(_(msg.format(c=category, m=aggregation)))
+        del(msg)
+
+        # Count number of cells within each land category
+        r.stats_zonal(
+                flags='r',
+                base=landmap,
+                cover=highest_spectrum,
+                method='count',
+                output=cells,
+                overwrite=True,
+                quiet=True)
+        remove_at_exit.append(cells)
+        # ------------------------------------------- REMOVEME
+        cells_map = grass.parse_command('r.category',
+                map=cells,
+                delimiter='\t')
+        grass.debug(_("Cells: {c}".format(c=cells_map)))
+        # ------------------------------------------- REMOVEME
+
+        # Compute extent of each land category
+        extent_expression = "@{cells} * area()"
+        extent_expression = extent_expression.format(cells=cells)
+        extent_equation = equation.format(
+                result=extent,
+                expression=extent_expression)
+        r.mapcalc(extent_equation, overwrite=True)
+
+        # Write extent figures as labels
+        r.stats_zonal(
+                flags='r',
+                base=landmap,
+                cover=extent,
+                method='average',
+                output=extent,
+                overwrite=True,
+                verbose=False,
+                quiet=True)
+        remove_at_exit.append(extent)
+
+        # ------------------------------------------- REMOVEME
+        extent_map = grass.parse_command('r.category',
+                map=extent,
+                delimiter='\t')
+        grass.debug(_("Extent: {e}".format(e=extent_map)))
+        # ------------------------------------------- REMOVEME
+
+        # Write land suitability scores as an ASCII file
+        suitability_scores_as_labels = string_to_file(
+                SUITABILITY_SCORES_LABELS,
+                name=reclassified_landmap)
+        remove_normal_files_at_exit.append(suitability_scores_as_labels)
+
+        # Write scores as raster category labels
+        r.reclass(input=landmap,
+                output=landmap_scores,
+                rules=suitability_scores_as_labels,
+                overwrite=True,
+                quiet=True,
+                verbose=False)
+        remove_at_exit.append(landmap_scores)
+
+        # Compute weighted extents
+        weighted_expression = "@{extent} * float(@{scores})"
+        weighted_expression = weighted_expression.format(
+                extent=extent,
+                scores=landmap_scores)
+        weighted_equation = equation.format(
+                result=weighted,
+                expression = weighted_expression)
+        r.mapcalc(weighted_equation, overwrite=True)
+        remove_at_exit.append(weighted)
+
+        # Write weighted extent figures as labels
+        r.stats_zonal(
+                flags='r',
+                base=landmap,
+                cover=weighted,
+                method='average',
+                output=weighted,
+                overwrite=True,
+                verbose=False,
+                quiet=True)
+
+        # Get weighted extents in a dictionary
+        weighted_extents = grass.parse_command('r.category',
+                map=weighted,
+                delimiter='\t')
+
+        # Compute the sum of all weighted extents and add to dictionary
+        category_sum = sum([float(x)
+            if not math.isnan(float(x))
+            else 0
+            for x
+            in weighted_extents.values()])
+        weighted_extents['sum'] = category_sum
+
+        # ------------------------------------------- REMOVEME
+        msg = "Weighted extents: {we}".format(we=weighted_extents)
+        grass.debug(_(msg))
+        del(msg)
+        # ------------------------------------------- REMOVEME
+
+        # Create a map to hold fractions of each weighted extent to the sum
+        # See also:
+        # https://grasswiki.osgeo.org/wiki/LANDSAT#Hint:_Minimal_disk_space_copies
+        r.reclass(
+                input=landmap,
+                output=fractions,
+                rules='-',
+                stdin='*=*',
+                verbose=False,
+                quiet=True)
+        remove_at_exit.append(fractions)
+
+        # Compute weighted fractions of land types
+        fraction_category_label = {key: float(value) / weighted_extents['sum']
+                for (key, value)
+                in weighted_extents.iteritems()
+                if key is not 'sum'}
+
+        # Build fraction category and label rules for `r.category`
+        fraction_rules = '\n'.join(['{0}:{1}'.format(key, value)
+            for key, value
+            in fraction_category_label.items()])
+        del(fraction_category_label)
+
+        # Set rules
+        r.category(
+                map=fractions,
+                rules='-',
+                stdin=fraction_rules,
+                separator=':')
+        del(fraction_rules)
+
+        # --------------------------------------------------------------------
+        # Assert that sum of fractions is ~1
+        fraction_categories = grass.parse_command('r.category',
+                map=fractions,
+                delimiter='\t')
+
+        fractions_sum = sum([float(x)
+            if not math.isnan(float(x))
+            else 0
+            for x
+            in fraction_categories.values()])
+        msg = "Fractions: {f}".format(f=fraction_categories)
+        grass.debug(_(msg))
+        # g.message(_(msg))
+
+        # g.message(_("Sum: {s}".format(s=fractions_sum)))
+        # assert fractions_sum < 1.000000000000001, "Sum of fractions is > 1"
+        assert fractions_sum > 0.9, "Sum of fractions is < 0.9"
+        # assert fractions_sum >= 0.999999999999, "Sum of fractions < 0.99"
+        # assert fractions_sum < 1., "Sum of fractions > 1"
+        # --------------------------------------------------------------------
+
+        # Compute flow
+        flow_expression = "@{fractions} * @{mobility}"
+        flow_expression = flow_expression.format(fractions=fractions,
+                mobility=mobility_in_landmap)
+        flow_equation = equation.format(
+                result=flow,
+                expression=flow_expression)
+        r.mapcalc(flow_equation, overwrite=True)
+        remove_at_exit.append(flow)
+
+        # draw_map(flow)
+        # if info:
+        #     r.report(map=flow, units=('k','c','p'))
+
+        # Write flow figures as raster category labels
+        r.stats_zonal(base=reclassified_landmap,
+                flags='r',
+                cover=flow,
+                method='sum',
+                output=flow_in_reclassified_landmap,
+                overwrite=True,
+                verbose=False,
+                quiet=True)
+        remove_at_exit.append(flow_in_reclassified_landmap)
+
+        # Update title
+        reclassified_landmap_title += ' ' + category
+        r.support(flow_in_reclassified_landmap,
+                title=reclassified_landmap_title)
+
+        # ------------------------------------------------------------ REMOVEME
+        draw_map(flow_in_reclassified_landmap)
+        if info:
+            r.report(flags='hn',
+                    map=flow_in_reclassified_landmap,
+                    units=('k','c','p'))
+        # ------------------------------------------------------------ REMOVEME
+
+        if print_only:
+            r.stats(input=(reclassified_landmap,flow_in_reclassified_landmap),
+                    output='-',
+                    flags='nacpl',
+                    separator=COMMA,
+                    quiet=True)
+
+        # write out as CSV
+        if not print_only:
+
+            if 'csv_prefix' in kwargs:
+                csv_prefix = kwargs.get('csv_prefix') + '_'
+            csv_suffix = '_' + category
+            csvname = csv_prefix + csv_basename + csv_suffix
+
+            r.stats(input=(reclassified_landmap,flow_in_reclassified_landmap),
+                    output=csvname,
+                    flags='nacpl',
+                    separator=COMMA,
+                    quiet=True)
+
+        # Maybe add flow map in a list
+        # flow_maps = flow_maps.append(flow_in_maes_ecosystem_types)
+
+        # remove MASK
+        r.mask(flags='r', quiet=True)
+
+    # Maybe return list of flow maps?  Requires unique flow map names
+    # return flow_maps
+
 
 def main():
     """
@@ -2579,10 +2948,11 @@ def main():
 
     '''Flags and Options'''
 
-    global info, save_temporary_maps
+    global info, save_temporary_maps, print_only
     landuse_extent = flags['e']
     save_temporary_maps = flags['s']
     info = flags['i']
+    print_only = flags['p']
 
     global timestamp
     timestamp = options['timestamp']
@@ -3487,337 +3857,362 @@ def main():
 
     if aggregation:
 
-        r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
+        compute_supply(
+                recreation_spectrum = recreation_spectrum,
+                highest_spectrum=highest_spectrum,
+                landmap = landcover,
+                land_reclassification_rules = landcover_reclassification_rules,
+                reclassified_landmap = maes_ecosystem_types,
+                reclassified_landmap_title = 'MAES ecosystem types',
+                mobility = mobility,
+                mobility_map_name = mobility_map_name,
+                aggregation = aggregation,
+                ns_resolution = population_ns_resolution,
+                ew_resolution = population_ew_resolution,
+                csv_prefix = supply,
+                csv_basename = 'statistics')
 
-        # ------------------------------------------------------------ REMOVEME
-        msg = "Land cover reclassified rules: {r}"
-        msg = msg.format(r=landcover_reclassification_rules)
-        grass.debug(_(msg))
-        with open(landcover_reclassification_rules) as f:
-             grass.debug(f.read())
-        # ------------------------------------------------------------ REMOVEME
-        r.reclass(input=landcover,
-                rules=landcover_reclassification_rules,
-                output=maes_ecosystem_types,
-                quiet=True)
-        remove_at_exit.append(maes_ecosystem_types)
+        # r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
 
-        draw_map(maes_ecosystem_types)
+        # # ------------------------------------------------------------ REMOVEME
+        # msg = "Land cover reclassified rules: {r}"
+        # msg = msg.format(r=landcover_reclassification_rules)
+        # grass.debug(_(msg))
+        # with open(landcover_reclassification_rules) as f:
+        #      grass.debug(f.read())
+        # # ------------------------------------------------------------ REMOVEME
+        # r.reclass(input=landcover,
+        #         rules=landcover_reclassification_rules,
+        #         output=maes_ecosystem_types,
+        #         quiet=True)
+        # remove_at_exit.append(maes_ecosystem_types)
 
-        mobility_in_landcover = mobility + '_' + landcover
+        # draw_map(maes_ecosystem_types)  # REMOVEME
 
-        # In comparison to 'supply':
-            # here:     base = 'maes_ecosystem_types'
-            # supply:   base = 'local_administrative_units'
+        # mobility_in_landcover = mobility + '_' + landcover
 
-        r.stats_zonal(base=landcover,
-                flags='r',
-                cover=mobility_map_name,
-                method='sum',
-                output=mobility_in_landcover,
-                overwrite=True)
+        # # In comparison to 'supply':
+        #     # here:     base = 'maes_ecosystem_types'
+        #     # supply:   base = 'local_administrative_units'
 
-        # OK ------------------------------------------------------------------
+        # r.stats_zonal(base=landcover,
+        #         flags='r',
+        #         cover=mobility_map_name,
+        #         method='sum',
+        #         output=mobility_in_landcover,
+        #         overwrite=True)
 
-        r.colors(map=mobility_in_landcover,
-            color=MOBILITY_COLORS,
-            quiet=True)
-        r.category(map=mobility_in_landcover)
+        # r.colors(map=mobility_in_landcover,
+        #     color=MOBILITY_COLORS,
+        #     quiet=True)
+        # r.category(map=mobility_in_landcover)
 
-        draw_map(mobility_in_landcover)  # REMOVEME
+        # draw_map(mobility_in_landcover)  # REMOVEME
 
-        '''Contribution of Ecosysten Types'''
+        # '''Contribution of Ecosysten Types'''
 
-        # FIXME
-        '''
-        1   B ← {0, .., m-1}     :  Set of aggregational boundaries
-        2   T ← {0, .., n-1}     :  Set of land cover types
-        3   WE ← 0               :  Set of weighted extents
-        4   R ← 0                :  Set of fractions
-        5   F ← 0
-        6   MASK ← HQR           : High Quality Recreation
-        7   foreach {b} ⊆ B do   : for each Boundary
-        8      RB ← 0
-        9      foreach {t} ⊆ T do  : for each Land Type
-        10         WEt ← Et * Wt   : Weighted Extent = Extent(t) * Weight(t)
-        11         WE ← WE⋃{WEt}   : Add to set of Weighted Extents
-        12     S ← ∑t∈WEt
-        13     foreach t ← T do
-        14        Rt ← WEt / ∑WE
-        15        R ← R⋃{Rt}
-        16     RB ← RB⋃{R}
-        '''
-        # FIXME
+        # # FIXME
+        # '''
+        # 1   B ← {0, .., m-1}     :  Set of aggregational boundaries
+        # 2   T ← {0, .., n-1}     :  Set of land cover types
+        # 3   WE ← 0               :  Set of weighted extents
+        # 4   R ← 0                :  Set of fractions
+        # 5   F ← 0
+        # 6   MASK ← HQR           : High Quality Recreation
+        # 7   foreach {b} ⊆ B do   : for each Boundary
+        # 8      RB ← 0
+        # 9      foreach {t} ⊆ T do  : for each Land Type
+        # 10         WEt ← Et * Wt   : Weighted Extent = Extent(t) * Weight(t)
+        # 11         WE ← WE⋃{WEt}   : Add to set of Weighted Extents
+        # 12     S ← ∑t∈WEt
+        # 13     foreach t ← T do
+        # 14        Rt ← WEt / ∑WE
+        # 15        R ← R⋃{Rt}
+        # 16     RB ← RB⋃{R}
+        # '''
+        # # FIXME
 
-        weighted_extents = {}
-        ratios = []
-        ratios_for_countries = {}
-        flows = {}
+        # weighted_extents = {}
+        # ratios = []
+        # ratios_for_countries = {}
+        # flows = {}
 
-        draw_map(recreation_spectrum)
-        draw_map(aggregation)
+        # draw_map(recreation_spectrum)
+        # draw_map(aggregation)
 
-        # read categories and labels
-        categories = grass.parse_command('r.category', map=aggregation, delimiter='\t')
+        # # read categories and labels
+        # categories = grass.parse_command('r.category', map=aggregation, delimiter='\t')
 
-        # for country in countries:
-        for category in categories:
+        # # for country in countries:
+        # for category in categories:
 
-            ratios_for_countries = {}
+        #     ratios_for_countries = {}
 
-            grass.debug(_("Category: {r}".format(r=category)))
-            # g.message(_("Category: {r}".format(r=category)))
+        #     grass.debug(_("Category: {r}".format(r=category)))
+        #     # g.message(_("Category: {r}".format(r=category)))
 
-            # first, set region to aggregation map
-            # to safely modify the region: grass.use_temp_region()  # FIXME
-            g.region(raster=aggregation,
-                    nsres=population_ns_resolution,
-                    ewres=population_ew_resolution,
-                    flags='a',
-                    quiet=True)  # Set region to 'mask'
+        #     # first, set region to aggregation map
+        #     # to safely modify the region: grass.use_temp_region()  # FIXME
+        #     g.region(raster=aggregation,
+        #             nsres=population_ns_resolution,
+        #             ewres=population_ew_resolution,
+        #             flags='a',
+        #             quiet=True)  # Set region to 'mask'
 
-            msg = "|! Computational resolution matched to {raster} [{category}]"
-            msg = msg.format(raster=aggregation, category=category)
-            grass.debug(_(msg))
+        #     msg = "|! Computational resolution matched to {raster} [{category}]"
+        #     msg = msg.format(raster=aggregation, category=category)
+        #     grass.debug(_(msg))
 
-            msg = "Setting region '{c}' of map '{m}' as a MASK"
-            grass.verbose(_(msg.format(c=category, m=aggregation)))
+        #     msg = "Setting region '{c}' of map '{m}' as a MASK"
+        #     grass.verbose(_(msg.format(c=category, m=aggregation)))
 
-            # -------------------------------------------------------- REMOVEME
-            draw_map(recreation_spectrum)
-            draw_map(aggregation)
-            # -------------------------------------------------------- REMOVEME
+        #     # -------------------------------------------------------- REMOVEME
+        #     draw_map(recreation_spectrum)
+        #     draw_map(aggregation)
+        #     # -------------------------------------------------------- REMOVEME
 
-            # build MASK for category & high recreation
-            masking = 'if( {spectrum} == {highest_spectrum} && '
-            masking += '{aggregation} == {category}, '
-            masking += '1, null() )'
-            masking = masking.format(
-                    spectrum=recreation_spectrum,
-                    highest_spectrum=HIGHEST_RECREATION_CATEGORY,
-                    aggregation=aggregation,
-                    category=category)
-            masking_equation = equation.format(
-                    result='MASK',
-                    expression = masking)
-            grass.mapcalc(masking_equation, overwrite=True)
+        #     # build MASK for category & high recreation
+        #     masking = 'if( {spectrum} == {highest_spectrum} && '
+        #     masking += '{aggregation} == {category}, '
+        #     masking += '1, null() )'
+        #     masking = masking.format(
+        #             spectrum=recreation_spectrum,
+        #             highest_spectrum=HIGHEST_RECREATION_CATEGORY,
+        #             aggregation=aggregation,
+        #             category=category)
+        #     masking_equation = equation.format(
+        #             result='MASK',
+        #             expression = masking)
+        #     grass.mapcalc(masking_equation, overwrite=True)
 
-            # ------------------------------------------- REMOVEME
-            draw_map('MASK')
-            # ------------------------------------------- REMOVEME
+        #     # ------------------------------------------- REMOVEME
+        #     draw_map('MASK')
+        #     # ------------------------------------------- REMOVEME
 
-            del(masking)
-            del(masking_equation)
+        #     del(masking)
+        #     del(masking_equation)
 
-            # zoom to MASK
-            g.region(zoom='MASK',
-                    nsres=population_ns_resolution,
-                    ewres=population_ew_resolution,
-                    quiet=True)
+        #     # zoom to MASK
+        #     g.region(zoom='MASK',
+        #             nsres=population_ns_resolution,
+        #             ewres=population_ew_resolution,
+        #             quiet=True)
 
-            # number of cells:
-            cells='cells'
-            r.stats_zonal(
-                    flags='r',
-                    base=landcover,
-                    cover=highest_spectrum,
-                    method='count',
-                    output=cells,
-                    overwrite=True)
-            remove_at_exit.append(cells)
-            # ------------------------------------------- REMOVEME
-            cells_map = grass.parse_command('r.category',
-                    map=cells,
-                    delimiter='\t')
-            grass.debug(_("Cells: {c}".format(c=cells_map)))
-            # ------------------------------------------- REMOVEME
+        #     # number of cells:
+        #     cells='cells'
+        #     r.stats_zonal(
+        #             flags='r',
+        #             base=landcover,
+        #             cover=highest_spectrum,
+        #             method='count',
+        #             output=cells,
+        #             overwrite=True)
+        #     remove_at_exit.append(cells)
+        #     # ------------------------------------------- REMOVEME
+        #     cells_map = grass.parse_command('r.category',
+        #             map=cells,
+        #             delimiter='\t')
+        #     grass.debug(_("Cells: {c}".format(c=cells_map)))
+        #     # ------------------------------------------- REMOVEME
 
-            # extent:
-            extent='extent'
-            extent_expression = "@{cells} * area()"
-            extent_expression = extent_expression.format(cells=cells)
-            extent_equation = equation.format(
-                    result=extent,
-                    expression=extent_expression)
-            r.mapcalc(extent_equation, overwrite=True)
+        #     # extent:
+        #     extent='extent'
+        #     extent_expression = "@{cells} * area()"
+        #     extent_expression = extent_expression.format(cells=cells)
+        #     extent_equation = equation.format(
+        #             result=extent,
+        #             expression=extent_expression)
+        #     r.mapcalc(extent_equation, overwrite=True)
 
-            r.stats_zonal(
-                    flags='r',
-                    base=landcover,
-                    cover=extent,
-                    method='average',
-                    output=extent,
-                    overwrite=True,
-                    verbose=False,
-                    quiet=True)
-            remove_at_exit.append(extent)
-            # ------------------------------------------- REMOVEME
-            extent_map = grass.parse_command('r.category',
-                    map=extent,
-                    delimiter='\t')
-            grass.debug(_("Extent: {e}".format(e=extent_map)))
-            # ------------------------------------------- REMOVEME
+        #     r.stats_zonal(
+        #             flags='r',
+        #             base=landcover,
+        #             cover=extent,
+        #             method='average',
+        #             output=extent,
+        #             overwrite=True,
+        #             verbose=False,
+        #             quiet=True)
+        #     remove_at_exit.append(extent)
+        #     # ------------------------------------------- REMOVEME
+        #     extent_map = grass.parse_command('r.category',
+        #             map=extent,
+        #             delimiter='\t')
+        #     grass.debug(_("Extent: {e}".format(e=extent_map)))
+        #     # ------------------------------------------- REMOVEME
 
-            # get scores as category descriptions
-            suitability_scores_as_labels = string_to_file(
-                    SUITABILITY_SCORES_LABELS,
-                    name=maes_ecosystem_types)
-            remove_normal_files_at_exit.append(suitability_scores_as_labels)
+        #     # get scores as category descriptions
+        #     suitability_scores_as_labels = string_to_file(
+        #             SUITABILITY_SCORES_LABELS,
+        #             name=maes_ecosystem_types)
+        #     remove_normal_files_at_exit.append(suitability_scores_as_labels)
 
-            landcover_scores = landcover + '.scores'
-            r.reclass(
-                    input=landcover,
-                    output=landcover_scores,
-                    rules=suitability_scores_as_labels,
-                    overwrite=True)
-            remove_at_exit.append(landcover_scores)
+        #     landcover_scores = landcover + '.scores'
+        #     r.reclass(
+        #             input=landcover,
+        #             output=landcover_scores,
+        #             rules=suitability_scores_as_labels,
+        #             overwrite=True,
+        #             quiet=True,
+        #             verbose=False)
+        #     remove_at_exit.append(landcover_scores)
 
-            # weighted extents:
-            weighted = 'weighted_extents'
-            weighted_expression = "@{extent} * float(@{scores})"
-            weighted_expression = weighted_expression.format(
-                    extent=extent,
-                    scores=landcover_scores)
-            weighted_equation = equation.format(
-                    result=weighted,
-                    expression = weighted_expression)
-            r.mapcalc(weighted_equation, overwrite=True)
-            remove_at_exit.append(weighted)
+        #     # weighted extents:
+        #     weighted = 'weighted_extents'
+        #     weighted_expression = "@{extent} * float(@{scores})"
+        #     weighted_expression = weighted_expression.format(
+        #             extent=extent,
+        #             scores=landcover_scores)
+        #     weighted_equation = equation.format(
+        #             result=weighted,
+        #             expression = weighted_expression)
+        #     r.mapcalc(weighted_equation, overwrite=True)
+        #     remove_at_exit.append(weighted)
 
-            r.stats_zonal(
-                    flags='r',
-                    base=landcover,
-                    cover=weighted,
-                    method='average',
-                    output=weighted,
-                    overwrite=True)
+        #     r.stats_zonal(
+        #             flags='r',
+        #             base=landcover,
+        #             cover=weighted,
+        #             method='average',
+        #             output=weighted,
+        #             overwrite=True,
+        #             verbose=False,
+        #             quiet=True)
 
-            weighted_extents = grass.parse_command('r.category',
-                    map=weighted,
-                    delimiter='\t')
+        #     weighted_extents = grass.parse_command('r.category',
+        #             map=weighted,
+        #             delimiter='\t')
 
-            category_sum = sum([float(x)
-                if not math.isnan(float(x))
-                else 0
-                for x
-                in weighted_extents.values()])
+        #     category_sum = sum([float(x)
+        #         if not math.isnan(float(x))
+        #         else 0
+        #         for x
+        #         in weighted_extents.values()])
 
-            weighted_extents['sum'] = category_sum
+        #     weighted_extents['sum'] = category_sum
 
-            # ------------------------------------------- REMOVEME
-            draw_map(weighted, suffix=category)
-            grass.debug(_("Weighted extents: {we}".format(we=weighted_extents)))
-            # ------------------------------------------- REMOVEME
+        #     # ------------------------------------------- REMOVEME
+        #     draw_map(weighted, suffix=category)
+        #     msg = "Weighted extents: {we}".format(we=weighted_extents)
+        #     grass.debug(_(msg))
+        #     del(msg)
+        #     # ------------------------------------------- REMOVEME
 
-            # fractions:
-            fractions = landcover + '.fractions'
+        #     # fractions:
+        #     fractions = landcover + '.fractions'
 
-            r.reclass(
-                    input=landcover,
-                    output=fractions,
-                    rules='-',
-                    stdin='*=*')
-            remove_at_exit.append(fractions)
+        #     # https://grasswiki.osgeo.org/wiki/LANDSAT#Hint:_Minimal_disk_space_copies
+        #     r.reclass(
+        #             input=landcover,
+        #             output=fractions,
+        #             rules='-',
+        #             stdin='*=*',
+        #             verbose=False,
+        #             quiet=True)
+        #     remove_at_exit.append(fractions)
 
-            # weighted fractions of land types
-            fraction_categories = {key: float(value) / weighted_extents['sum']
-                    for (key, value)
-                    in weighted_extents.iteritems()
-                    if key is not 'sum'}
+        #     # weighted fractions of land types
+        #     fraction_categories = {key: float(value) / weighted_extents['sum']
+        #             for (key, value)
+        #             in weighted_extents.iteritems()
+        #             if key is not 'sum'}
 
-            # rules for `r.category`
-            fraction_rules = '\n'.join(['{0}:{1}'.format(key, value)
-                for key, value
-                in fraction_categories.items()])
+        #     # rules for `r.category`
+        #     fraction_rules = '\n'.join(['{0}:{1}'.format(key, value)
+        #         for key, value
+        #         in fraction_categories.items()])
 
-            del(fraction_categories)  # not to mix with later 'fraction_values'
+        #     del(fraction_categories)  # not to mix with later 'fraction_values'
 
-            r.category(
-                    map=fractions,
-                    rules='-',
-                    stdin=fraction_rules,
-                    separator=':')
+        #     r.category(
+        #             map=fractions,
+        #             rules='-',
+        #             stdin=fraction_rules,
+        #             separator=':')
 
-            del(fraction_rules)  # not to mix with later 'fraction_values'
+        #     del(fraction_rules)  # not to mix with later 'fraction_values'
 
-            fraction_categories = grass.parse_command('r.category',
-                    map=fractions,
-                    delimiter='\t')
+        #     fraction_categories = grass.parse_command('r.category',
+        #             map=fractions,
+        #             delimiter='\t')
 
-            fractions_sum = sum([float(x)
-                if not math.isnan(float(x))
-                else 0
-                for x
-                in fraction_categories.values()])
-            # ------------------------------------------- REMOVEME
-            msg = "Fractions: {f}".format(f=fraction_categories)
-            grass.debug(_(msg))
-            # g.message(_(msg))
+        #     fractions_sum = sum([float(x)
+        #         if not math.isnan(float(x))
+        #         else 0
+        #         for x
+        #         in fraction_categories.values()])
+        #     # ------------------------------------------- REMOVEME
+        #     msg = "Fractions: {f}".format(f=fraction_categories)
+        #     grass.debug(_(msg))
+        #     # g.message(_(msg))
 
-            # g.message(_("Sum: {s}".format(s=fractions_sum)))
-            assert fractions_sum >= 0.9, "The sum of fractions is less than 0.99"
-            # assert fractions_sum >= 0.999999999999, "The sum of fractions is less than 0.99"
-            # assert fractions_sum < 1., "The sum of fractions is more than 1"
-            # ------------------------------------------- REMOVEME
+        #     # g.message(_("Sum: {s}".format(s=fractions_sum)))
+        #     assert fractions_sum >= 0.9, "The sum of fractions is less than 0.99"
+        #     # assert fractions_sum >= 0.999999999999, "The sum of fractions is less than 0.99"
+        #     # assert fractions_sum < 1., "The sum of fractions is more than 1"
+        #     # ------------------------------------------- REMOVEME
 
-            # flow:
-            flow='flow'
-            flow_expression = "@{fractions} * @{mobility}"
-            flow_expression = flow_expression.format(fractions=fractions,
-                    mobility=mobility_in_landcover)
-            flow_equation = equation.format(
-                    result=flow,
-                    expression=flow_expression)
-            r.mapcalc(flow_equation, overwrite=True)
-            remove_at_exit.append(flow)
+        #     # flow:
+        #     flow='flow'
+        #     flow_expression = "@{fractions} * @{mobility}"
+        #     flow_expression = flow_expression.format(fractions=fractions,
+        #             mobility=mobility_in_landcover)
+        #     flow_equation = equation.format(
+        #             result=flow,
+        #             expression=flow_expression)
+        #     r.mapcalc(flow_equation, overwrite=True)
+        #     remove_at_exit.append(flow)
 
-            # ------------------------------------------- REMOVEME
-            draw_map(flow)
-            if info:
-                r.report(map=flow, units=('k','c','p'))
-            # ------------------------------------------- REMOVEME
+        #     # ------------------------------------------- REMOVEME
+        #     draw_map(flow)
+        #     if info:
+        #         r.report(map=flow, units=('k','c','p'))
+        #     # ------------------------------------------- REMOVEME
 
-            flow_in_maes_ecosystem_types = flow + '_' + maes_ecosystem_types
-            r.stats_zonal(base=maes_ecosystem_types,
-                    flags='r',
-                    cover=flow,
-                    method='sum',
-                    output=flow_in_maes_ecosystem_types,
-                    overwrite=True,
-                    quiet=True)
-            remove_at_exit.append(flow_in_maes_ecosystem_types)
+        #     flow_in_maes_ecosystem_types = flow + '_' + maes_ecosystem_types
+        #     r.stats_zonal(base=maes_ecosystem_types,
+        #             flags='r',
+        #             cover=flow,
+        #             method='sum',
+        #             output=flow_in_maes_ecosystem_types,
+        #             overwrite=True,
+        #             verbose=False,
+        #             quiet=True)
+        #     remove_at_exit.append(flow_in_maes_ecosystem_types)
 
-            # ------------------------------------------- REMOVEME
-            draw_map(flow_in_maes_ecosystem_types)
-            if info:
-                r.report(map=flow_in_maes_ecosystem_types, units=('k','c','p'))
-            # ------------------------------------------- REMOVEME
+        #     # ------------------------------------------- REMOVEME
+        #     draw_map(flow_in_maes_ecosystem_types)
+        #     if info:
+        #         r.report(map=flow_in_maes_ecosystem_types, units=('k','c','p'))
+        #     # ------------------------------------------- REMOVEME
 
-            # # write out as CSV -- FIXME
-            statistics_filename = 'statistics_'
-            statistics_filename += maes_ecosystem_types + '_' + category
+        #     # write out as CSV -- FIXME
+        #     statistics_filename = 'statistics'
+        #     statistics_filename += '_' + maes_ecosystem_types
+        #     statistics_filename += '_' + aggregation
+        #     statistics_filename += '_' + category
 
-            r.stats(input=(maes_ecosystem_types,flow_in_maes_ecosystem_types),
-                    output='-',
-                    flags='nacpl',
-                    separator=COMMA,
-                    quiet=True)
+        #     # r.stats(input=(maes_ecosystem_types,flow_in_maes_ecosystem_types),
+        #     #         output='-',
+        #     #         flags='nacpl',
+        #     #         separator=COMMA,
+        #     #         quiet=True)
 
-            r.stats(input=(maes_ecosystem_types,flow_in_maes_ecosystem_types),
-                    output=statistics_filename,
-                    flags='nacpl',
-                    separator=COMMA,
-                    quiet=True)
+        #     r.stats(input=(maes_ecosystem_types,flow_in_maes_ecosystem_types),
+        #             output=statistics_filename,
+        #             flags='nacpl',
+        #             separator=COMMA,
+        #             quiet=True)
 
-            # if base_vector:
-                # Add logic
+        #     # if base_vector:
+        #         # Add logic
 
-            del(statistics_filename)
+        #     del(statistics_filename)
 
-            # remove MASK
-            r.mask(flags='r', quiet=True)
+        #     # remove MASK
+        #     r.mask(flags='r', quiet=True)
 
-            '''Contribution of Ecosysten Types --------------------- End'''
+        #     '''Contribution of Ecosysten Types --------------------- End'''
 
     # restore region
     if landuse_extent:

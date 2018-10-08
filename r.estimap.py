@@ -307,30 +307,30 @@
 ###% requires: protected, protected_scores
 ##%end
 
-'''Anthropic areas'''
+'''Artificial areas'''
 
 #%option G_OPT_R_INPUT
-#% key: anthropic
+#% key: artificial
 #% key_desc: name
 #% label: Input map of artificial surfaces
-#% description: Partial input map to compute anthropic areas proximity, scored via a distance function
+#% description: Partial input map to compute proximity to artificial areas, scored via a distance function
 #% required : no
 #% guisection: Water
 #%end
 
 #%option G_OPT_R_INPUT
-#% key: anthropic_distances
+#% key: artificial_distances
 #% type: string
 #% key_desc: rules
 #% label: Input distance classification rules
-#% description: Categories for distance to anthropic surfaces. Expected are rules for `r.recode` that correspond to distance values in the 'anthropic' map
+#% description: Categories for distance to artificial surfaces. Expected are rules for `r.recode` that correspond to distance values in the 'artificial' map
 #% required : no
 #% guisection: Anthropic
 #% answer: 0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5
 #%end
 
 #%rules
-#%  requires: anthropic, anthropic_distances
+#%  requires: artificial, artificial_distances
 #%end
 
 '''Roads'''
@@ -358,7 +358,7 @@
 
 #%rules
 #%  requires: roads, roads_distances
-#%  collective: anthropic, roads
+#%  collective: artificial, roads
 #%end
 
 '''Recreation'''
@@ -506,23 +506,23 @@
 
 #%rules
 #%  requires_all: demand, population, base
-#%  requires: demand, infrastructure, anthropic, roads
+#%  requires: demand, infrastructure, artificial, roads
 #%  requires: unmet, demand
 #%end
 
 #%option G_OPT_R_OUTPUT
-#% key: mobility
+#% key: flow
 #% type: string
 #% key_desc: name
-#% label: Output map of mobility
-#% description: Mobility output map: population (per Local Administrative Unit) near areas of high recreational value
+#% label: Output map of flow
+#% description: Flow output map: population (per Local Administrative Unit) near areas of high recreational value
 #% required : no
 #% guisection: Output
 #%end
 
 #%rules
-#%  requires_all: mobility, population, base
-#%  requires: mobility, infrastructure, anthropic, roads
+#%  requires_all: flow, population, base
+#%  requires: flow, infrastructure, artificial, roads
 #%end
 
 #%option G_OPT_F_OUTPUT
@@ -537,8 +537,8 @@
 #%end
 
 #%rules
-#%  requires: opportunity, spectrum, demand, mobility, supply
-#%  required: potential, spectrum, demand, mobility, supply
+#%  requires: opportunity, spectrum, demand, flow, supply
+#%  required: potential, spectrum, demand, flow, supply
 #%end
 
 #%rules
@@ -598,6 +598,7 @@ import grass.script as grass
 from grass.exceptions import CalledModuleError
 from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
+from grass.pygrass.modules.shortcuts import vector as v
 
 if "GISBASE" not in os.environ:
     g.message(_("You must be in GRASS GIS to run this program."))
@@ -769,7 +770,7 @@ URBAN_ATLAS_TO_MAES_NOMENCLATURE='''
 recreation_potential_categories = '''0.0:0.2:1
 0.2:0.4:2
 0.4:*:3'''
-#anthropic_distance_categories=
+#artificial_distance_categories=
 #'0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5'
 recreation_opportunity_categories=recreation_potential_categories
 
@@ -923,15 +924,19 @@ def cleanup():
 
         # remove temporary maps
         if temporary_raster_maps:
-            g.remove(flags='f', type="raster", 
-                pattern='tmp.{pid}*'.format(pid=os.getpid()),
-                quiet=True)
-
-        # remove using handcrafted list
-        if remove_at_exit:
-            g.remove(flags='f', type='raster', name=','.join(remove_at_exit),
+            g.remove(flags='f',
+                    type="raster",
+                    pattern='tmp.{pid}*'.format(pid=os.getpid()),
                     quiet=True)
 
+        # remove maps in handcrafted list
+        if remove_at_exit:
+            g.remove(flags='f',
+                    type=('raster','vector'),
+                    name=','.join(remove_at_exit),
+                    quiet=True)
+
+        # remove normal files at OS level
         if remove_normal_files_at_exit:
             for item in remove_normal_files_at_exit:
                 os.unlink(item)
@@ -941,7 +946,25 @@ def cleanup():
         r.mask(flags='r', verbose=True)
 
 def string_to_file(string, **kwargs):
-    """
+    """Split series of strings separated by comma in lines and write as an
+    ASCII file
+
+    Parameters
+    ----------
+    string :
+        A string where commas will be replaced by a newline
+
+    kwargs :
+        Optional key-word argument 'name'
+
+    Returns
+    -------
+    filename :
+        Name of the ASCII file into where the transformed string is written
+
+    Examples
+    --------
+
     """
     string = string.split(',')
     string = '\n'.join(string)
@@ -985,13 +1008,13 @@ def draw_map(mapname, **kwargs):
 
     Parameters
     ----------
-    mapname:
+    mapname :
         Name of input raster map to draw on terminology
 
-    width:
+    width :
         Optional parameter to set the width
 
-    height:
+    height :
         Optional parameter to set the height
 
     Returns
@@ -1252,7 +1275,7 @@ def float_to_integer(double):
 
     Parameters
     ----------
-    double:
+    double :
             An 'FCELL' or 'DCELL' type raste map
 
     Returns
@@ -1340,16 +1363,16 @@ def build_distance_function(constant, kappa, alpha, variable, **kwargs):
 
     variable :
         The main input variable: for 'attractiveness' it is 'distance', for
-        'mobility' it is 'population'
+        'flow' it is 'population'
 
     kwargs :
         More keyword arguments such as: 'score', 'suitability'
 
-        score:
+        score :
             If 'score' is given, it used as a multiplication factor to the base
             equation.
 
-        suitability:
+        suitability :
             If 'suitability' is given, it is used as a multiplication factor to
             the base equation.
 
@@ -1806,9 +1829,9 @@ def classify_recreation_component(component, rules, output_name):
             output=output_name)
     draw_map(output_name)  # REMOVEME
 
-def compute_anthropic_proximity(raster, distance_categories, **kwargs):
+def compute_artificial_proximity(raster, distance_categories, **kwargs):
     """
-    Compute proximity to anthropic surfaces
+    Compute proximity to artificial surfaces
 
     1. Distance to features
     2. Classify distances
@@ -1833,11 +1856,11 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
     --------
     ...
     """
-    anthropic_distances = tmp_map_name(name=raster)
+    artificial_distances = tmp_map_name(name=raster)
 
     grass.run_command("r.grow.distance",
             input = raster,
-            distance = anthropic_distances,
+            distance = artificial_distances,
             metric = EUCLIDEAN,
             quiet = True,
             overwrite = True)
@@ -1847,14 +1870,14 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
         grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
 
     else:
-        tmp_output = tmp_map_name(name='anthropic_proximity')
+        tmp_output = tmp_map_name(name='artificial_proximity')
         grass.debug(_("Hardcoded temporary map name {name}".format(name=tmp_output)))
 
     msg = "Computing proximity to '{mapname}'"
     msg = msg.format(mapname=raster)
     grass.verbose(_(msg))
     grass.run_command("r.recode",
-            input = anthropic_distances,
+            input = artificial_distances,
             output = tmp_output,
             rules = distance_categories,
             overwrite = True)
@@ -1868,11 +1891,11 @@ def compute_anthropic_proximity(raster, distance_categories, **kwargs):
     draw_map(tmp_output)  # REMOVEME
     return tmp_output
 
-def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
+def artificial_accessibility_expression(artificial_proximity, roads_proximity):
     """
     Build an r.mapcalc compatible expression to compute accessibility to
-    anthropic surfaces based on the following accessibility classification
-    rules for anthropic surfaces:
+    artificial surfaces based on the following accessibility classification
+    rules for artificial surfaces:
 
 |-------------------+-------+------------+-------------+--------------+---------|
 | Anthropic / Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
@@ -1890,8 +1913,8 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
 
     Parameters
     ----------
-    anthropic :
-        Proximity to anthropic surfaces
+    artificial :
+        Proximity to artificial surfaces
 
     roads :
         Proximity to roads
@@ -1906,31 +1929,31 @@ def anthropic_accessibility_expression(anthropic_proximity, roads_proximity):
     --------
     ...
     """
-    expression = ('if( {anthropic} <= 2 && {roads} <= 2, 1,'
-            ' \ \n if( {anthropic} == 1 && {roads} == 3, 2,'
-            ' \ \n if( {anthropic} == 2 && {roads} == 3, 2,'
-            ' \ \n if( {anthropic} == 3 && {roads} <= 3, 2,'
-            ' \ \n if( {anthropic} <= 2 && {roads} == 4, 3,'
-            ' \ \n if( {anthropic} == 4 && {roads} == 2, 3,'
-            ' \ \n if( {anthropic} >= 4 && {roads} == 1, 3,'
-            ' \ \n if( {anthropic} <= 2 && {roads} == 5, 4,'
-            ' \ \n if( {anthropic} == 3 && {roads} == 4, 4,'
-            ' \ \n if( {anthropic} >= 4 && {roads} == 3, 4,'
-            ' \ \n if( {anthropic} == 5 && {roads} == 2, 4,'
-            ' \ \n if( {anthropic} >= 3 && {roads} == 5, 5,'
-            ' \ \n if( {anthropic} >= 4 && {roads} == 4, 5)))))))))))))')
+    expression = ('if( {artificial} <= 2 && {roads} <= 2, 1,'
+            ' \ \n if( {artificial} == 1 && {roads} == 3, 2,'
+            ' \ \n if( {artificial} == 2 && {roads} == 3, 2,'
+            ' \ \n if( {artificial} == 3 && {roads} <= 3, 2,'
+            ' \ \n if( {artificial} <= 2 && {roads} == 4, 3,'
+            ' \ \n if( {artificial} == 4 && {roads} == 2, 3,'
+            ' \ \n if( {artificial} >= 4 && {roads} == 1, 3,'
+            ' \ \n if( {artificial} <= 2 && {roads} == 5, 4,'
+            ' \ \n if( {artificial} == 3 && {roads} == 4, 4,'
+            ' \ \n if( {artificial} >= 4 && {roads} == 3, 4,'
+            ' \ \n if( {artificial} == 5 && {roads} == 2, 4,'
+            ' \ \n if( {artificial} >= 3 && {roads} == 5, 5,'
+            ' \ \n if( {artificial} >= 4 && {roads} == 4, 5)))))))))))))')
 
-    expression = expression.format(anthropic=anthropic_proximity,
+    expression = expression.format(artificial=artificial_proximity,
             roads=roads_proximity)
     return expression
 
-def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwargs):
-    """Compute anthropic proximity
+def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kwargs):
+    """Compute artificial proximity
 
     Parameters
     ----------
-    anthropic_proximity :
-        Anthropic surfaces...
+    artificial_proximity :
+        Artificial surfaces...
 
     roads_proximity :
         Road infrastructure
@@ -1947,31 +1970,33 @@ def compute_anthropic_accessibility(anthropic_proximity, roads_proximity, **kwar
     --------
     ...
     """
-    anthropic = grass.find_file(name=anthropic_proximity, element='cell')
-    if not anthropic['file']:
-        grass.fatal("Raster map {name} not found".format(name=anthropic_proximity))
+    artificial = grass.find_file(name=artificial_proximity, element='cell')
+    if not artificial['file']:
+        grass.fatal("Raster map {name} not found".format(name=artificial_proximity))
 
     roads = grass.find_file(name=roads_proximity, element='cell')
     if not roads['file']:
         grass.fatal("Raster map {name} not found".format(name=roads_proximity))
 
-    accessibility_expression = anthropic_accessibility_expression(anthropic_proximity, roads_proximity)
+    accessibility_expression = artificial_accessibility_expression(
+            artificial_proximity,
+            roads_proximity)
     if 'output_name' in kwargs:
         tmp_output = tmp_map_name(name=kwargs.get('output_name'))  # temporary maps will be removed
     else:
-        basename = 'anthropic_accessibility'
+        basename = 'artificial_accessibility'
         tmp_output = tmp_map_name(name=basename)
 
     accessibility_equation = equation.format(result=tmp_output,
             expression=accessibility_expression)
 
     if info:
-        msg = "Equation for proximity to anthropic areas: \n"
+        msg = "Equation for proximity to artificial areas: \n"
         msg += accessibility_equation
         grass.debug(msg)
         del(msg)
 
-    grass.verbose(_("Computing accessibility to anthropic surfaces"))
+    grass.verbose(_("Computing accessibility to artificial surfaces"))
     grass.mapcalc(accessibility_equation, overwrite=True)
 
     del(accessibility_expression)
@@ -2123,7 +2148,7 @@ def update_meta(raster, title):
     del(source1)
     del(source2)
 
-def compute_mobility(distance, constant, coefficients, population, score,
+def mobility_function(distance, constant, coefficients, population, score,
         suitability):
     """
     The following 'mobility' function, is identical to the one used in
@@ -2145,13 +2170,13 @@ def compute_mobility(distance, constant, coefficients, population, score,
     Parameters
     ----------
 
-    distance:
+    distance :
         Map of distance categories
 
-    constant:
+    constant :
         Constant for the mobility function
 
-    coefficients:
+    coefficients :
         A dictionary with a set for coefficients for each distance category, as
         (the example) presented in the following table:
 
@@ -2175,22 +2200,22 @@ def compute_mobility(distance, constant, coefficients, population, score,
         Note, the Alpha coefficient, is signed with a '-' in the mobility
         function.
 
-    population:
+    population :
         A map with the distribution of the demand per distance category and
         predefined geometric boundaries (see `r.stats.zonal` deriving the
         'demand' map ).
 
-    score:
+    score :
         A score value for the mobility function
 
-    suitability:
+    suitability :
         Not used. Yet! Where to integrate?
 
     Returns
     -------
 
-    mobility_expression:
-        A valid mapcalc expression to compute the mobility based on the
+    mobility_expression :
+        A valid mapcalc expression to compute the flow based on the
         predefined function `build_distance_function`.
 
     Examples
@@ -2261,13 +2286,13 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
     Parameters
     ----------
 
-    distance:
+    distance :
         Map of distance categories
 
-    constant:
+    constant :
         Constant for the mobility function
 
-    coefficients:
+    coefficients :
         A tuple with coefficients for the last distance category, as
         (the example) presented in the following table:
 
@@ -2277,25 +2302,25 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
         | >4       | 0.06930 | 0.00057 |
         |----------+---------+---------|
 
-        Note, this is the "last" distance category--see also the
-        compute_mobility() function.
+        Note, this is the last distance category. See also the
+        mobility_function().
 
-    population:
+    population :
         A map with the distribution of the demand per distance category and
         predefined geometric boundaries (see `r.stats.zonal` deriving the
         'unmet demand' map ).
 
-    score:
+    score :
         A score value for the mobility function
 
-    suitability:
+    suitability :
         Not used. Yet! Where to integrate?
 
     Returns
     -------
 
-    mobility_expression:
-        A valid mapcalc expression to compute the mobility based on the
+    mobility_expression :
+        A valid mapcalc expression to compute the flow based on the
         predefined function `build_distance_function`.
 
     Examples
@@ -2341,17 +2366,17 @@ def update_vector(vector, raster, methods, column_prefix):
 
     Parameters
     ----------
-    vector:
+    vector :
         Vector map whose attribute table to update with results of the
         v.rast.stats call
 
-    raster:
+    raster :
         Source raster map for statistics
 
-    methods:
+    methods :
         Descriptive statistics for the `v.rast.stats` call
 
-    column_prefix:
+    column_prefix :
         Prefix for the names of the columns created by the `v.rast.stats` call
 
     Returns
@@ -2368,190 +2393,55 @@ def update_vector(vector, raster, methods, column_prefix):
             flags='c',
             raster=raster,
             method=methods,
-            column_prefix=raster,
+            column_prefix=column_prefix,
             overwrite=True)
-    grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
+    # grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
 
-def compute_supply_table(base, landcover, reclassification_rules,
-        reclassified_landcover, title, recreation_spectrum, highest_spectrum,
-        mobility, **kwargs):
-    # ----------------------------------------
-    # FIXME: merge with compute_supply()
-    # ----------------------------------------
+def get_raster_statistics(map_one, map_two, separator, flags):
     """
     Parameters
     ----------
+    map_one :
+        First map as input to `r.stats`
 
-    base:
-        Base map for final zonal statistics
+    map_two :
+        Second map as input to `r.stats`
 
-    landcover:
-        Land cover map to use as a base map for intermediate zonal statistics
-        ? FIXME
+    separator :
+        Character to use as separator in `r.stats`
 
-    reclassification_rules:
-        Reclassification rules for the input landcover map
-
-    reclassified_landcover:
-        Name for the reclassified land cover map
-
-    title:
-        Title for the reclassified land cover map
-
-    recreation_spectrum:
-        Map scoring access to and quality of recreation
-
-    highest_spectrum:
-        Expected is a map of areas with highest recreational value (category 9
-        as per the report ... )
-
-    ?:  Why is this needed for? An output for the final table? FIXME
-        Land cover class percentages in ROS9 (this is: relative percentage)
-
-    mobility:
-        Map of visits, derived from the mobility function, depicting the
-        number of people living inside zones 0, 1, 2, 3. Used as a cover map
-        for zonal statistics.
-
-    output:
-        Supply table (distribution of flow for each land cover class)
-
-    **kwargs:
-        Optional keyword arguments, such as: 'prefix'
+    flags :
+        Flags for `r.stats`
 
     Returns
     -------
-    This function produces a map to base the production of a supply table in
-    form of CSV. It does not return any value.
+    dictionary :
+        A nested dictionary that holds categorical statistics for both maps
+        'map_one' and 'map_two'.
     """
-    # 1  Process only “High-Quality Recreation Areas”
-    r.mask(raster=highest_spectrum,
-            overwrite=True,
+    statistics = grass.read_command(
+            'r.stats',
+            input=(map_one, map_two),
+            output='-',
+            flags=flags,
+            separator=separator,
             quiet=True)
-    grass.verbose(_("MASKing areas of high recreational value"))
+    statistics = statistics.split('\n')[:-1]
 
-    mobility_in_base = mobility + '_in_' + base
-    r.stats_zonal(base=base,
-            flags='r',
-            cover=mobility,
-            method='sum',
-            output=mobility_in_base,
-            overwrite=True,
-            quiet=True)
+    dictionary = dict()
 
-    r.colors(map=mobility_in_base,
-        color=MOBILITY_COLORS,
-        quiet=True)
-    draw_map(mobility_in_base)  # REMOVEME
+    for row in statistics:
+        row = row.split('|')
+        outer_key = ( row[0], row[1])
+        inner_key = row[2]
+        inner_value = row[3:]
+        inner_dictionary = {inner_key: inner_value}
+        try:
+            dictionary[outer_key][inner_key] = inner_value
+        except KeyError:
+            dictionary[outer_key] = { inner_key : inner_value}
 
-    draw_map(landcover)
-
-    r.reclass(input=landcover,
-            rules=reclassification_rules,
-            output=reclassified_landcover,
-            title=title,
-            quiet=True)
-    remove_at_exit.append(reclassified_landcover)
-
-    draw_map(reclassified_landcover)  # REMOVEME
-
-    # land class percentage per zone
-    landcover_fragment_patches = []
-
-    # dictionary to hold statistics
-    global statistics_dictionary
-    statistics_dictionary = {}
-
-    # read categories and labels
-    categories = grass.parse_command('r.category', map=base, delimiter='\t')
-
-    # 2  Loop over categories of the `base` map
-    for category, label in categories.items():
-
-        grass.debug(_("Base map category: {c}".format(c=category)))
-
-        # build a raster based on 'category'
-        masking = 'if( {base} == {category} && '
-        masking += '{spectrum} == {highest_spectrum}, '
-        masking += '{landcover}, null() )'
-        masking = masking.format(
-                base=base,
-                category=category,
-                spectrum=recreation_spectrum,
-                highest_spectrum=HIGHEST_RECREATION_CATEGORY,
-                landcover=reclassified_landcover)
-
-        # Why not name directly 'MASK'?
-        base_mask = '{spectrum}_{base}_{category}'
-        base_mask = base_mask.format(
-                spectrum=highest_spectrum,
-                base=base,
-                category=category)
-        remove_at_exit.append(base_mask)  # NOTE
-
-        masking_equation = equation.format(
-                result=base_mask,
-                expression=masking)
-        grass.mapcalc(masking_equation, overwrite=True)
-
-        # set built raster map as MASK
-        grass.verbose(_("Setting map '{r}' as a MASK".format(r=base_mask)))
-        draw_map(base_mask)  # REMOVEME
-        r.mask(raster=base_mask, overwrite=True, quiet=True)
-
-        del(masking)
-        del(base_mask)
-        del(masking_equation)
-
-        # get statistics
-        if info:
-            r.report(map=(base,reclassified_landcover),
-                    flags='hn',
-                    units=units,
-                    quiet=True)
-
-        statistics = grass.read_command(
-                'r.stats',
-                input=(base,reclassified_landcover),
-                output='-',
-                flags='nlcap',
-                separator='|',
-                quiet=True)
-        statistics = statistics.split('\n')[:-1]
-
-        dictionary = dict()
-        for row in statistics:
-            row = row.split('|')
-            outer_key = ( row[0], row[1])
-            inner_key = row[2]
-            inner_value = row[3:]
-            inner_dictionary = {inner_key: inner_value}
-
-            try:
-                dictionary[outer_key][inner_key] = inner_value
-            except KeyError:
-                dictionary[outer_key] = { inner_key : inner_value}
-
-        # merge the iteration's output with the global 'statistics' dictionary
-        statistics_dictionary = merge_two_dictionaries(statistics_dictionary,
-                dictionary)
-        del(dictionary)
-
-        # remove MASK
-        r.mask(flags='r', quiet=True)
-
-    # csv output filename and prefix
-    statistics_filename = 'statistics_' + base + '.csv'
-
-    # export to csv
-    if 'prefix' in kwargs:
-        prefix = kwargs.get('prefix') + '_'
-        statistics_filename = prefix + statistics_filename
-    write_dictionary_to_csv(statistics_filename, statistics_dictionary)
-
-    # clean up
-    del(statistics_filename)
-    del(statistics_dictionary)
+    return dictionary
 
 def compute_supply(base,
         recreation_spectrum,
@@ -2559,17 +2449,13 @@ def compute_supply(base,
         base_reclassification_rules,
         reclassified_base,
         reclassified_base_title,
-        mobility,
-        mobility_map_name,
+        flow,
+        flow_map_name,
         aggregation,
         ns_resolution,
         ew_resolution,
-        csv_prefix,
         csv_basename,
         **kwargs):
-    # ----------------------------------------
-    # FIXME: merge with compute_supply_table()
-    # ----------------------------------------
     """
     # In comparison to 'supply':
         # here:     base = 'ecosystem_types'
@@ -2601,40 +2487,65 @@ def compute_supply(base,
     Parameters
     ----------
     recreation_spectrum:
-        Map classifying recreation quality ?
+        Map scoring access to and quality of recreation
 
-    highest_spectrum:
+    highest_spectrum :
+        Expected is a map of areas with highest recreational value (category 9
+        as per the report ... )
 
-    base:
+    base :
+        Base land types map for final zonal statistics. Specifically to ESTIMAP's
+        recrceation mapping algorithm.
 
-    base_reclassification_rules:
+    base_reclassification_rules :
+        Reclassification rules for the input base map
 
-    reclassified_base,
+    reclassified_base :
+        Name for the reclassified base cover map
 
-    reclassified_base_title,
+    reclassified_base_title :
+        Title for the reclassified base map
 
-    ecosystem_types:
+    ecosystem_types :
 
-    mobility:
+    flow :
+        Map of visits, derived from the mobility function, depicting the
+        number of people living inside zones 0, 1, 2, 3. Used as a cover map
+        for zonal statistics.
 
-    mobility_map_name:
+    flow_map_name :
+        A name for the 'flow' map. This is required when the 'flow' input
+        option is not defined by the user, yet some of the requested outputs
+        required first the production of the 'flow' map. An example is the
+        request for a supply table without requesting the 'flow' map itself.
 
-    aggregation:
+    aggregation :
 
-    ns_resolution:
+    ns_resolution :
 
-    ew_resolution:
+    ew_resolution :
 
-    statistics_filename:
+    statistics_filename :
+
+    **kwargs :
+        Optional keyword arguments, such as: 'csv_prefix'
+
+    ? :
+        Land cover class percentages in ROS9 (this is: relative percentage)
+
+    output :
+        Supply table (distribution of flow for each land cover class)
 
     Returns
     -------
+    This function produces a map to base the production of a supply table in
+    form of CSV.
 
     Examples
     --------
     """
     # Inputs
-    mobility_in_base = mobility + '_' + base
+    flow_in_base = flow + '_' + base
     base_scores = base + '.scores'
 
     csv_basename += '_' + reclassified_base
@@ -2642,10 +2553,14 @@ def compute_supply(base,
 
     # Define lists and dictionaries to hold intermediate data
     weighted_extents = {}
-    flows = {}
+    flows = []
+    global statistics_dictionary
+    statistics_dictionary = {}
 
     # MASK areas of high quality recreation
     r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
+
+    draw_map('MASK')
 
     # Reclassify land cover map to MAES ecosystem types
     # ------------------------------------------------------------ REMOVEME
@@ -2655,29 +2570,40 @@ def compute_supply(base,
     with open(base_reclassification_rules) as f:
             grass.debug(f.read())
     # ------------------------------------------------------------ REMOVEME
+
+    draw_map(base)  # REMOVEME
+
     r.reclass(input=base,
             rules=base_reclassification_rules,
             output=reclassified_base,
             quiet=True)
     remove_at_exit.append(reclassified_base)
 
+    # Discard areas out of MASK
+    # copy_expression = "{input_raster}"
+    # copy_expression = copy_expression.format(input_raster=reclassified_base)
+    copy_equation = equation.format(result=reclassified_base,
+            expression=reclassified_base)
+    r.mapcalc(copy_equation, overwrite=True)
+    del(copy_equation)
+
     draw_map(reclassified_base)  # REMOVEME
 
     # Count flow within each land cover category
     r.stats_zonal(base=base,
             flags='r',
-            cover=mobility_map_name,
+            cover=flow_map_name,
             method='sum',
-            output=mobility_in_base,
+            output=flow_in_base,
             overwrite=True,
             quiet=True)
 
     # Set colors for "flow" map
-    r.colors(map=mobility_in_base,
+    r.colors(map=flow_in_base,
         color=MOBILITY_COLORS,
         quiet=True)
 
-    draw_map(mobility_in_base)  # REMOVEME
+    draw_map(flow_in_base)  # REMOVEME
 
     # Parse aggregation raster categories and labels
     categories = grass.parse_command('r.category',
@@ -2687,12 +2613,27 @@ def compute_supply(base,
     for category in categories:
 
         # Intermediate names
+
         cells = highest_spectrum + '.cells' + '.' + category
+        remove_at_exit.append(cells)
+
         extent = highest_spectrum + '.extent' + '.' + category
+        remove_at_exit.append(extent)
+
         weighted = highest_spectrum + '.weighted' + '.' + category
+        remove_at_exit.append(weighted)
+
         fractions = base + '.fractions' + '.' + category
-        flow = base + '.flow' + '.' + category
-        flow_in_reclassified_base = reclassified_base + '.flow' + '.' + category
+        remove_at_exit.append(fractions)
+
+        flow_category = '_flow_' + category
+        flow = base + flow_category
+        remove_at_exit.append(flow)
+
+        flow_in_reclassified_base = reclassified_base + flow_category
+        del(flow_category)
+        flows.append(flow_in_reclassified_base)  # add to list for patching
+        remove_at_exit.append(flow_in_reclassified_base)
 
         # Output names
 
@@ -2718,6 +2659,10 @@ def compute_supply(base,
         del(msg)
 
         # Build MASK for current category & high quality recreation areas
+        msg = "Setting category '{c}' of '{a}' as a MASK"
+        grass.verbose(_(msg.format(c=category, a=aggregation)))
+        del(msg)
+
         masking = 'if( {spectrum} == {highest_quality_category} && '
         masking += '{aggregation} == {category}, '
         masking += '1, null() )'
@@ -2742,9 +2687,8 @@ def compute_supply(base,
                 ewres=ew_resolution,
                 quiet=True)
 
-        msg = "Setting category '{c}' of '{m}' as a MASK"
-        grass.verbose(_(msg.format(c=category, m=aggregation)))
-        del(msg)
+        draw_map('MASK')  # REMOVEME
+        draw_map(highest_spectrum)  # REMOVEME
 
         # Count number of cells within each land category
         r.stats_zonal(
@@ -2755,13 +2699,32 @@ def compute_supply(base,
                 output=cells,
                 overwrite=True,
                 quiet=True)
-        remove_at_exit.append(cells)
-        # ------------------------------------------- REMOVEME
-        cells_map = grass.parse_command('r.category',
+        cells_categories = grass.parse_command('r.category',
                 map=cells,
                 delimiter='\t')
-        grass.debug(_("Cells: {c}".format(c=cells_map)))
-        # ------------------------------------------- REMOVEME
+        grass.debug(_("Cells: {c}".format(c=cells_categories)))
+
+        # Build cell category and label rules for `r.category`
+        cells_rules = '\n'.join(['{0}:{1}'.format(key, value)
+            for key, value
+            in cells_categories.items()])
+        del(cells_categories)
+
+        # Discard areas out of MASK
+        copy_equation = equation.format(result=cells,
+                expression=cells)
+        r.mapcalc(copy_equation, overwrite=True)
+        del(copy_equation)
+
+        # Reassign cell category labels
+        r.category(
+                map=cells,
+                rules='-',
+                stdin=cells_rules,
+                separator=':')
+        del(cells_rules)
+
+        draw_map(cells)  # REMOVEME
 
         # Compute extent of each land category
         extent_expression = "@{cells} * area()"
@@ -2781,7 +2744,6 @@ def compute_supply(base,
                 overwrite=True,
                 verbose=False,
                 quiet=True)
-        remove_at_exit.append(extent)
 
         # ------------------------------------------- REMOVEME
         extent_map = grass.parse_command('r.category',
@@ -2814,7 +2776,6 @@ def compute_supply(base,
                 result=weighted,
                 expression = weighted_expression)
         r.mapcalc(weighted_equation, overwrite=True)
-        remove_at_exit.append(weighted)
 
         # Write weighted extent figures as labels
         r.stats_zonal(
@@ -2856,7 +2817,6 @@ def compute_supply(base,
                 stdin='*=*',
                 verbose=False,
                 quiet=True)
-        remove_at_exit.append(fractions)
 
         # Compute weighted fractions of land types
         fraction_category_label = {key: float(value) / weighted_extents['sum']
@@ -2891,7 +2851,7 @@ def compute_supply(base,
             in fraction_categories.values()])
         msg = "Fractions: {f}".format(f=fraction_categories)
         grass.debug(_(msg))
-        # g.message(_(msg))
+        del(msg)
 
         # g.message(_("Sum: {s}".format(s=fractions_sum)))
         # assert fractions_sum < 1.000000000000001, "Sum of fractions is > 1"
@@ -2901,18 +2861,15 @@ def compute_supply(base,
         # --------------------------------------------------------------------
 
         # Compute flow
-        flow_expression = "@{fractions} * @{mobility}"
+        flow_expression = "@{fractions} * @{flow}"
         flow_expression = flow_expression.format(fractions=fractions,
-                mobility=mobility_in_base)
+                flow=flow_in_base)
         flow_equation = equation.format(
                 result=flow,
                 expression=flow_expression)
         r.mapcalc(flow_equation, overwrite=True)
-        remove_at_exit.append(flow)
 
-        # draw_map(flow)
-        # if info:
-        #     r.report(map=flow, units=('k','c','p'))
+        draw_map(flow)  # REMOVEME
 
         # Write flow figures as raster category labels
         r.stats_zonal(base=reclassified_base,
@@ -2923,51 +2880,150 @@ def compute_supply(base,
                 overwrite=True,
                 verbose=False,
                 quiet=True)
-        remove_at_exit.append(flow_in_reclassified_base)
+
+        # Parse flow categories and labels
+        flow_categories = grass.parse_command('r.category',
+                map=flow_in_reclassified_base,
+                delimiter='\t')
+        grass.debug(_("Flow: {c}".format(c=flow_categories)))
+
+        # Build flow category and label rules for `r.category`
+        flow_rules = '\n'.join(['{0}:{1}'.format(key, value)
+            for key, value
+            in flow_categories.items()])
+        del(flow_categories)
+
+        # Discard areas out of MASK
+        copy_equation = equation.format(result=flow_in_reclassified_base,
+                expression=flow_in_reclassified_base)
+        r.mapcalc(copy_equation, overwrite=True)
+        del(copy_equation)
+
+        # Reassign cell category labels
+        r.category(
+                map=flow_in_reclassified_base,
+                rules='-',
+                stdin=flow_rules,
+                separator=':')
+        del(flow_rules)
 
         # Update title
         reclassified_base_title += ' ' + category
         r.support(flow_in_reclassified_base,
                 title=reclassified_base_title)
 
-        # ------------------------------------------------------------ REMOVEME
-        draw_map(flow_in_reclassified_base)
-        if info:
-            r.report(flags='hn',
-                    map=flow_in_reclassified_base,
-                    units=('k','c','p'))
-        # ------------------------------------------------------------ REMOVEME
+        # if info:
+        #     r.report(flags='hn',
+        #             map=(flow_in_reclassified_base),
+        #             units=('k','c','p'))
 
         if print_only:
-            r.stats(input=(reclassified_base,flow_in_reclassified_base),
+            r.stats(input=(flow_in_reclassified_base),
                     output='-',
                     flags='nacpl',
                     separator=COMMA,
                     quiet=True)
 
-        # write out as CSV
         if not print_only:
 
-            if 'csv_prefix' in kwargs:
-                csv_prefix = kwargs.get('csv_prefix') + '_'
-            csv_suffix = '_' + category
-            csvname = csv_prefix + csv_basename + csv_suffix
+            if 'flow_column_name' in kwargs:
+                flow_column_name = kwargs.get('flow_column_name')
+            else:
+                flow_column_name = 'flow'
+
+            # Produce vector map(s)
+            if 'vector' in kwargs:
+                r.to_vect(
+                        input=flow_in_reclassified_base,
+                        output=flow_in_reclassified_base,
+                        type='area',
+                        quiet=True)
+
+                # Value is the ecosystem type
+                v.db_renamecolumn(
+                        map=flow_in_reclassified_base,
+                        column=('value', 'ecosystem'))
+
+                # New column for flow values
+                addcolumn_string = flow_column_name + ' double'
+                v.db_addcolumn(
+                        map=flow_in_reclassified_base,
+                        columns=addcolumn_string)
+
+                # The raster category 'label' is the 'flow'
+                v.db_update(
+                        map=flow_in_reclassified_base,
+                        column='flow',
+                        query_column='label')
+                v.db_dropcolumn(
+                        map=flow_in_reclassified_base,
+                        columns='label')
+
+                # Update the aggregation raster categories
+                v.db_addcolumn(
+                        map=flow_in_reclassified_base,
+                        columns='aggregation_id int')
+                v.db_update(
+                        map=flow_in_reclassified_base,
+                        column='aggregation_id',
+                        value=category)
+
+                v.colors(map=flow_in_reclassified_base,
+                        raster=flow_in_reclassified_base,
+                        quiet=True)
+
+            # get statistics
+            dictionary = get_raster_statistics(
+                    map_one=aggregation,  # reclassified_base
+                    map_two=flow_in_reclassified_base,
+                    separator='|',
+                    flags='nlcap')
+
+            # merge 'dictionary' with global 'statistics_dictionary'
+            statistics_dictionary = merge_two_dictionaries(
+                    statistics_dictionary,
+                    dictionary)
+            del(dictionary)
+
+        # It is important to remove the MASK!
+        r.mask(flags='r', quiet=True)
+
+    if not print_only:
+
+        if 'vector' in kwargs:
+            # Patch all flow vector maps in one
+            v.patch(flags='e',
+                    input=flows,
+                    output=flow_in_base,
+                    overwrite=True)
+
+        # export to csv
+        if 'csv_prefix' in kwargs:
+
+            # csv output prefix and filename
+            csv_prefix = kwargs.get('csv_prefix') + '_'
+            # csv_suffix = '_' + category
+            csv_extension = '.csv'
+            statistics_filename = csv_prefix + csv_basename + csv_extension
 
             r.stats(input=(reclassified_base,flow_in_reclassified_base),
-                    output=csvname,
+                    output=statistics_filename,
                     flags='nacpl',
                     separator=COMMA,
                     quiet=True)
 
-        # Maybe add flow map in a list
-        # flow_maps = flow_maps.append(flow_in_maes_ecosystem_types)
+            write_dictionary_to_csv(statistics_filename,
+                    statistics_dictionary)
 
-        # remove MASK
-        r.mask(flags='r', quiet=True)
+            # clean up
+            del(statistics_filename)
+            del(statistics_dictionary)
 
     # Maybe return list of flow maps?  Requires unique flow map names
-    # return flow_maps
+    return flows
 
+    grass.del_temp_region()  # restoring previous region settings
+    # grass.verbose("Original Region restored")
 
 def main():
     """
@@ -3141,15 +3197,15 @@ def main():
 
     # Rename back to Urban?
 
-    anthropic = options['anthropic']
-    anthropic_proximity_map_name='anthropic_proximity'
-    anthropic_distance_categories = options['anthropic_distances']
+    artificial = options['artificial']
+    artificial_proximity_map_name='artificial_proximity'
+    artificial_distance_categories = options['artificial_distances']
 
     roads = options['roads']
     roads_proximity_map_name = 'roads_proximity'
     roads_distance_categories = options['roads_distances']
 
-    anthropic_accessibility_map_name='anthropic_accessibility'
+    artificial_accessibility_map_name='artificial_accessibility'
 
     '''Devaluation'''
 
@@ -3199,8 +3255,8 @@ def main():
     demand = options['demand']
     unmet_demand = options['unmet']
 
-    mobility = options['mobility']
-    mobility_map_name = 'mobility'
+    flow = options['flow']
+    flow_map_name = 'flow'
 
     supply = options['supply']  # use as CSV filename prefix
     """ First, care about the computational region"""
@@ -3397,7 +3453,6 @@ def main():
             # REMOVEME
             msg = "Subsetting '{subset}' map".format(subset=suitability_map)
             grass.debug(_(msg))
-            g.message(_(msg))  #REMOVEME
             del(msg)
 
             r.mapcalc(subset_land)
@@ -3500,13 +3555,12 @@ def main():
     # Required for recreation opportunity and successively recreation spectrum
 
     if infrastructure and not any([recreation_opportunity,
-        recreation_spectrum, demand, mobility, supply]):
+        recreation_spectrum, demand, flow, supply]):
         msg = ("Infrastructure is not required "
         "to derive the 'potential' recreation map.")
         grass.warning(_(msg))
 
-    if any([recreation_opportunity, recreation_spectrum, demand, mobility,
-        supply]):
+    if any([recreation_opportunity, recreation_spectrum, demand, flow, supply]):
 
         infrastructure_component = []
         infrastructure_components = []
@@ -3515,32 +3569,32 @@ def main():
             draw_map(infrastructure)  # REMOVEME
             infrastructure_component.append(infrastructure)
 
-        '''Anthropic surfaces (includung Roads)'''
+        '''Artificial surfaces (includung Roads)'''
 
-        if anthropic and roads:
+        if artificial and roads:
 
             msg = "Roads distance categories: {c}"
             msg = msg.format(c=roads_distance_categories)
             grass.debug(_(msg))
-            roads_proximity = compute_anthropic_proximity(
+            roads_proximity = compute_artificial_proximity(
                     raster = roads,
                     distance_categories = roads_distance_categories,
                     output_name = roads_proximity_map_name)
 
-            msg = "Anthropic distance categories: {c}"
-            msg = msg.format(c=anthropic_distance_categories)
+            msg = "Artificial distance categories: {c}"
+            msg = msg.format(c=artificial_distance_categories)
             grass.debug(_(msg))
-            anthropic_proximity = compute_anthropic_proximity(
-                    raster = anthropic,
-                    distance_categories = anthropic_distance_categories,
-                    output_name = anthropic_proximity_map_name)
+            artificial_proximity = compute_artificial_proximity(
+                    raster = artificial,
+                    distance_categories = artificial_distance_categories,
+                    output_name = artificial_proximity_map_name)
 
-            anthropic_accessibility = compute_anthropic_accessibility(
-                    anthropic_proximity,
+            artificial_accessibility = compute_artificial_accessibility(
+                    artificial_proximity,
                     roads_proximity,
-                    output_name = anthropic_accessibility_map_name)
+                    output_name = artificial_accessibility_map_name)
 
-            infrastructure_components.append(anthropic_accessibility)
+            infrastructure_components.append(artificial_accessibility)
 
         # merge infrastructure component related maps in one list
         infrastructure_component += infrastructure_components
@@ -3558,7 +3612,7 @@ def main():
 
     """ Recreation Spectrum """
 
-    if any([recreation_spectrum, demand, mobility, supply]):
+    if any([recreation_spectrum, demand, flow, supply]):
 
         recreation_opportunity_component = []
 
@@ -3599,7 +3653,6 @@ def main():
         msg = "Computing recreation opportunity {opportunity}"
         msg +="\n---------------------------------------------------------------\n"
         grass.debug(msg.format(opportunity=recreation_opportunity))
-        # g.message(_(msg.format(opportunity=recreation_opportunity)))
         del(msg)
 
         classify_recreation_component(
@@ -3637,7 +3690,7 @@ def main():
 
         # Recreation Spectrum: Potential + Opportunity [Output]
 
-        if not recreation_spectrum and any([demand, mobility, supply]):
+        if not recreation_spectrum and any([demand, flow, supply]):
             recreation_spectrum = tmp_map_name(name='recreation_spectrum')
             remove_at_exit.append(recreation_spectrum)
 
@@ -3680,7 +3733,7 @@ def main():
 
     """Valuation Tables"""
 
-    if any([demand, mobility, supply, aggregation]):
+    if any([demand, flow, supply, aggregation]):
 
         '''Highest Recreation Spectrum == 9'''
 
@@ -3743,15 +3796,15 @@ def main():
         msg = msg.format(raster=landuse)
         grass.verbose(_(msg))
 
-        if info:
-            population_statistics = get_univariate_statistics(population)
-            population_total = population_statistics['sum']
-            msg = "|i Population statistics: {s}".format(s=population_total)
-            g.message(_(msg))
+        # if info:
+        #     population_statistics = get_univariate_statistics(population)
+        #     population_total = population_statistics['sum']
+        #     msg = "|i Population statistics: {s}".format(s=population_total)
+        #     g.message(_(msg))
 
         '''Demand Distribution'''
 
-        if any([mobility, supply, aggregation]) and not demand:
+        if any([flow, supply, aggregation]) and not demand:
             demand = tmp_map_name(name='demand')
 
         r.stats_zonal(base=tmp_crossmap,
@@ -3783,13 +3836,11 @@ def main():
         # rename back to 'demand'
         g.rename(raster=(demand_copy,demand), quiet=True)
 
-        if supply:
-
-            if base_vector:
-                update_vector(vector=base_vector,
-                        raster=demand,
-                        methods=METHODS,
-                        column_prefix='demand')
+        if demand and base_vector:
+            update_vector(vector=base_vector,
+                    raster=demand,
+                    methods=METHODS,
+                    column_prefix='demand')
 
         '''Unmet Demand'''
 
@@ -3826,19 +3877,19 @@ def main():
 
         '''Mobility function'''
 
-        if not mobility and any([supply, aggregation]):
+        if not flow and any([supply, aggregation]):
 
-            mobility = mobility_map_name
-            remove_at_exit.append(mobility)
+            flow = flow_map_name
+            remove_at_exit.append(flow)
 
-        if mobility or any ([supply, aggregation]):
+        if flow or any ([supply, aggregation]):
 
             # ----------------------------------------------------
             # the 'suitability_map' is not used in the computation
             # FIXME or REMOVEME
             # ----------------------------------------------------
 
-            mobility_expression = compute_mobility(
+            mobility_expression = mobility_function(
                     distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
                     coefficients=MOBILITY_COEFFICIENTS,
@@ -3850,40 +3901,31 @@ def main():
             grass.debug(_(msg.format(f=mobility_expression)))
             del(msg)
 
-            '''Mobility map'''
+            '''Flow map'''
 
-            mobility_equation = equation.format(result=mobility,
+            mobility_equation = equation.format(result=flow,
                     expression=mobility_expression)
             r.mapcalc(mobility_equation, overwrite=True)
 
-            draw_map(mobility, width='45', height='45')  # REMOVEME
+            draw_map(flow, width='45', height='45')  # REMOVEME
 
             if base_vector:
                 update_vector(vector=base_vector,
-                        raster=mobility_map_name,
+                        raster=flow_map_name,
                         methods=METHODS,
-                        column_prefix='mobility')
+                        column_prefix='flow')
 
     '''Supply Table'''
 
-    if supply:
-
-        grass.del_temp_region()  # restoring previous region settings
-        grass.verbose("Original Region restored")
-
-        compute_supply_table(base=base,
-                landcover=landcover,
-                reclassification_rules=landcover_reclassification_rules,
-                reclassified_landcover=maes_ecosystem_types,
-                title="MAES land class nomenclature",
-                recreation_spectrum=recreation_spectrum,
-                highest_spectrum=highest_spectrum,
-                mobility=mobility_map_name,
-                prefix=supply)
-
-    '''Aggregate per ?'''
-
     if aggregation:
+
+        supply_parameters = {}
+
+        if supply:
+            supply_parameters.update({'csv_prefix': supply})
+
+        if base_vector:
+            supply_parameters.update({'vector': base_vector})
 
         compute_supply(
                 base = landcover,
@@ -3892,14 +3934,13 @@ def main():
                 base_reclassification_rules = landcover_reclassification_rules,
                 reclassified_base = maes_ecosystem_types,
                 reclassified_base_title = 'MAES ecosystem types',
-                mobility = mobility,
-                mobility_map_name = mobility_map_name,
+                flow = flow,
+                flow_map_name = flow_map_name,
                 aggregation = aggregation,
                 ns_resolution = population_ns_resolution,
                 ew_resolution = population_ew_resolution,
-                csv_prefix = supply,
-                csv_basename = 'statistics')
-
+                csv_basename = 'statistics',
+                **supply_parameters)
 
     # restore region
     if landuse_extent:

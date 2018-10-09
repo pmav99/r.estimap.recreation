@@ -117,17 +117,32 @@ significance of areas with the
 <em>Highest Recreation Spectrum</em>.
 
 <p>
-<div class="code"><pre>
-    |-------------------------+------+----------+-----|
-    | Potential / Opportunity | Near | Midrange | Far |
-    |-------------------------+------+----------+-----|
-    | Near                    | 1    | 2        | 3   |
-    |-------------------------+------+----------+-----|
-    | Midrange                | 4    | 5        | 6   |
-    |-------------------------+------+----------+-----|
-    | Far                     | 7    | 8        | 9   |
-    |-------------------------+------+----------+-----|
-</pre></div>
+<div class="tg-wrap"><table>
+  <tr>
+    <th>Potential | Opportunity</th>
+    <th>Near</th>
+    <th>Midrange</th>
+    <th>Far</th>
+  </tr>
+  <tr>
+    <td>Near</td>
+    <td>1</td>
+    <td>2</td>
+    <td>3</td>
+  </tr>
+  <tr>
+    <td>Midrange</td>
+    <td>4</td>
+    <td>5</td>
+    <td>6</td>
+  </tr>
+  <tr>
+    <td>Far</td>
+    <td>7</td>
+    <td>8</td>
+    <td>9</td>
+  </tr>
+</table></div>
 
 <h5>Flow, Supply and Use</h5>
 
@@ -198,6 +213,7 @@ and dividing by its range.
 For the sake of demonstrating the usage of the module,
 we use the following "component" maps
 <ul>
+  <li><pre>area_of_interest</pre></li>
   <li><pre>land_suitability</pre></li>
   <li><pre>water_resources</pre></li>
   <li><pre>protected_areas</pre></li>
@@ -205,9 +221,149 @@ we use the following "component" maps
 (available to download at: ...) 
 to derive a recreation <i>potential</i> map.
 
-FIXME
+<p>
+Below,
+a table overviewing
+all input and output maps
+used or produced in the examples.
 
-Add a table describing the example input and output maps.
+<p>
+<div class="tg-wrap"><table>
+  <tr>
+    <th></th>
+    <th>Input map name</th>
+    <th>Spatial Resolution</th>
+    <th>Remarks</th>
+  </tr>
+  <tr>
+    <td></td>
+    <td>area_of_interest</td>
+    <td>50 m</td>
+    <td>A map that can be used as a 'mask'</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>land_suitability</td>
+    <td>50 m</td>
+    <td>A map scoring the potential for recreation over CORINE land classes</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>water_resources</td>
+    <td>50 m</td>
+    <td>A map scoring access to water resources</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>protected_areas</td>
+    <td>50 m</td>
+    <td>A map scoring the recreational value of natural protected areas</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>distance_to_infrastructure</td>
+    <td>50 m</td>
+    <td>A map scoring access to infrastructure</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>population_2015</td>
+    <td>1000 m</td>
+    <td>The resolution of the raster map given to the 'populatio' input option
+      will define the resolution of the output maps 'demand', 'unmet' and
+      'flow'</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>local_administrative_unit</td>
+    <td>50 m</td>
+    <td>A rasterised version of Eurostat's Local Administrative Units map</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <th>Output map name</th>
+    <th>Spatial Resolution</th>
+    <th>Remarks</th>
+  </tr>
+  <tr>
+    <td></td>
+    <td>potential<br></td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>potential_1</td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>potential_2</td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>potential_3</td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>potential_4</td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>spectrum</td>
+    <td>50 m</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>opportunity</td>
+    <td>50 m</td>
+    <td>Requires to request for the 'spectrum' output</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>demand</td>
+    <td>1000 m</td>
+    <td>Depends on the 'flow' map which, in turn, depends on the 'population' input map</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>unmet</td>
+    <td>1000 m</td>
+    <td>Depends on the 'flow' map which, in turn, depends on the 'population' input map<br></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>flow</td>
+    <td>1000 m</td>
+    <td>Depends on the 'population' input map</td>
+  </tr>
+  <tr>
+    <td></td>
+    <th>Output table name</th>
+    <th></th>
+    <th></th>
+  </tr>
+  <tr>
+    <td></td>
+    <td>supply</td>
+    <td>NA</td>
+    <td></td>
+  </tr>
+</table></div>
 
 <p>
 <div>
@@ -220,16 +376,17 @@ Add a table describing the example input and output maps.
 </div>
 
 
+<p>
 Before anything, we need to define the extent of interest using
 <div class="code"><pre>
-g.region raster=area_of_interest
+g.region  raster=area_of_interest
 </pre></div>
 
 
 <h3>Using pre-processed maps</h3>
 
-The first four options are meant for pre-processed input maps
-that classify as either
+The first four input options of the module are designed to receive
+pre-processed input maps that classify as either
 <code>land</code>,
 <code>natural</code>,
 <code>water</code>
@@ -239,9 +396,20 @@ resources.
 <h4>Potential</h4>
 
 <p>
-A simple command is to use a map that depicts the suitability of different land
-types to support for recreation (here <code>land_suitability<code>) and feed it
-to the <code>land<code> input option:
+To compute a <em>potential</em> output map,
+the simplest possible command call
+requires the user
+to define the input map option
+<code>land</code> and
+define a name for the output map option
+<code>potential</code>.
+
+Using a pre-processed map
+that depicts the suitability of different land types
+to support for recreation
+(here the map named
+<code>land_suitability<code>)
+the command to execute is:
 
 <div class="code"><pre>
 r.estimap  land=land_suitability  potential=potential
@@ -252,15 +420,19 @@ r.estimap  land=land_suitability  potential=potential
 <img src="potential.png" alt="Example of a recreation potential output map">
 </center>
 
+<p>
 Note,
 this will process the input map
 <code>land_suitability</code>
 over the extent defined previously via
-<code>g.region</code>.
+<code>g.region</code>,
+which is the standard behaviour in GRASS GIS.
 
 <p>
-To exclude certain areas from the
-computations, we may use a raster map as a mask:
+To exclude certain areas from the computations,
+we may use a raster map
+as a mask and feed it to the input map
+option <code>mask</code>:
 
 <div class="code"><pre>
 r.estimap  land=land_suitability  mask=area_of_interest  potential=potential_1
@@ -283,7 +455,7 @@ these areas will be empty in the output map
 
 Actually,
 the same effect can be achieved
-by using GRASS GIS' native mask creation module `r.mask`
+by using GRASS GIS' native mask creation module <code>r.mask</code>
 and feed it with a raster map of interest.
 The result will be a raster map named <strong>MASK</strong>
 whose presence acts as a filter.
@@ -295,18 +467,22 @@ features such <strong>No Data</strong> areas,
 they will be propagated in the output map.
 
 <p>
-However, it is good practice to use a MASK
+Nonetheless, it is good practice to use a <code>MASK</code>
 when one needs to ensure
 the exclusion of undesired areas
 from any computations.
 
 Also,
-note the `--o` flag:
+note the <code>--o</code> flag:
 it is required to overwrite
 the already existing map named
 <code>potential_1</code>.
 
-Next, we add a water component and execute again, without a mask:
+<p>
+Next, we add a water component, a map named
+<code>water_resources</code>,
+modify the output map name to <code>potential_2</code>
+and execute again, without a mask:
 
 <div class="code"><pre>
 r.estimap  land=land_suitability  water=water_resources  potential=potential_2
@@ -317,7 +493,15 @@ r.estimap  land=land_suitability  water=water_resources  potential=potential_2
 <img src="potential_2.png" alt="Example of a recreation potential output map while using a MASK, a land suitability map and a water resources map">
 </center>
 
-In addition, we provide a map of protected areas and repeat:
+At this point it becomes clear that all <code>NULL</code> cells present in the
+"water" map, are proagated in the output map <code>potential_2</code>.
+
+<p>
+Following, we provide a map of protected areas named
+<code>protected_areas</code>,
+modify the output map name to
+<code>potential_3</code>
+and repeat the command execution:
 
 <div class="code"><pre>
 r.estimap  land=land_suitability  water=water_resources  natural=protected_areas  potential=potential_3
@@ -330,18 +514,21 @@ while using a MASK, a land suitability map, a water resources map and a natural
 resources map">
 </center>
 
+<p>
 While the <code>land</code> option
 accepts only one map as an input,
 both the <code>water</code> and the <code>natural</code> options
 accept multiple maps as inputs.
 
 In example,
-we add a second map of
+we add a second map named
 <code>bathing_water_quality</code>
-to the water component:
+to the water component and modify the output map name to
+<code>potential_4</code>:
 <div class="code"><pre>
 r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  potential=potential_4
 </pre></div>
+
 
 <p>
 In general, arbitrary number of maps,
@@ -365,6 +552,13 @@ d.legend  -c  -b  potential_4  at=0,15,0,1  border_color=white
 d.text  text="Potential"  bgcolor=white
 </pre></div>
 
+
+<p>
+The different output map names
+are purposefully selected
+so as to enable a visual
+comparison of the differences
+among the differenct examples.
 
 The output maps
 <code>potential_1</code>,
@@ -391,15 +585,34 @@ with the recreation (opportunity)
 <code>spectrum</code>,
 we need in addition an
 <code>infrastructure</code>
-component:
+component.
+
+In this example a map that scores distance to infrastructure (such as the road
+network) named
+<code>distance_to_infrastructure</code>
+is defined as an input:
+
+<p>
+<center>
+<img src="distance_to_infrastructure.png" alt="Example of an input map showing distances to infrastructure">
+</center>
+
+Naturally,
+we need to define the output map option
+<code>spectrum</code> too:
 
 <div class="code"><pre>
 r.estimap  \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
   natural=protected_areas \
-  spectrum=spectrum  \
   infrastructure=distance_to_infrastructure
+  spectrum=spectrum  \
+</pre></div>
+
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  spectrum=spectrum
 </pre></div>
 
 <p>
@@ -427,12 +640,13 @@ The <code>opportunity</code> map
 is actually an intermediate step
 of the algorithm.
 The option to output this map
+<code>opportunity</code>
 is meant for expert users
 who want to explore
 the fundamentals of the processing steps.
 Hence,
 it requires to define
-the <code>spectrum</code>
+the output option <code>spectrum</code>
 map as well.
 
 Building upon the previous command, we add the <code>opportunity</code> output
@@ -449,6 +663,11 @@ r.estimap  \
   opportunity=opportunity
 </pre></div>
 
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  spectrum=spectrum  infrastructure=distance_to_infrastructure  opportunity=opportunity
+</pre></div>
+
 <p>
 <center>
 <img src="opportunity.png" alt="Example of a recreation spectrum output map
@@ -459,27 +678,46 @@ resources map">
 
 <h4>More input maps</h4>
 
-To derive
-the <code>demand</code> distributiom,
-the <code>unmet</code> demand distributiom
-and the <code>mobility</code>,
+To derive the outputs
+met <code>demand</code> distributiom,
+<code>unmet</code> demand distributiom
+and the actual <code>flow</code>,
 additional requirements are
-a population map
-and one of regions
-within which to aggregate
-estimations of expected numbers of visits.
+a <code>population</code> map
+and one of boundaries,
+as an input to the option
+<code>base</code>,
+within which to quantify the distribution of the population.
+Using a map of administrative boundaries for the latter option,
+serves for deriving comparable figures across these boundaries.
+
+The algorithm sets internally the spatial resolution
+of all related output maps
+<code>demand</code>,
+<code>unmet</code> and
+<code>flow</code>
+to the spatial resolution of the
+<code>population</code>
+input map.
 
 <p>
 Population
 <center>
 <img src="population_2015.png" alt="Fragment of a population map (GHSL, 2015)">
 </center>
+In this example, the population map named <code>population_2015</code> is of
+1000m^2.
+
 
 <p>
 Local administrative units
 <center>
 <img src="local_administrative_units.png" alt="Fragment of a local administrative units input map">
 </center>
+The map named
+<code>local_administrative_units</code>
+serves in the following example
+as the base map for the zonal statistics to obtain the demand map.
 
 <h4>Demand</h4>
 

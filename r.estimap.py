@@ -929,7 +929,7 @@ def cleanup():
                     pattern='tmp.{pid}*'.format(pid=os.getpid()),
                     quiet=True)
 
-        # remove maps in handcrafted list
+        # remove raster and vector maps in handcrafted list
         if remove_at_exit:
             g.remove(flags='f',
                     type=('raster','vector'),
@@ -941,9 +941,9 @@ def cleanup():
             for item in remove_normal_files_at_exit:
                 os.unlink(item)
 
-    # remove MASK ? FIXME
-    if grass.find_file(name='MASK', element='cell')['file']:
-        r.mask(flags='r', verbose=True)
+    # # remove MASK ? FIXME
+    # if grass.find_file(name='MASK', element='cell')['file']:
+    #     r.mask(flags='r', verbose=True)
 
 def string_to_file(string, **kwargs):
     """Split series of strings separated by comma in lines and write as an
@@ -1124,7 +1124,40 @@ def merge_two_dictionaries(a, b):
     merged_dictionary.update(b)
     return merged_dictionary
 
-def write_dictionary_to_csv(filename, dictionary):
+def dictionary_to_csv(filename, dictionary):
+    """Write a Python dictionary as CSV named 'filename'
+
+    Parameters
+    ----------
+    filename :
+        Name for output file
+
+    dictionary :
+        Name of input Python dictionary to write to 'filename'
+
+    Returns
+    -------
+        This function does not return anything
+
+    Examples
+    --------
+    """
+    f = open(filename, "wb")
+    w = csv.writer(f)
+
+    # terminology: from 'base' and 'cover' maps
+    for base_key, value in dictionary.items():
+        base_category = base_key[0]
+        base_label = base_key[1]  # .decode('utf-8')
+        if value is None or value == '':
+            continue
+        w.writerow([base_category,
+            base_label,
+            value])
+
+    f.close()
+
+def nested_dictionary_to_csv(filename, dictionary):
     """Write out a nested Python dictionary as CSV named 'filename'
 
     Parameters
@@ -1406,11 +1439,16 @@ def build_distance_function(constant, kappa, alpha, variable, **kwargs):
         function = function.format(score=score)
     grass.debug(_("Function after adding 'score': {f}".format(f=function)))
 
-    if 'suitability' in kwargs:
-        suitability = kwargs.get('suitability')
-        function += " * {suitability}"  # FIXME : Confirm Correctness
-        function = function.format(suitability=suitability)
-    grass.debug(_("Function after adding 'suitability': {f}".format(f=function)))
+    # Integrate land suitability scores in the distance function ? ------------
+
+    # if 'suitability' in kwargs:
+    #     suitability = kwargs.get('suitability')
+    #     function += " * {suitability}"  # FIXME : Confirm Correctness
+    #     function = function.format(suitability=suitability)
+    # msg = "Function after adding 'suitability': {f}".format(f=function)
+    # grass.debug(_(msg))
+
+    # -------------------------------------------------------------------------
 
     del(numerator)
     del(denominator)
@@ -2149,7 +2187,7 @@ def update_meta(raster, title):
     del(source2)
 
 def mobility_function(distance, constant, coefficients, population, score,
-        suitability):
+        **kwargs):
     """
     The following 'mobility' function, is identical to the one used in
     `compute_attractiveness()`, excluding, however, the 'score' term:
@@ -2208,8 +2246,9 @@ def mobility_function(distance, constant, coefficients, population, score,
     score :
         A score value for the mobility function
 
-    suitability :
-        Not used. Yet! Where to integrate?
+    **kwargs :
+        Optional parameters. For example, the land suitability if integration
+        in the build_distance_function() will be successfull.
 
     Returns
     -------
@@ -2224,6 +2263,13 @@ def mobility_function(distance, constant, coefficients, population, score,
     """
     expressions={}  # create a dictionary of expressions
 
+    # Not used. It can be though if integration to build_distance_function() is
+    # successfull. ------------------------------------------------------------
+
+    # if 'suitability' in kwargs:
+    #     suitability = kwargs.get('suitability')
+    # -------------------------------------------------------------------------
+
     for distance_category, parameters in coefficients.items():
 
         kappa, alpha = parameters
@@ -2234,8 +2280,10 @@ def mobility_function(distance, constant, coefficients, population, score,
                 kappa=kappa,
                 alpha=-alpha,
                 variable=population,
-                score=score,
-                suitability=suitability)
+                score=score)
+                # suitability=suitability)  # Not used.
+                # Maybe it can, though, after successfully testing its
+                # integration to build_distance_function().
 
         grass.debug(_("For distance '{d}':".format(d=distance)))
         grass.debug(_(expressions[distance_category]))
@@ -2281,7 +2329,7 @@ def mobility_function(distance, constant, coefficients, population, score,
     return mobility_expression
 
 def compute_unmet_demand(distance, constant, coefficients, population, score,
-        suitability):
+        **kwargs):
     """
     Parameters
     ----------
@@ -2305,6 +2353,9 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
         Note, this is the last distance category. See also the
         mobility_function().
 
+        Note, the Alpha coefficient, is signed with a '-' in the mobility
+        function.
+
     population :
         A map with the distribution of the demand per distance category and
         predefined geometric boundaries (see `r.stats.zonal` deriving the
@@ -2313,8 +2364,9 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
     score :
         A score value for the mobility function
 
-    suitability :
-        Not used. Yet! Where to integrate?
+    **kwargs :
+        Optional parameters. For example, the land suitability if integration
+        in the build_distance_function() will be successfull.
 
     Returns
     -------
@@ -2333,10 +2385,12 @@ def compute_unmet_demand(distance, constant, coefficients, population, score,
     unmet_demand_expression = build_distance_function(
             constant=constant,
             kappa=kappa,
-            alpha=alpha,
+            alpha=-alpha,
             variable=population,
-            score=score,
-            suitability=suitability)
+            score=score)
+            # suitability=suitability)  # Not used. Maybe it can, though,
+            # after successfull testing its integration to
+            # build_distance_function().
 
     msg = "Expression for distance category '{d}': {e}"
     msg = msg.format(d=distance_category, e=unmet_demand_expression)
@@ -2418,7 +2472,33 @@ def get_raster_statistics(map_one, map_two, separator, flags):
     dictionary :
         A nested dictionary that holds categorical statistics for both maps
         'map_one' and 'map_two'.
+
+        - The 'outer_key' is the raster category _and_ label of 'map_one'.
+        - The 'inner_key' is the raster map category of 'map_two'.
+        - The 'inner_value' is the list of statistics for map two, as returned
+          for `r.stats`.
+
+        Example of a nested dictionary:
+
+        {(u'3',
+            u'Region 3'):
+            {u'1': [
+                u'355.747658',
+                u'6000000.000000',
+                u'6',
+                u'6.38%'],
+            u'3': [
+                u'216304.146140',
+                u'46000000.000000',
+                u'46',
+                u'48.94%'],
+            u'2': [
+                u'26627.415787',
+                u'46000000.000000',
+                u'46',
+                u'48.94%']}}
     """
+
     statistics = grass.read_command(
             'r.stats',
             input=(map_one, map_two),
@@ -2430,6 +2510,7 @@ def get_raster_statistics(map_one, map_two, separator, flags):
 
     dictionary = dict()
 
+    # build a nested dictionary where:
     for row in statistics:
         row = row.split('|')
         outer_key = ( row[0], row[1])
@@ -2443,6 +2524,42 @@ def get_raster_statistics(map_one, map_two, separator, flags):
 
     return dictionary
 
+def compile_use_table(supply):
+    """Compile use table out of supply table
+
+    Parameters
+    ----------
+    supply :
+        A nested Python dictionary that is compiled when runnning the
+        compute_supply() function
+
+    Returns
+    -------
+
+    Examples
+    --------
+    """
+    uses = {}
+    for outer_key, outer_value in supply.items():
+        dictionaries = statistics_dictionary[outer_key]
+
+        use_values = []
+        for key, value in dictionaries.items():
+            use_value = value[0]
+            use_values.append(use_value)
+
+        use_in_key = sum([float(x)
+            if not math.isnan(float(x))
+            else 0
+            for x in use_values])
+
+        try:
+            uses[outer_key] = use_in_key
+        except KeyError:
+            print "Something went wrong in building the use table"
+
+    return uses
+
 def compute_supply(base,
         recreation_spectrum,
         highest_spectrum,
@@ -2454,13 +2571,8 @@ def compute_supply(base,
         aggregation,
         ns_resolution,
         ew_resolution,
-        csv_basename,
         **kwargs):
     """
-    # In comparison to 'supply':
-        # here:     base = 'ecosystem_types'
-        # supply:   base = 'local_administrative_units'
-
      Algorithmic description of the "Contribution of Ecosysten Types"
 
      # FIXME
@@ -2471,7 +2583,7 @@ def compute_supply(base,
      4   R ← 0                :  Set of fractions
      5   F ← 0
      6   MASK ← HQR           : High Quality Recreation
-     7   foreach {b} ⊆ B do   : for each Boundary
+     7   foreach {b} ⊆ B do   : for each aggregational boundary 'b'
      8      RB ← 0
      9      foreach {t} ⊆ T do  : for each Land Type
      10         WEt ← Et * Wt   : Weighted Extent = Extent(t) * Weight(t)
@@ -2548,9 +2660,6 @@ def compute_supply(base,
     flow_in_base = flow + '_' + base
     base_scores = base + '.scores'
 
-    csv_basename += '_' + reclassified_base
-    csv_basename += '_' + aggregation
-
     # Define lists and dictionaries to hold intermediate data
     weighted_extents = {}
     flows = []
@@ -2577,11 +2686,9 @@ def compute_supply(base,
             rules=base_reclassification_rules,
             output=reclassified_base,
             quiet=True)
-    remove_at_exit.append(reclassified_base)
+    # add to "remove_at_exit" after the reclassified maps!
 
     # Discard areas out of MASK
-    # copy_expression = "{input_raster}"
-    # copy_expression = copy_expression.format(input_raster=reclassified_base)
     copy_equation = equation.format(result=reclassified_base,
             expression=reclassified_base)
     r.mapcalc(copy_equation, overwrite=True)
@@ -2630,10 +2737,11 @@ def compute_supply(base,
         flow = base + flow_category
         remove_at_exit.append(flow)
 
-        flow_in_reclassified_base = reclassified_base + flow_category
+        flow_in_reclassified_base = reclassified_base + '_flow'
+        flow_in_category = reclassified_base + flow_category
         del(flow_category)
-        flows.append(flow_in_reclassified_base)  # add to list for patching
-        remove_at_exit.append(flow_in_reclassified_base)
+        flows.append(flow_in_category)  # add to list for patching
+        remove_at_exit.append(flow_in_category)
 
         # Output names
 
@@ -2876,14 +2984,14 @@ def compute_supply(base,
                 flags='r',
                 cover=flow,
                 method='sum',
-                output=flow_in_reclassified_base,
+                output=flow_in_category,
                 overwrite=True,
                 verbose=False,
                 quiet=True)
 
         # Parse flow categories and labels
         flow_categories = grass.parse_command('r.category',
-                map=flow_in_reclassified_base,
+                map=flow_in_category,
                 delimiter='\t')
         grass.debug(_("Flow: {c}".format(c=flow_categories)))
 
@@ -2894,14 +3002,18 @@ def compute_supply(base,
         del(flow_categories)
 
         # Discard areas out of MASK
-        copy_equation = equation.format(result=flow_in_reclassified_base,
-                expression=flow_in_reclassified_base)
+
+        # Check here again!
+        # Output patch of all flow maps?
+
+        copy_equation = equation.format(result=flow_in_category,
+                expression=flow_in_category)
         r.mapcalc(copy_equation, overwrite=True)
         del(copy_equation)
 
         # Reassign cell category labels
         r.category(
-                map=flow_in_reclassified_base,
+                map=flow_in_category,
                 rules='-',
                 stdin=flow_rules,
                 separator=':')
@@ -2909,16 +3021,16 @@ def compute_supply(base,
 
         # Update title
         reclassified_base_title += ' ' + category
-        r.support(flow_in_reclassified_base,
+        r.support(flow_in_category,
                 title=reclassified_base_title)
 
         # if info:
         #     r.report(flags='hn',
-        #             map=(flow_in_reclassified_base),
+        #             map=(flow_in_category),
         #             units=('k','c','p'))
 
         if print_only:
-            r.stats(input=(flow_in_reclassified_base),
+            r.stats(input=(flow_in_category),
                     output='-',
                     flags='nacpl',
                     separator=COMMA,
@@ -2928,54 +3040,72 @@ def compute_supply(base,
 
             if 'flow_column_name' in kwargs:
                 flow_column_name = kwargs.get('flow_column_name')
+                flow_column_prefix = flow_column_name + category
             else:
                 flow_column_name = 'flow'
+                flow_column_prefix = flow_column_name + category
 
             # Produce vector map(s)
             if 'vector' in kwargs:
+
+                vector = kwargs.get('vector')
+
+                # The following is wrong
+
+                # update_vector(vector=vector,
+                #         raster=flow_in_category,
+                #         methods=METHODS,
+                #         column_prefix=flow_column_prefix)
+
+                # What can be done?
+
+                # Maybe update columns of an existing map from the columns of
+                # the following vectorised raster map(s)
+                # ?
+
                 r.to_vect(
-                        input=flow_in_reclassified_base,
-                        output=flow_in_reclassified_base,
+                        input=flow_in_category,
+                        output=flow_in_category,
                         type='area',
                         quiet=True)
 
                 # Value is the ecosystem type
                 v.db_renamecolumn(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         column=('value', 'ecosystem'))
 
                 # New column for flow values
                 addcolumn_string = flow_column_name + ' double'
                 v.db_addcolumn(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         columns=addcolumn_string)
 
                 # The raster category 'label' is the 'flow'
                 v.db_update(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         column='flow',
                         query_column='label')
                 v.db_dropcolumn(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         columns='label')
 
                 # Update the aggregation raster categories
                 v.db_addcolumn(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         columns='aggregation_id int')
                 v.db_update(
-                        map=flow_in_reclassified_base,
+                        map=flow_in_category,
                         column='aggregation_id',
                         value=category)
 
-                v.colors(map=flow_in_reclassified_base,
-                        raster=flow_in_reclassified_base,
+                v.colors(map=flow_in_category,
+                        raster=flow_in_category,
                         quiet=True)
 
             # get statistics
             dictionary = get_raster_statistics(
                     map_one=aggregation,  # reclassified_base
-                    map_two=flow_in_reclassified_base,
+                    map_two=flow_in_category,
                     separator='|',
                     flags='nlcap')
 
@@ -2988,36 +3118,51 @@ def compute_supply(base,
         # It is important to remove the MASK!
         r.mask(flags='r', quiet=True)
 
+
+    # FIXME
+
+    # Add "reclassified_base" map to "remove_at_exit" here, so as to be after
+    # all reclassified maps that derive from it
+
+    # remove the map 'reclassified_base'
+    # g.remove(flags='f', type='raster', name=reclassified_base, quiet=True)
+    # remove_at_exit.append(reclassified_base)
+
     if not print_only:
+
+        r.patch(flags='',
+                input=flows,
+                output=flow_in_reclassified_base,
+                quiet=True)
 
         if 'vector' in kwargs:
             # Patch all flow vector maps in one
             v.patch(flags='e',
                     input=flows,
-                    output=flow_in_base,
-                    overwrite=True)
-
-        # export to csv
-        if 'csv_prefix' in kwargs:
-
-            # csv output prefix and filename
-            csv_prefix = kwargs.get('csv_prefix') + '_'
-            # csv_suffix = '_' + category
-            csv_extension = '.csv'
-            statistics_filename = csv_prefix + csv_basename + csv_extension
-
-            r.stats(input=(reclassified_base,flow_in_reclassified_base),
-                    output=statistics_filename,
-                    flags='nacpl',
-                    separator=COMMA,
+                    output=flow_in_reclassified_base,
+                    overwrite=True,
                     quiet=True)
 
-            write_dictionary_to_csv(statistics_filename,
-                    statistics_dictionary)
+        # export to csv
+        csv_extension = '.csv'  # FIXME: make global, i.e. CSV_PREFIX ?
 
-            # clean up
-            del(statistics_filename)
+        if 'supply_filename' in kwargs:
+
+            supply_filename = kwargs.get('supply_filename')
+            supply_filename += csv_extension
+            nested_dictionary_to_csv(supply_filename,
+                    statistics_dictionary)
+            del(supply_filename)
+
+        if 'use_filename' in kwargs:
+
+            use_filename = kwargs.get('use_filename')
+            use_filename += csv_extension
+            uses = compile_use_table(statistics_dictionary)
+            dictionary_to_csv(use_filename, uses)
+            del(use_filename)
             del(statistics_dictionary)
+            del(uses)
 
     # Maybe return list of flow maps?  Requires unique flow map names
     return flows
@@ -3193,9 +3338,7 @@ def main():
     protected_scores = options['protected_scores']
     protected_areas_map_name = 'protected_areas'
 
-    '''Anthropic areas'''
-
-    # Rename back to Urban?
+    '''Artificial areas'''
 
     artificial = options['artificial']
     artificial_proximity_map_name='artificial_proximity'
@@ -3848,25 +3991,22 @@ def main():
 
             # compute unmet demand
 
-            # ----------------------------------------------------
-            # the 'suitability_map' is not used in the computation
-            # FIXME or REMOVEME
-            # ----------------------------------------------------
-
             unmet_demand_expression = compute_unmet_demand(
                     distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
                     coefficients=MOBILITY_COEFFICIENTS[4],
                     population=demand,
-                    score=MOBILITY_SCORE,
-                    suitability=suitability_map)
+                    score=MOBILITY_SCORE)
+                    # suitability=suitability)  # Not used.
+                    # Maybe it can, though, after successfully testing its
+                    # integration to build_distance_function().
+
             grass.debug(_("Unmet demand function: {f}".format(f=unmet_demand_expression)))
 
             unmet_demand_equation = equation.format(result=unmet_demand,
                     expression=unmet_demand_expression)
             r.mapcalc(unmet_demand_equation, overwrite=True)
 
-            draw_map(suitability_map)  # REMOVEME
             draw_map(unmet_demand, width='45', height='45')  # REMOVEME
 
             if base_vector:
@@ -3884,18 +4024,15 @@ def main():
 
         if flow or any ([supply, aggregation]):
 
-            # ----------------------------------------------------
-            # the 'suitability_map' is not used in the computation
-            # FIXME or REMOVEME
-            # ----------------------------------------------------
-
             mobility_expression = mobility_function(
                     distance=distance_categories_to_highest_spectrum,
                     constant=MOBILITY_CONSTANT,
                     coefficients=MOBILITY_COEFFICIENTS,
                     population=demand,
-                    score=MOBILITY_SCORE,
-                    suitability=suitability_map)
+                    score=MOBILITY_SCORE)
+                    # suitability=suitability)  # Not used.
+                    # Maybe it can, though, after successfully testing its
+                    # integration to build_distance_function().
 
             msg = "Mobility function: {f}"
             grass.debug(_(msg.format(f=mobility_expression)))
@@ -3922,7 +4059,8 @@ def main():
         supply_parameters = {}
 
         if supply:
-            supply_parameters.update({'csv_prefix': supply})
+            supply_parameters.update({'supply_filename': supply})
+            supply_parameters.update({'use_filename': 'use'})
 
         if base_vector:
             supply_parameters.update({'vector': base_vector})
@@ -3939,7 +4077,6 @@ def main():
                 aggregation = aggregation,
                 ns_resolution = population_ns_resolution,
                 ew_resolution = population_ew_resolution,
-                csv_basename = 'statistics',
                 **supply_parameters)
 
     # restore region

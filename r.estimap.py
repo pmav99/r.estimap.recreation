@@ -536,6 +536,17 @@
 #% guisection: Output
 #%end
 
+#%option G_OPT_F_OUTPUT
+#% key: use
+#% key_desc: prefix
+#% type: string
+#% label: Output prefix for the file name of the supply table CSV
+#% description: Supply table CSV output file names will get this prefix
+#% multiple: no
+#% required: no
+#% guisection: Output
+#%end
+
 #%rules
 #%  requires: opportunity, spectrum, demand, flow, supply
 #%  required: potential, spectrum, demand, flow, supply
@@ -545,6 +556,9 @@
 #%  requires_all: supply, population
 #%  requires: supply, base, base_vector, aggregation
 #%  requires: supply, landcover, landuse
+#%  requires_all: use, population
+#%  requires: use, base, base_vector, aggregation
+#%  requires: use, landcover, landuse
 #%end
 
 '''Various'''
@@ -1145,6 +1159,9 @@ def dictionary_to_csv(filename, dictionary):
     f = open(filename, "wb")
     w = csv.writer(f)
 
+    # write a header
+    w.writerow(['category', 'label', 'value'])
+
     # terminology: from 'base' and 'cover' maps
     for base_key, value in dictionary.items():
         base_category = base_key[0]
@@ -1170,6 +1187,15 @@ def nested_dictionary_to_csv(filename, dictionary):
     """
     f = open(filename, "wb")
     w = csv.writer(f)
+
+    # write a header
+    w.writerow(['base',
+                'base_label',
+                'cover',
+                'cover_label',
+                'area',
+                'count',
+                'percents'])
 
     # terminology: from 'base' and 'cover' maps
     for base_key, inner_dictionary in dictionary.items():
@@ -1309,7 +1335,7 @@ def float_to_integer(double):
     Parameters
     ----------
     double :
-            An 'FCELL' or 'DCELL' type raste map
+            An 'FCELL' or 'DCELL' type raster map
 
     Returns
     -------
@@ -2525,7 +2551,7 @@ def get_raster_statistics(map_one, map_two, separator, flags):
     return dictionary
 
 def compile_use_table(supply):
-    """Compile use table out of supply table
+    """Compile the 'use' table out of a 'supply' table
 
     Parameters
     ----------
@@ -3402,6 +3428,8 @@ def main():
     flow_map_name = 'flow'
 
     supply = options['supply']  # use as CSV filename prefix
+    use = options['use']  # use as CSV filename prefix
+
     """ First, care about the computational region"""
 
     if mask:
@@ -4060,7 +4088,9 @@ def main():
 
         if supply:
             supply_parameters.update({'supply_filename': supply})
-            supply_parameters.update({'use_filename': 'use'})
+
+        if use:
+            supply_parameters.update({'use_filename': use})
 
         if base_vector:
             supply_parameters.update({'vector': base_vector})

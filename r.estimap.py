@@ -61,6 +61,15 @@
 #%  description: Print out results (i.e. supply table), don't export to file
 #%end
 
+'''
+exclusive: at most one of the options may be given
+required: at least one of the options must be given
+requires: if the first option is given, at least one of the subsequent options must also be given
+requires_all: if the first option is given, all of the subsequent options must also be given
+excludes: if the first option is given, none of the subsequent options may be given
+collective: all or nothing; if any option is given, all must be given
+'''
+
 '''Components section'''
 
 #%option G_OPT_R_INPUT
@@ -415,6 +424,10 @@
 #% guisection: Output
 #%end
 
+#%rules
+#%  requires: potential, land, natural, water, landuse, protected, lakes, coastline
+#%end
+
 #%option G_OPT_R_OUTPUT
 #% key: opportunity
 #% key_desc: name
@@ -439,7 +452,7 @@
 
 #%rules
 #%  requires: spectrum, infrastructure, roads
-#%  requires: landcover, spectrum
+##%  requires: spectrum, landcover
 #%  required: land, landcover, landuse
 #%end
 
@@ -549,11 +562,13 @@
 
 #%rules
 #%  requires: opportunity, spectrum, demand, flow, supply
-#%  required: potential, spectrum, demand, flow, supply
+#%  required: potential, spectrum, demand, flow, supply, use
 #%end
 
 #%rules
+#%  requires: supply, land, natural, water, landuse, protected, lakes, coastline
 #%  requires_all: supply, population
+#%  requires_all: supply, landcover, land_classes
 #%  requires: supply, base, base_vector, aggregation
 #%  requires: supply, landcover, landuse
 #%  requires_all: use, population
@@ -3015,6 +3030,9 @@ def compute_supply(base,
                 verbose=False,
                 quiet=True)
 
+        r.stats(flags='nlcap',
+                input=flow_in_category)
+
         # Parse flow categories and labels
         flow_categories = grass.parse_command('r.category',
                 map=flow_in_category,
@@ -3661,8 +3679,10 @@ def main():
 
     if len(natural_component) > 1:
         grass.verbose(_("\nNormalize 'Natural' component\n"))
-        zerofy_and_normalise_component(natural_component, THRESHHOLD_ZERO,
-                natural_component_map_name)
+        zerofy_and_normalise_component(
+                components=natural_component,
+                threshhold=THRESHHOLD_ZERO,
+                output_name=natural_component_map_name)
         recreation_potential_component.append(natural_component_map_name)
     else:
         recreation_potential_component.extend(natural_component)
@@ -3677,8 +3697,10 @@ def main():
     grass.verbose(_("\nNormalize 'Recreation Potential' component\n"))
     grass.debug(_("Maps: {maps}".format(maps=recreation_potential_component)))
 
-    zerofy_and_normalise_component(recreation_potential_component,
-            THRESHHOLD_ZERO, tmp_recreation_potential)
+    zerofy_and_normalise_component(
+            components=recreation_potential_component,
+            threshhold=THRESHHOLD_ZERO,
+            output_name=tmp_recreation_potential)
 
     if recreation_potential:
 

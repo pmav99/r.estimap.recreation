@@ -25,6 +25,7 @@ the recreation potential
 and the existing infrastructure.
 
 
+<p>
 The module offers two functionalities.
 
 One is the production of recreation related maps by using pre-processed maps
@@ -32,6 +33,8 @@ that depict the quality of or the access to areas of recreational value.
 The other is to transform maps that depict natural features into scored maps
 that reflect the potential to support for outdoor recreational.
 
+<em>Nevertheless, it is strongly advised to understand first the concepts and
+  the terminology behind the algorithm, by reading the related sources.</em>
 
 
 <h5>Terminology</h5>
@@ -155,7 +158,7 @@ the module
 supports the production of
 a series of
 <i>demand</i>
-and <i>mobility</i> maps
+and <i>flow</i> maps
 as well as exporting
 related <i>supply</i> and <i>use</i> tables.
 
@@ -408,7 +411,7 @@ Using a pre-processed map
 that depicts the suitability of different land types
 to support for recreation
 (here the map named
-<code>land_suitability<code>)
+<code>land_suitability</code>)
 the command to execute is:
 
 <div class="code"><pre>
@@ -733,6 +736,11 @@ r.estimap --o \
   base=local_administrative_units
 </pre></div>
 
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  population=population_2015  base=local_administrative_units
+</pre></div>
+
 <p>
 <center>
 <img src="demand.png" alt="Example of a demand distribution output map while using
@@ -761,6 +769,11 @@ r.estimap --o \
   base=local_administrative_units
 </pre></div>
 
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  unmet=unmet_demand  population=population_2015  base=local_administrative_units
+</pre></div>
+
 <p>
 <center>
 <img src="unmet_demand.png" alt="Example of an 'unmet demand' output map while using
@@ -774,11 +787,11 @@ population
 and base">
 </center>
 
-<h4>Mobility</h4>
+<h4>Flow</h4>
 
 <p>
 The
-<i>mobility</i>
+<i>flow</i>
 bases upon the same function
 used to quantify the attractiveness
 of locations for their recreational value.
@@ -851,6 +864,11 @@ r.estimap --o \
   base=local_administrative_units
 </pre></div>
 
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  mobility=mobility  population=population_2015  base=local_administrative_units
+</pre></div>
+
 <p>
 <center>
 <img src="mobility.png" alt="Example of a mobility output map while using
@@ -885,6 +903,11 @@ r.estimap --o  \
   timestamp='2018'
 </pre></div>
 
+or, the same command in a copy-paste friendly way:
+<div class="code"><pre>
+r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  potential=potential  opportunity=opportunity  spectrum=spectrum  demand=demand  unmet=unmet_demand  mobility=mobility  population=population_2015  base=local_administrative_units  timestamp='2018'
+</pre></div>
+
 <p>
 Note the use of
 the <code>timestamp</code>
@@ -894,6 +917,100 @@ If plans
 include working with GRASS GIS' temporal framework
 on time-series,
 this will be useful.
+
+<h4>Supply and Use tables</h4>
+
+The module can export
+<em>supply</em> and
+<em>use</em> tables,
+in form of CSV files,
+given the identically named
+<code>supply</code>
+and <code>use</code>
+file name output options are defined.
+
+In order to extract a supply table, the module requires maps
+that enable the estimation of the actual flow and how each different ecosystem
+type contributes, in terms of its areal extent, to this flow.
+
+The dependencies to extract a supply table are the following:
+
+<ul>
+  <li>the recreation potential which requires either of, or any
+    combination of, or all of the land, natural and water related
+    components</li>
+
+  <li>the recreation opportunity spectrum which requires any of the above in
+    addition to either of, or any combination of, or all of the inputs related
+    to the infrastructure component</li>
+
+  <li>the demand distribution which requires the combined minimim requirements
+    of the previous items, so as to derive areas of high recreational value,
+    in addition to a population map and a <em>base</em> map of zones, over 
+    which to aggregate the population</li>
+
+  <li>and finally the land types (be it a land cover, a land use or a mixture)
+    map so as to estimate the contribution of each land type in the actual flow
+    in addition to a map of zones over which to aggregate the actual flow</li>
+</ul>
+
+Practically and in terms of components (that is pre-processed maps), the
+module requires at minimum the following input options
+
+<ul>
+  <li><code>land</code> or <code>water</code> or <code>natural</code></li>
+  <li><code>infrastructure</code></li>
+  <li>population</li>
+  <li>base</li>
+  <li>landcover</li>
+  <li>aggregation</li>
+</ul>
+
+and the output option <code>supply</code>
+
+<p>
+An example command to derive a supply table is:
+
+<div class="code"><pre>
+r.estimap  \
+  land=land_suitability  \
+  infrastructure=distance_to_infrastructure  \
+  population=population_2015  \
+  base=local_administrative_units  \
+  landcover=corine_land_cover_2006  \
+  aggregation=regions  \
+  supply=supply
+</pre></div>
+
+or, instead of the land component, only using the <code>water</code> component
+
+<div class="code"><pre>
+r.estimap  \
+  water=water_resources  \
+  infrastructure=distance_to_infrastructure  \
+  population=population_2015  \
+  base=local_administrative_units  \
+  landcover=corine_land_cover_2006  \
+  land_classes=corine_accounting_to_maes_land_classes.rules \
+  aggregation=regions  \
+  supply=supply
+</pre></div>
+
+or, instead, using only the <code>natural</code> component:
+
+<div class="code"><pre>
+r.estimap  \
+  natural=protected_areas  \
+  infrastructure=distance_to_infrastructure  \
+  population=population_2015  \
+  base=local_administrative_units  \
+  landcover=corine_land_cover_2006  \
+  land_classes=corine_accounting_to_maes_land_classes.rules  \
+  aggregation=regions  \
+  supply=supply
+</pre></div>
+
+The <em>use</em> table can be requested via the <code>use</code> output option.
 
 <h3>Using unprocessed input maps</h3>
 

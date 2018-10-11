@@ -3030,9 +3030,6 @@ def compute_supply(base,
                 verbose=False,
                 quiet=True)
 
-        r.stats(flags='nlcap',
-                input=flow_in_category)
-
         # Parse flow categories and labels
         flow_categories = grass.parse_command('r.category',
                 map=flow_in_category,

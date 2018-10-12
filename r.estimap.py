@@ -1693,6 +1693,55 @@ def neighborhood_function(raster, method, size, distance_map):
 
     return filtered_output
 
+def smooth_map(raster, method, size):
+    """
+    Parameters
+    ----------
+    raster :
+
+    method :
+
+    size :
+
+    Returns
+    -------
+
+    Examples
+    --------
+    """
+    r.neighbors(
+            input=raster,
+            output=raster,
+            method=method,
+            size=size,
+            overwrite=True,
+            quiet=True)
+
+def smooth_component(component, method, size):
+    """
+    component:
+
+    method:
+
+    size:
+    """
+    try:
+        if len(component) > 1:
+            for item in component:
+                smooth_map(item,
+                        method=method,
+                        size=size)
+                draw_map(item)
+
+        else:
+            smooth_map(component[0],
+                    method=method,
+                    size=size)
+            draw_map(component)
+
+    except IndexError:
+        grass.verbose(_("Index Error"))  # FIXME: some useful message... ?
+
 def zerofy_small_values(raster, threshhold, output_name):
     """
     Set the input raster map cell values to 0 if they are smaller than the
@@ -3002,8 +3051,9 @@ def compute_supply(base,
         grass.debug(_(msg))
         del(msg)
 
-        # g.message(_("Sum: {s}".format(s=fractions_sum)))
+        # g.message(_("Sum: {:.17g}".format(fractions_sum)))
         # assert fractions_sum < 1.000000000000001, "Sum of fractions is > 1"
+        assert fractions_sum < 1.01, "Sum of fractions is > 1"
         assert fractions_sum > 0.9, "Sum of fractions is < 0.9"
         # assert fractions_sum >= 0.999999999999, "Sum of fractions < 0.99"
         # assert fractions_sum < 1., "Sum of fractions > 1"
@@ -3217,6 +3267,9 @@ def main():
     """
 
     '''Flags and Options'''
+
+    global average_filter
+    average_filter = flags['f']
 
     global info, save_temporary_maps, print_only
     landuse_extent = flags['e']
@@ -3486,7 +3539,10 @@ def main():
 
         draw_map(suitability_map_name)  # REMOVEME
 
-        append_map_to_component(suitability_map_name, 'land', land_component)
+        append_map_to_component(
+                raster=suitability_map_name,
+                component_name='land',
+                component_list=land_component)
 
     '''Water Component'''
 
@@ -3522,11 +3578,16 @@ def main():
                 alpha = alpha,
                 score = score,
                 mask = lakes)
+
         del(constant)
         del(kappa)
         del(alpha)
         del(score)
-        append_map_to_component(lakes_proximity, 'water', water_components)
+
+        append_map_to_component(
+                raster=lakes_proximity,
+                component_name='water',
+                component_list=water_components)
 
     if coastline:
 
@@ -3538,7 +3599,11 @@ def main():
                 alpha = water_proximity_alpha,
                 kappa = water_proximity_kappa,
                 score = water_proximity_score)
-        append_map_to_component(coast_proximity, 'water', water_components)
+
+        append_map_to_component(
+                raster=coast_proximity,
+                component_name='water',
+                component_list=water_components)
 
     if coast_geomorphology:
 
@@ -3557,7 +3622,11 @@ def main():
                 method = NEIGHBORHOOD_METHOD,
                 size = NEIGHBORHOOD_SIZE,
                 distance_map=coast_proximity)
-        append_map_to_component(coast_attractiveness, 'water', water_components)
+
+        append_map_to_component(
+                raster=coast_attractiveness,
+                component_name='water',
+                component_list=water_components)
 
     if bathing_water:
 
@@ -3572,11 +3641,15 @@ def main():
                 constant = constant,
                 kappa = kappa,
                 alpha = alpha)
+
         del(constant)
         del(kappa)
         del(alpha)
-        append_map_to_component(bathing_water_proximity, 'water',
-                water_components)
+
+        append_map_to_component(
+                raster=bathing_water_proximity,
+                component_name='water',
+                component_list=water_components)
 
     # merge water component related maps in one list
     water_component += water_components
@@ -3608,7 +3681,10 @@ def main():
                 colors=SCORE_COLORS,
                 output=protected_areas)
 
-        append_map_to_component(protected_areas, 'natural', natural_components)
+        append_map_to_component(
+                raster=protected_areas,
+                component_name='natural',
+                component_list=natural_components)
 
     # merge natural resources component related maps in one list
     natural_component += natural_components
@@ -3663,6 +3739,13 @@ def main():
         recreation_potential_component.extend(land_component)
     else:
         recreation_potential_component.extend(land_component)
+
+    if land_component and average_filter:
+        smooth_component(
+                land_component,
+                method='average',
+                size=7)
+
     # remove_at_exit.extend(land_component)
 
     if len(water_component) > 1:
@@ -3683,6 +3766,13 @@ def main():
         recreation_potential_component.append(natural_component_map_name)
     else:
         recreation_potential_component.extend(natural_component)
+
+    if natural_component and average_filter:
+        smooth_component(
+                natural_component,
+                method='average',
+                size=7)
+
     # remove_at_exit.append(natural_component_map_name)
 
     """ Recreation Potential [Output] """
@@ -4007,8 +4097,8 @@ def main():
 
         # ------------------------------------------- REMOVEME
         draw_map(demand)
-        if info:
-            r.report(map=demand, units=('k','c','p'))
+        # if info:
+        #     r.report(map=demand, units=('k','c','p'))
         # ------------------------------------------- REMOVEME
 
         # copy 'reclassed' as 'normal' map (r.mapcalc)

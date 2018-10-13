@@ -658,13 +658,13 @@ EUCLIDEAN='euclidean'
 NEIGHBORHOOD_SIZE = 11  # this and below, required for neighborhood_function
 NEIGHBORHOOD_METHOD = 'mode'
 
-water_proximity_constant=1
-water_proximity_kappa=30
-water_proximity_alpha=0.008
-water_proximity_score=1
-bathing_water_proximity_constant=1
-bathing_water_proximity_kappa=5
-bathing_water_proximity_alpha=0.1101
+water_proximity_constant = 1
+water_proximity_kappa = 30
+water_proximity_alpha = 0.008
+water_proximity_score = 1
+bathing_water_proximity_constant = 1
+bathing_water_proximity_kappa = 5
+bathing_water_proximity_alpha = 0.1101
 
 SUITABILITY_SCORES='''1:1:0:0
 2:2:0.1:0.1
@@ -1103,6 +1103,7 @@ def draw_map(mapname, **kwargs):
                 extension = 'png')
 
         os.putenv("GRASS_RENDER_FILE", render_file)
+        # os.environ[GRASS_RENDER_FILE] = render_file
 
         run("d.erase", bgcolor='black', flags='f')
         run("d.rast", map=mapname)
@@ -1731,13 +1732,13 @@ def smooth_component(component, method, size):
                 smooth_map(item,
                         method=method,
                         size=size)
-                draw_map(item)
+                draw_map(item)  # REMOVEME
 
         else:
             smooth_map(component[0],
                     method=method,
                     size=size)
-            draw_map(component)
+            draw_map(component)  # REMOVEME
 
     except IndexError:
         grass.verbose(_("Index Error"))  # FIXME: some useful message... ?
@@ -3036,7 +3037,6 @@ def compute_supply(base,
                 separator=':')
         del(fraction_rules)
 
-        # --------------------------------------------------------------------
         # Assert that sum of fractions is ~1
         fraction_categories = grass.parse_command('r.category',
                 map=fractions,
@@ -3052,12 +3052,7 @@ def compute_supply(base,
         del(msg)
 
         # g.message(_("Sum: {:.17g}".format(fractions_sum)))
-        # assert fractions_sum < 1.000000000000001, "Sum of fractions is > 1"
-        assert fractions_sum < 1.01, "Sum of fractions is > 1"
-        assert fractions_sum > 0.9, "Sum of fractions is < 0.9"
-        # assert fractions_sum >= 0.999999999999, "Sum of fractions < 0.99"
-        # assert fractions_sum < 1., "Sum of fractions > 1"
-        # --------------------------------------------------------------------
+        assert abs(fractions_sum -1 ) < 1.e-6, "Sum of fractions is != 1"
 
         # Compute flow
         flow_expression = "@{fractions} * @{flow}"

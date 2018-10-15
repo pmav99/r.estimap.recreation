@@ -1569,6 +1569,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
 
     draw_map(tmp_distance)  # REMOVEME
 
+    # FIXME: use a parameters dictionary, avoid conditionals
     if 'score' in kwargs:
         distance_function = build_distance_function(
                 constant=constant,
@@ -1577,6 +1578,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
                 variable=tmp_distance,
                 score=score)
 
+    # FIXME: use a parameters dictionary, avoid conditionals
     if not 'score' in kwargs:
         distance_function = build_distance_function(
                 constant=constant,
@@ -1676,7 +1678,7 @@ def neighborhood_function(raster, method, size, distance_map):
     neighborhood_function = equation.format(result=filtered_output,
             expression=scoring_function)
     # ---------------------------------------------------------------
-    grass.verbose(_("Expression: {e}".format(e=neighborhood_function)))
+    grass.debug(_("Expression: {e}".format(e=neighborhood_function)))
     # ---------------------------------------------------------------
     grass.mapcalc(neighborhood_function, overwrite=True)
 

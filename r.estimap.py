@@ -796,12 +796,12 @@ URBAN_ATLAS_TO_MAES_NOMENCLATURE='''
 50000 = 5 Heathland and shrub
 '''
 
-recreation_potential_categories = '''0.0:0.2:1
+RECREATION_POTENTIAL_CATEGORIES = '''0.0:0.2:1
 0.2:0.4:2
 0.4:*:3'''
 #artificial_distance_categories=
 #'0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5'
-recreation_opportunity_categories=recreation_potential_categories
+RECREATION_OPPORTUNITY_CATEGORIES = RECREATION_POTENTIAL_CATEGORIES
 
 #
 ## FIXME -- No hardcodings please.
@@ -2278,6 +2278,81 @@ def update_meta(raster, title):
     del(units)
     del(source1)
     del(source2)
+
+def export_map(input_name, title, categories, colors, output_name):
+    """
+    Export a raster map by renaming the (temporary) raster map name
+    'input_name' to the requested output raster map name 'output_name'.
+    This function is (mainly) used to export either of the intermediate
+    recreation 'potential' or 'opportunity' maps.
+
+    Parameters
+    ----------
+    raster :
+        Input raster map name
+
+    title :
+        Title for the output raster map
+
+    categories :
+        Categories and labels for the output raster map
+
+    colors :
+        Colors for the output raster map
+
+    output_name :
+        Output raster map name
+
+    Returns
+    -------
+    output_name :
+        This function will return the requested 'output_name'
+
+    Examples
+    --------
+    ..
+    """
+    finding = grass.find_file(name=input_name,
+            element='cell')
+    if not finding['file']:
+        grass.fatal("Raster map {name} not found".format(name=input_name))
+    del(finding)
+
+    # inform
+    msg = "\nOutputting '{raster}' map\n"
+    msg = msg.format(raster=input_name)
+    grass.verbose(_(msg))
+    del(msg)
+
+    # get categories and labels
+    raster_categories = 'categories_of_'
+    raster_categories += input_name
+    raster_category_labels = string_to_file(
+            string = categories,
+            name = raster_categories)
+
+    # add ascii file to removal list
+    remove_normal_files_at_exit.append(raster_category_labels)
+
+    # apply categories and description
+    r.category(map=input_name,
+            rules=raster_category_labels,
+            separator=':')
+
+    # update meta and colors
+    update_meta(input_name, title)
+    r.colors(map=input_name,
+            rules='-',
+            stdin=colors,
+            quiet=True)
+    # rename to requested output name
+    g.rename(
+            raster=(
+                input_name,
+                output_name),
+            quiet=True)
+
+    return output_name
 
 def mobility_function(distance, constant, coefficients, population, score,
         **kwargs):
@@ -3775,58 +3850,39 @@ def main():
     """ Recreation Potential [Output] """
 
     tmp_recreation_potential = tmp_map_name(name=recreation_potential_map_name)
-    msg = "Computing an intermediate potential map '{potential}'"
-    grass.debug(_(msg.format(potential=tmp_recreation_potential)))
 
-    grass.verbose(_("\nNormalize 'Recreation Potential' component\n"))
+    msg = "Computing intermediate 'Recreation Potential' map: '{potential}'"
+    grass.verbose(_(msg.format(potential=tmp_recreation_potential)))
     grass.debug(_("Maps: {maps}".format(maps=recreation_potential_component)))
 
     zerofy_and_normalise_component(
-            components=recreation_potential_component,
-            threshhold=THRESHHOLD_ZERO,
-            output_name=tmp_recreation_potential)
+            components = recreation_potential_component,
+            threshhold = THRESHHOLD_ZERO,
+            output_name = tmp_recreation_potential)
+
+    # recode recreation_potential
+    tmp_recreation_potential_categories = tmp_map_name(
+            name=recreation_potential)
+
+    msg = "\nClassifying '{potential}' map"
+    msg = msg.format(potential=tmp_recreation_potential)
+    grass.verbose(_(msg))
+
+    classify_recreation_component(
+            component = tmp_recreation_potential,
+            rules = RECREATION_POTENTIAL_CATEGORIES,
+            output_name = tmp_recreation_potential_categories)
 
     if recreation_potential:
 
-        msg = "\nClassifying '{potential}' map"
-        msg = msg.format(potential=tmp_recreation_potential)
-        grass.verbose(_(msg))
-        tmp_recreation_potential_categories = tmp_map_name(name=recreation_potential)
-        classify_recreation_component(
-                component = tmp_recreation_potential,
-                rules = recreation_potential_categories,
-                output_name = tmp_recreation_potential_categories)
-
-        # get categories and labels
-        potential_categories = 'categories_of_'
-        potential_categories += recreation_potential
-        potential_category_labels = string_to_file(
-                POTENTIAL_CATEGORY_LABELS,
-                name=potential_categories)
-
-        # add to list for removal
-        remove_normal_files_at_exit.append(potential_category_labels)
-
-        # apply categories and description
-        r.category(map=tmp_recreation_potential_categories,
-                rules=potential_category_labels,
-                separator=':')
-
-        msg = "\nWriting '{potential}' map\n"
-        msg = msg.format(potential=recreation_potential)
-        grass.verbose(_(msg))
-        g.rename(
-                raster=(
-                    tmp_recreation_potential_categories,
-                    recreation_potential),
-                quiet=True)
-
-        update_meta(recreation_potential, potential_title)
-        r.colors(map=recreation_potential, rules='-', stdin = POTENTIAL_COLORS,
-                quiet=True)
-
-        del(msg)
-        del(tmp_recreation_potential_categories)
+        # export 'recreation_potential' map and
+        # use 'output_name' for the temporary 'potential' map for spectrum
+        tmp_recreation_potential_categories = export_map(
+                input_name = tmp_recreation_potential_categories,
+                title = potential_title,
+                categories = POTENTIAL_CATEGORY_LABELS,
+                colors = POTENTIAL_COLORS,
+                output_name = recreation_potential)
 
     # Infrastructure to access recreational facilities, amenities, services
     # Required for recreation opportunity and successively recreation spectrum
@@ -3893,10 +3949,16 @@ def main():
 
         recreation_opportunity_component = []
 
+        draw_map(infrastructure_component)  # REMOVEME
+
         # input
-        zerofy_and_normalise_component(infrastructure_component,
-                THRESHHOLD_ZERO, infrastructure_component_map_name)
-        recreation_opportunity_component.append(infrastructure_component_map_name)
+        zerofy_and_normalise_component(
+                components = infrastructure_component,
+                threshhold = THRESHHOLD_ZERO,
+                output_name = infrastructure_component_map_name)
+
+        recreation_opportunity_component.append(
+                infrastructure_component_map_name)
 
         # # input
         # zerofy_and_normalise_component(recreation_component,
@@ -3907,63 +3969,47 @@ def main():
         # intermediate
 
         # REVIEW --------------------------------------------------------------
-        if not recreation_opportunity:
-            recreation_opportunity = tmp_map_name(
-                    name=recreation_opportunity_map_name)
+        tmp_recreation_opportunity = tmp_map_name(
+                name=recreation_opportunity_map_name)
+        msg = "Computing intermediate opportunity map '{opportunity}'"
+        grass.debug(_(msg.format(opportunity=tmp_recreation_opportunity)))
+
+        grass.verbose(_("\nNormalize 'Recreation Opportunity' component\n"))
+        grass.debug(_("Maps: {maps}".format(maps=recreation_opportunity_component)))
 
         zerofy_and_normalise_component(
-                recreation_opportunity_component,
-                THRESHHOLD_0003,
-                recreation_opportunity)
+                components = recreation_opportunity_component,
+                threshhold = THRESHHOLD_0003,
+                output_name = tmp_recreation_opportunity)
+
         # Why threshhold 0.0003? How and why it differs from 0.0001?
         # -------------------------------------------------------------- REVIEW
 
-        # recode recreation_potential
-        tmp_recreation_potential_categories = tmp_map_name(
-                name=tmp_recreation_potential)
-        classify_recreation_component(component = tmp_recreation_potential,
-                rules = recreation_potential_categories,
-                output_name = tmp_recreation_potential_categories)
-
-        # recode opportunity_component
-        msg = "Reclassifying '{opportunity}' map"
-        msg = "Computing recreation opportunity {opportunity}"
-        msg +="\n---------------------------------------------------------------\n"
-        grass.debug(msg.format(opportunity=recreation_opportunity))
+        msg = "Classifying '{opportunity}' map"
+        grass.verbose(msg.format(opportunity=tmp_recreation_opportunity))
         del(msg)
 
+        # recode opportunity_component
+        tmp_recreation_opportunity_categories = tmp_map_name(
+                name=recreation_opportunity)
+
         classify_recreation_component(
-                component = recreation_opportunity,
-                rules = recreation_opportunity_categories,
-                output_name = recreation_opportunity)
+                component = tmp_recreation_opportunity,
+                rules = RECREATION_OPPORTUNITY_CATEGORIES,
+                output_name = tmp_recreation_opportunity_categories)
+
+        ''' Recreation Opportunity [Output]'''
 
         if recreation_opportunity:
 
-            # get category labels
-            opportunity_categories = 'categories_of_'
-            opportunity_categories += recreation_opportunity
-            opportunity_category_labels = string_to_file(
-                    OPPORTUNITY_CATEGORY_LABELS,
-                    name=opportunity_categories)
-
-            # add ascii file to removal list
-            remove_normal_files_at_exit.append(opportunity_category_labels)
-
-            # update category labels
-            r.category(map=recreation_opportunity,
-                    rules=opportunity_category_labels,
-                    separator=':')
-
-            msg = "Writing '{opportunity}' map"
-            grass.verbose(msg.format(opportunity=recreation_opportunity))
-            del(msg)
-
-            # modify temporary map name too
-            tmp_recreation_opportunity_categories = recreation_opportunity
-
-            update_meta(recreation_opportunity, opportunity_title)
-            r.colors(map=recreation_opportunity, rules='-', stdin =
-                    OPPORTUNITY_COLORS, quiet=True)
+            # export 'recreation_opportunity' map and
+            # use 'output_name' for the temporary 'potential' map for spectrum
+            tmp_recreation_opportunity_categories = export_map(
+                    input_name = tmp_recreation_opportunity_categories,
+                    title = opportunity_title,
+                    categories = OPPORTUNITY_CATEGORY_LABELS,
+                    colors = OPPORTUNITY_COLORS,
+                    output_name = recreation_opportunity)
 
         # Recreation Spectrum: Potential + Opportunity [Output]
 
@@ -3992,13 +4038,15 @@ def main():
         # add to list for removal
         remove_normal_files_at_exit.append(spectrum_category_labels)
 
-        # update category labels
+        # update category labels, meta and colors
         spectrum_categories = 'categories_of_'
+
         r.category(map=recreation_spectrum,
                 rules=spectrum_category_labels,
                 separator=':')
 
         update_meta(recreation_spectrum, spectrum_title)
+
         r.colors(map=recreation_spectrum, rules='-', stdin = SPECTRUM_COLORS,
                 quiet=True)
 

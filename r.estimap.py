@@ -38,7 +38,7 @@
 
 #%flag
 #%  key: f
-#%  description: Filter input map before...
+#%  description: Filter maps in land and natural components before computing recreation maps
 #%end
 
 #%flag
@@ -658,13 +658,13 @@ EUCLIDEAN='euclidean'
 NEIGHBORHOOD_SIZE = 11  # this and below, required for neighborhood_function
 NEIGHBORHOOD_METHOD = 'mode'
 
-water_proximity_constant = 1
-water_proximity_kappa = 30
-water_proximity_alpha = 0.008
-water_proximity_score = 1
-bathing_water_proximity_constant = 1
-bathing_water_proximity_kappa = 5
-bathing_water_proximity_alpha = 0.1101
+WATER_PROXIMITY_CONSTANT = 1
+WATER_PROXIMITY_KAPPA = 30
+WATER_PROXIMITY_ALPHA = 0.008
+WATER_PROXIMITY_SCORE = 1
+BATHING_WATER_PROXIMITY_CONSTANT = 1
+BATHING_WATER_PROXIMITY_KAPPA = 5
+BATHING_WATER_PROXIMITY_ALPHA = 0.1101
 
 SUITABILITY_SCORES='''1:1:0:0
 2:2:0.1:0.1
@@ -1882,7 +1882,9 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
         # prepare string for mapcalc expression
         components = [ name.split('@')[0] for name in components ]
-        components_string = spacy_plus.join(components).replace(' ', '').replace('+', '_')
+        components_string = spacy_plus.join(components)
+        components_string = components_string.replace(' ', '')
+        components_string = components_string.replace('+', '_')
 
         # temporary map names
         tmp_intermediate = tmp_map_name(name=components_string)
@@ -1890,7 +1892,8 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
         # build mapcalc expression
         component_expression = spacy_plus.join(components)
-        component_equation = equation.format(result=tmp_intermediate, expression=component_expression)
+        component_equation = equation.format(result=tmp_intermediate,
+                expression=component_expression)
 
         grass.mapcalc(component_equation, overwrite=True)
 
@@ -2217,17 +2220,18 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     --------
     ...
     """
-    spectrum_expression = recreation_spectrum_expression(potential,
-            opportunity)
+    spectrum_expression = recreation_spectrum_expression(
+            potential=potential,
+            opportunity=opportunity)
 
     spectrum_equation = equation.format(result=spectrum,
             expression=spectrum_expression)
 
-    # if info:
-    #     msg = "Recreation Spectrum equation: \n"
-    #     msg += spectrum_equation
-    #     g.message(msg)
-    #     del(msg)
+    if info:
+        msg = "Recreation Spectrum equation: \n"
+        msg += spectrum_equation
+        g.message(msg)
+        del(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
@@ -3667,10 +3671,10 @@ def main():
         coast_proximity = compute_attractiveness(
                 raster = coastline,
                 metric = EUCLIDEAN,
-                constant = water_proximity_constant,
-                alpha = water_proximity_alpha,
-                kappa = water_proximity_kappa,
-                score = water_proximity_score)
+                constant = WATER_PROXIMITY_CONSTANT,
+                alpha = WATER_PROXIMITY_ALPHA,
+                kappa = WATER_PROXIMITY_KAPPA,
+                score = WATER_PROXIMITY_SCORE)
 
         append_map_to_component(
                 raster=coast_proximity,
@@ -3827,6 +3831,7 @@ def main():
         recreation_potential_component.append(water_component_map_name)
     else:
         recreation_potential_component.extend(water_component)
+
     # remove_at_exit.append(water_component_map_name)
 
     if len(natural_component) > 1:

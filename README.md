@@ -1,139 +1,10 @@
-DESCRIPTION
+Description
 -----------
 
 *r.estimap* is an implementation of the ESTIMAP recreation algorithm to
 support mapping and modelling of ecosystem services (Zulian, 2014).
 
-The algorithm estimates the capacity of ecosystems to provide
-opportunities for nature-based recreation and leisure (recreation
-opportunity spectrum). First, it bases upon look-up tables, to score
-access to or the quality of natural features (land suitability,
-protected areas, infrastructure, water resources) for their potential to
-support for outdoor recreation (potential recreation). Second, it
-implements a proximity-remoteness concept to integrate the recreation
-potential and the existing infrastructure. The module offers two
-functionalities. One is the production of recreation related maps by
-using pre-processed maps that depict the quality of or the access to
-areas of recreational value. The other is to transform maps that depict
-natural features into scored maps that reflect the potential to support
-for outdoor recreational.
-
-##### Terminology
-
-First, an overview of the terminology
-
- Recreation Potential
-:   is ...
-
- Recreation Opportunity
-:   is ...
-
- Recreation (Opportunity) Spectrum
-:   is ...
-
- Demand Distribution
-:   is ...
-
- Unmet Demand Distribution
-:   is ...
-
- Mobidtty
-:   is ...
-
- Flow
-:   is ...
-
- Supply
-:   is ...
-
- Use
-:   is ...
-
-##### Recreation Potential
-
-The recreation potential map, derives by adding and normalizing maps of
-natural *components* that may provide recreation opportunities.
-Components are user-defined, pre-processed, input raster maps, that
-score access to or quality of resources such as:
-
--   land
--   natural
--   water
--   urban
-
-Alternatively, the module treats unprocessed maps, by providing a set of
-relevant scores or coefficients, to derive component maps required by
-the algorithm. FIXME 1. an ASCII file with a set of land suitability
-scores (see below) 2. a string listing a set of comma-separated scores
-for each raster category.. -- FIXME 3. in the case of the CORINE map,
-use of internal rules FIXME For example, a CORINE land cover map may be
-given to the 'landuse' input option along with a set of land suitability
-scores, that correspond to the CORINE nomenclature. The latter is fed as
-an ASCII file to the 'suitability\_scores' input option.
-
-##### Recreation Opportunity
-
-...
-
-##### Recreation Spectrum
-
-The recreation (opportunity) spectrum map, derives by combining the
-recreation potential and maps that depict access (i.e. infrastructure)
-and/or areas that provide opportunities for recreational activities.
-
-**Explain here** significance of areas with the *Highest Recreation
-Spectrum*.
-
-<div class="tg-wrap">
-
-  Potential | Opportunity   Near   Midrange   Far
-  ------------------------- ------ ---------- -----
-  Near                      1      2          3
-  Midrange                  4      5          6
-  Far                       7      8          9
-
-</div>
-
-##### Flow, Supply and Use
-
-By integrating maps of regions of interest and population, the module
-supports the production of a series of *demand* and *mobility* maps as
-well as exporting related *supply* and *use* tables.
-
-### Mathematical Background
-
-The following equation represents the logic behind ESTIMAP:
-
-    Recreation Spectrum = Recreation Potential + Recreation Opportunity
-
-##### Remoteness and Proximity
-
-The base *distance* function to quantify *attractiveness*, is:
-
-<div class="code">
-
-    ( {Constant} + {Kappa} ) / ( {Kappa} + exp({alpha} * {Variable}) )
-
-</div>
-
-where
-
--   Constant
--   Coefficients
-    -   Kappa
-    -   Alpha
--   Variable
-
-##### Accessibility
-
-##### Normalization
-
-Each *component* is normalized. That is, all maps listed in a given
-component are summed up and normalised. Normalizing any raster map, be
-it a single map or the sum of a series of maps, is performed by
-subtracting its minimum value and dividing by its range.
-
-EXAMPLES
+Examples
 --------
 
 For the sake of demonstrating the usage of the module, we use the
@@ -148,37 +19,6 @@ following "component" maps
 -   protected_areas
 
 (available to download at: ...) to derive a recreation *potential* map.
-
-Below, a table overviewing all input and output maps used or produced in
-the examples.
-
-<div class="tg-wrap">
-
-     Input map name                 Spatial Resolution   Remarks
-  -- ------------------------------ -------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------
-     area\_of\_interest             50 m                 A map that can be used as a 'mask'
-     land\_suitability              50 m                 A map scoring the potential for recreation over CORINE land classes
-     water\_resources               50 m                 A map scoring access to water resources
-     protected\_areas               50 m                 A map scoring the recreational value of natural protected areas
-     distance\_to\_infrastructure   50 m                 A map scoring access to infrastructure
-     population\_2015               1000 m               The resolution of the raster map given to the 'populatio' input option will define the resolution of the output maps 'demand', 'unmet' and 'flow'
-     local\_administrative\_unit    50 m                 A rasterised version of Eurostat's Local Administrative Units map
-                                                         
-     Output map name                Spatial Resolution   Remarks
-     potential\                     50 m                 
-     potential\_1                   50 m                 
-     potential\_2                   50 m                 
-     potential\_3                   50 m                 
-     potential\_4                   50 m                 
-     spectrum                       50 m                 
-     opportunity                    50 m                 Requires to request for the 'spectrum' output
-     demand                         1000 m               Depends on the 'flow' map which, in turn, depends on the 'population' input map
-     unmet                          1000 m               Depends on the 'flow' map which, in turn, depends on the 'population' input map\
-     flow                           1000 m               Depends on the 'population' input map
-     Output table name                                   
-     supply                         NA                   
-
-</div>
 
 <div>
 
@@ -684,19 +524,32 @@ provide an alternative scoring scheme, all what is required is either of
 -   provide a new "rules" file with the desired set of scoring rules
 -   provide a string to the `suitability_scores` option
 
-REFERENCES
-----------
-
--   http://publications.jrc.ec.europa.eu/repository/bitstream/JRC87585/lb-na-26474-en-n.pd
-
-SEE ALSO
---------
-
-*[r.univar](r.univar.html), [r.mapcalc](r.mapcalc.html)*
-
-AUTHOR
+Author
 ------
 
 Nikos Alexandris
+
+Licence
+-------
+
+Copyright 2018 European Union
+
+Licensed under the EUPL, Version 1.2 or – as soon they will be
+approved by the European Commission – subsequent versions of the
+EUPL (the "Licence");
+
+You may not use this work except in compliance with the Licence.
+You may obtain a copy of the Licence at:
+
+https://joinup.ec.europa.eu/collection/eupl/eupl-text-11-12
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the Licence is distributed on an
+"AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. See the Licence for the specific
+language governing permissions and limitations under the Licence.
+
+Consult the LICENCE file for details.
+
 
 *Last changed: \$Date: 2017-11-03 18:21:39 +0100 (Fri, 03 Nov 2017) \$*

@@ -550,6 +550,3 @@ either express or implied. See the Licence for the specific
 language governing permissions and limitations under the Licence.
 
 Consult the LICENCE file for details.
-
-
-*Last changed: \$Date: 2017-11-03 18:21:39 +0100 (Fri, 03 Nov 2017) \$*

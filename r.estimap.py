@@ -16,10 +16,24 @@
 
  SOURCES:      https://www.bts.gov/archive/publications/journal_of_transportation_and_statistics/volume_04_number_23/paper_03/index
 
- COPYRIGHT:    (C) 2017 by the GRASS Development Team
-
-               This programme is released under the European Union Public
-               Licence v 1.1. Please consult the LICENCE file for details.
+ COPYRIGHT:    Copyright 2018 European Union
+ 
+               Licensed under the EUPL, Version 1.2 or – as soon they will be
+               approved by the European Commission – subsequent versions of the
+               EUPL (the "Licence");
+               
+               You may not use this work except in compliance with the Licence.
+               You may obtain a copy of the Licence at:
+               
+               https://joinup.ec.europa.eu/collection/eupl/eupl-text-11-12
+               
+               Unless required by applicable law or agreed to in writing,
+               software distributed under the Licence is distributed on an
+               "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+               either express or implied. See the Licence for the specific
+               language governing permissions and limitations under the Licence.
+               
+               Consult the LICENCE file for details.
 """
 
 '''Flags'''

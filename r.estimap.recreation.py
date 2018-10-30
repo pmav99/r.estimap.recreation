@@ -825,6 +825,7 @@ POTENTIAL_CATEGORY_LABELS = '''1:Low
 2:Moderate
 3:High
 '''
+
 OPPORTUNITY_CATEGORY_LABELS = '''1:Far
 2:Midrange
 3:Near

@@ -1,6 +1,6 @@
 <h2>DESCRIPTION</h2>
 
-<em>r.estimap</em> is an implementation of the ESTIMAP recreation algorithm
+<em>r.estimap.recreation</em> is an implementation of the ESTIMAP recreation algorithm
 to support mapping and modelling of ecosystem services (Zulian, 2014).
 
 <p>
@@ -415,7 +415,7 @@ to support for recreation
 the command to execute is:
 
 <div class="code"><pre>
-r.estimap  land=land_suitability  potential=potential
+r.estimap.recreation  land=land_suitability  potential=potential
 </pre></div>
 
 <p>
@@ -438,7 +438,7 @@ as a mask and feed it to the input map
 option <code>mask</code>:
 
 <div class="code"><pre>
-r.estimap  land=land_suitability  mask=area_of_interest  potential=potential_1
+r.estimap.recreation  land=land_suitability  mask=area_of_interest  potential=potential_1
 </pre></div>
 
 <p>
@@ -488,7 +488,7 @@ modify the output map name to <code>potential_2</code>
 and execute again, without a mask:
 
 <div class="code"><pre>
-r.estimap  land=land_suitability  water=water_resources  potential=potential_2
+r.estimap.recreation  land=land_suitability  water=water_resources  potential=potential_2
 </pre></div>
 
 <p>
@@ -507,7 +507,7 @@ modify the output map name to
 and repeat the command execution:
 
 <div class="code"><pre>
-r.estimap  land=land_suitability  water=water_resources  natural=protected_areas  potential=potential_3
+r.estimap.recreation  land=land_suitability  water=water_resources  natural=protected_areas  potential=potential_3
 </pre></div>
 
 <p>
@@ -529,7 +529,7 @@ we add a second map named
 to the water component and modify the output map name to
 <code>potential_4</code>:
 <div class="code"><pre>
-r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  potential=potential_4
+r.estimap.recreation  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  potential=potential_4
 </pre></div>
 
 
@@ -605,7 +605,7 @@ we need to define the output map option
 <code>spectrum</code> too:
 
 <div class="code"><pre>
-r.estimap  \
+r.estimap.recreation  \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
   natural=protected_areas \
@@ -615,7 +615,7 @@ r.estimap  \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  spectrum=spectrum
+r.estimap.recreation  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  spectrum=spectrum
 </pre></div>
 
 <p>
@@ -656,7 +656,7 @@ Building upon the previous command, we add the <code>opportunity</code> output
 option:
 
 <div class="code"><pre>
-r.estimap  \
+r.estimap.recreation  \
   mask=area_of_interest \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
@@ -668,7 +668,7 @@ r.estimap  \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  spectrum=spectrum  infrastructure=distance_to_infrastructure  opportunity=opportunity
+r.estimap.recreation  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  spectrum=spectrum  infrastructure=distance_to_infrastructure  opportunity=opportunity
 </pre></div>
 
 <p>
@@ -725,7 +725,7 @@ as the base map for the zonal statistics to obtain the demand map.
 <h4>Demand</h4>
 
 <div class="code"><pre>
-r.estimap --o \
+r.estimap.recreation --o \
   mask=area_of_interest \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
@@ -738,7 +738,7 @@ r.estimap --o \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  population=population_2015  base=local_administrative_units
+r.estimap.recreation --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  population=population_2015  base=local_administrative_units
 </pre></div>
 
 <p>
@@ -757,7 +757,7 @@ and base">
 <h4>Unmet Demand</h4>
 
 <div class="code"><pre>
-r.estimap --o \
+r.estimap.recreation --o \
   mask=area_of_interest \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
@@ -771,7 +771,7 @@ r.estimap --o \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  unmet=unmet_demand  population=population_2015  base=local_administrative_units
+r.estimap.recreation --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  demand=demand  unmet=unmet_demand  population=population_2015  base=local_administrative_units
 </pre></div>
 
 <p>
@@ -853,7 +853,7 @@ per distance category and within predefined geometric boundaries
 
 <p>
 <div class="code"><pre>
-r.estimap --o \
+r.estimap.recreation --o \
   mask=area_of_interest \
   land=land_suitability \
   water=water_resources,bathing_water_quality \
@@ -866,7 +866,7 @@ r.estimap --o \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  mobility=mobility  population=population_2015  base=local_administrative_units
+r.estimap.recreation --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  mobility=mobility  population=population_2015  base=local_administrative_units
 </pre></div>
 
 <p>
@@ -886,7 +886,7 @@ and base">
 
 Of course it is possible to derive all output maps with one call:
 <div class="code"><pre>
-r.estimap --o  \
+r.estimap.recreation --o  \
   mask=area_of_interest  \
   land=land_suitability  \
   water=water_resources,bathing_water_quality  \
@@ -905,7 +905,7 @@ r.estimap --o  \
 
 or, the same command in a copy-paste friendly way:
 <div class="code"><pre>
-r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  potential=potential  opportunity=opportunity  spectrum=spectrum  demand=demand  unmet=unmet_demand  mobility=mobility  population=population_2015  base=local_administrative_units  timestamp='2018'
+r.estimap.recreation --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  potential=potential  opportunity=opportunity  spectrum=spectrum  demand=demand  unmet=unmet_demand  mobility=mobility  population=population_2015  base=local_administrative_units  timestamp='2018'
 </pre></div>
 
 <p>
@@ -972,7 +972,7 @@ and the output option <code>supply</code>
 An example command to derive a supply table is:
 
 <div class="code"><pre>
-r.estimap  \
+r.estimap.recreation  \
   land=land_suitability  \
   infrastructure=distance_to_infrastructure  \
   population=population_2015  \
@@ -985,7 +985,7 @@ r.estimap  \
 or, instead of the land component, only using the <code>water</code> component
 
 <div class="code"><pre>
-r.estimap  \
+r.estimap.recreation  \
   water=water_resources  \
   infrastructure=distance_to_infrastructure  \
   population=population_2015  \
@@ -999,7 +999,7 @@ r.estimap  \
 or, instead, using only the <code>natural</code> component:
 
 <div class="code"><pre>
-r.estimap  \
+r.estimap.recreation  \
   natural=protected_areas  \
   infrastructure=distance_to_infrastructure  \
   population=population_2015  \
@@ -1013,7 +1013,7 @@ r.estimap  \
 Here a "real" example:
 
 <div class="code"><pre>
-r.estimap --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  potential=potential  opportunity=opportunity  spectrum=spectrum  demand=demand  unmet=unmet_demand  population=population_2015  base=local_administrative_units timestamp='2018'  landcover=corine_land_cover_2006  aggregation=regions  land_classes=../categories_and_rules/corine_accounting_to_maes_land_classes.rules  supply=supply  use=us
+r.estimap.recreation --o  mask=area_of_interest  land=land_suitability  water=water_resources,bathing_water_quality  natural=protected_areas  infrastructure=distance_to_infrastructure  potential=potential  opportunity=opportunity  spectrum=spectrum  demand=demand  unmet=unmet_demand  population=population_2015  base=local_administrative_units timestamp='2018'  landcover=corine_land_cover_2006  aggregation=regions  land_classes=../categories_and_rules/corine_accounting_to_maes_land_classes.rules  supply=supply  use=us
 </pre></div>
 
 which will output the following supply table
@@ -1156,7 +1156,7 @@ that contains the following
 This file is provided in the <code>suitability_scores</code> option:
 
 <div class="code"><pre>
-r.estimap  landuse=corine_land_cover_2006 suitability_scores=corine_suitability.scores  potential=potential_corine --o
+r.estimap.recreation  landuse=corine_land_cover_2006 suitability_scores=corine_suitability.scores  potential=potential_corine --o
 </pre></div>
 
 <p>
@@ -1168,7 +1168,7 @@ while using a MASK, based on a fragment from the CORINE land data base">
 The same can be achieved with a long one-line string too:
 
 <div class="code"><pre>
-r.estimap \
+r.estimap.recreation \
   landuse=corine_land_cover_2006 \
   suitability_scores="1:1:0:0,2:2:0.1:0.1,3:9:0:0,10:10:1:1,11:11:0.1:0.1,12:13:0.3:0.3,14:14:0.4:0.4,15:17:0.5:0.5,18:18:0.6:0.6,19:20:0.3:0.3,21:22:0.6:0.6,23:23:1:1,24:24:0.8:0.8,25:25:1:1,26:29:0.8:0.8,30:30:1:1,31:31:0.8:0.8,32:32:0.7:0.7,33:33:0:0,34:34:0.8:0.8,35:35:1:1,36:36:0.8:0.8,37:37:1:1,38:38:0.8:0.8,39:39:1:1,40:42:1:1,43:43:0.8:0.8,44:44:1:1,45:45:0.3:0.3"  potential=potential_1 --o
 </pre></div>
@@ -1181,7 +1181,7 @@ so we obtain the same output
 even by discarding the <code>suitability_scores</code> option:
 
 <div class="code"><pre>
-r.estimap  landuse=corine_land_cover_2006  suitability_scores=corine_suitability.scores  potential=potential_1 --o
+r.estimap.recreation  landuse=corine_land_cover_2006  suitability_scores=corine_suitability.scores  potential=potential_1 --o
 </pre></div>
 
 This is so

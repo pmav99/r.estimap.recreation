@@ -6,8 +6,8 @@
 
  AUTHOR(S):    Nikos Alexandris <nik@nikosalexandris.net>
 
+               First implementation as a collection of Python scripts by
                Grazia Zulian <Grazia.Zulian@ec.europa.eu>
-               First scripted implementation in Python
 
  PURPOSE:      An implementation of the Ecosystem Services Mapping Tool
                (ESTIMAP). ESTIMAP is a collection of spatially explicit models
@@ -17,22 +17,22 @@
  SOURCES:      https://www.bts.gov/archive/publications/journal_of_transportation_and_statistics/volume_04_number_23/paper_03/index
 
  COPYRIGHT:    Copyright 2018 European Union
- 
+
                Licensed under the EUPL, Version 1.2 or – as soon they will be
                approved by the European Commission – subsequent versions of the
                EUPL (the "Licence");
-               
+
                You may not use this work except in compliance with the Licence.
                You may obtain a copy of the Licence at:
-               
+
                https://joinup.ec.europa.eu/collection/eupl/eupl-text-11-12
-               
+
                Unless required by applicable law or agreed to in writing,
                software distributed under the Licence is distributed on an
                "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
                either express or implied. See the Licence for the specific
                language governing permissions and limitations under the Licence.
-               
+
                Consult the LICENCE file for details.
 """
 
@@ -651,9 +651,8 @@ if "GISBASE" not in os.environ:
 
 # globals
 
-global grass_render_directory, grass_render_file
+global grass_render_directory
 grass_render_directory = "/geo/grassdb/render"
-# grass_render_file = grass_render_directory + 'grass_render_file.png'  # REMOVEME
 
 global equation, citation, spacy_plus
 citation_recreation_potential='Zulian (2014)'
@@ -663,9 +662,9 @@ equation = "{result} = {expression}"  # basic equation for mapcalc
 global THRESHHOLD_ZERO, THRESHHOLD_0001, THRESHHOLD_0003
 THRESHHOLD_ZERO = 0
 THRESHHOLD_0001 = 0.0001
-THRESHHOLD_0003 = 0.0003
 
-global COMMA, EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
+global CSV_EXTENSION, COMMA, EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
+CSV_EXTENSION = '.csv'
 COMMA='comma'
 EUCLIDEAN='euclidean'
 # units='k'
@@ -944,7 +943,7 @@ def tmp_map_name(**kwargs):
     tmp.SomeTemporaryString.potential
     """
     temporary_absolute_filename = grass.tempfile()
-    temporary_filename = "tmp." + grass.basename(temporary_absolute_filename)  # use its basename
+    temporary_filename = "tmp." + grass.basename(temporary_absolute_filename)
     if 'name' in kwargs:
         name = kwargs.get('name')
         temporary_filename = temporary_filename + '.' + str(name)
@@ -1035,7 +1034,7 @@ def string_to_file(string, **kwargs):
         #     grass.debug(_(line.rstrip()))
 
     except IOError as error:
-        print "IOError :", error
+        print ("IOError :", error)
         return
 
     finally:
@@ -1576,7 +1575,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         mask = kwargs.get('mask')
         # global mask
         msg = "Inverted masking to exclude non-NULL cells "
-        msg += "from distance related computations based on '{mask}'".format(mask=mask)
+        msg += "from distance related computations based on '{mask}'"
         msg = msg.format(mask=mask)
         grass.verbose(_(msg))
         r.mask(raster=mask, flags='i', overwrite=True, quiet=True)
@@ -1619,7 +1618,10 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
 
     r.null(map=tmp_distance_map, null=0)  # Set NULLs to 0
 
-    compress_status = grass.read_command('r.compress', flags='g', map=tmp_distance_map)
+    compress_status = grass.read_command(
+            'r.compress',
+            flags='g',
+            map=tmp_distance_map)
     grass.verbose(_("Compress status: {s}".format(s=compress_status)))
 
     del(distance_function)
@@ -1656,7 +1658,7 @@ def neighborhood_function(raster, method, size, distance_map):
     r.null(map=raster, null=0)  # Set NULLs to 0
 
     neighborhood_output = distance_map + '_' + method
-    msg = "Neighborhood operator '{method}' and size '{size}' for input map '{name}'"
+    msg = "Neighborhood operator '{method}' and size '{size}' for map '{name}'"
     msg = msg.format(method=method, size=size, name=neighborhood_output)
     grass.verbose(_(msg))
 
@@ -2015,7 +2017,8 @@ def compute_artificial_proximity(raster, distance_categories, **kwargs):
             overwrite = True)
 
     if 'output_name' in kwargs:
-        tmp_output = tmp_map_name(name=kwargs.get('output_name'))  # temporary maps will be removed
+        # temporary maps will be removed
+        tmp_output = tmp_map_name(name=kwargs.get('output_name'))
         grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
 
     else:
@@ -2025,6 +2028,7 @@ def compute_artificial_proximity(raster, distance_categories, **kwargs):
     msg = "Computing proximity to '{mapname}'"
     msg = msg.format(mapname=raster)
     grass.verbose(_(msg))
+    del(msg)
     grass.run_command("r.recode",
             input = artificial_distances,
             output = tmp_output,
@@ -2047,7 +2051,7 @@ def artificial_accessibility_expression(artificial_proximity, roads_proximity):
     rules for artificial surfaces:
 
 |-------------------+-------+------------+-------------+--------------+---------|
-| Anthropic / Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
+| Anthropic \ Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
 |-------------------+-------+------------+-------------+--------------+---------|
 | < 500             | 1     | 1          | 2           | 3            | 4       |
 |-------------------+-------+------------+-------------+--------------+---------|
@@ -2131,7 +2135,8 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
             artificial_proximity,
             roads_proximity)
     if 'output_name' in kwargs:
-        tmp_output = tmp_map_name(name=kwargs.get('output_name'))  # temporary maps will be removed
+        # temporary maps will be removed!
+        tmp_output = tmp_map_name(name=kwargs.get('output_name'))
     else:
         basename = 'artificial_accessibility'
         tmp_output = tmp_map_name(name=basename)
@@ -2793,8 +2798,8 @@ def compute_supply(base,
         as per the report ... )
 
     base :
-        Base land types map for final zonal statistics. Specifically to ESTIMAP's
-        recrceation mapping algorithm.
+        Base land types map for final zonal statistics. Specifically to
+        ESTIMAP's recrceation mapping algorithm
 
     base_reclassification_rules :
         Reclassification rules for the input base map
@@ -3326,12 +3331,10 @@ def compute_supply(base,
                     quiet=True)
 
         # export to csv
-        csv_extension = '.csv'  # FIXME: make global, i.e. CSV_PREFIX ?
-
         if 'supply_filename' in kwargs:
 
             supply_filename = kwargs.get('supply_filename')
-            supply_filename += csv_extension
+            supply_filename += CSV_EXTENSION
             nested_dictionary_to_csv(supply_filename,
                     statistics_dictionary)
             del(supply_filename)
@@ -3339,7 +3342,7 @@ def compute_supply(base,
         if 'use_filename' in kwargs:
 
             use_filename = kwargs.get('use_filename')
-            use_filename += csv_extension
+            use_filename += CSV_EXTENSION
             uses = compile_use_table(statistics_dictionary)
             dictionary_to_csv(use_filename, uses)
             del(use_filename)
@@ -3467,7 +3470,9 @@ def main():
     landcover_reclassification_rules = options['land_classes']
 
     # if 'land_classes' is a file
-    if landcover and landcover_reclassification_rules and ':' not in landcover_reclassification_rules:
+    if (landcover and
+        landcover_reclassification_rules and
+        ':' not in landcover_reclassification_rules):
         msg = "Land cover reclassification rules from file: {rules}."
         msg = msg.format(rules = landcover_reclassification_rules)
         grass.verbose(_(msg))
@@ -3492,7 +3497,9 @@ def main():
 
         # if landcover is a "MAES" land cover, no need to reclassify!
 
-    if landuse and landcover_reclassification_rules and ':' in landcover_reclassification_rules:
+    if (landuse and
+        landcover_reclassification_rules and
+        ':' in landcover_reclassification_rules):
         msg = "Using provided string of rules to reclassify the '{map}' map"
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
@@ -3572,7 +3579,8 @@ def main():
 
     spectrum_distance_categories = options['spectrum_distances']
     if ':' in spectrum_distance_categories:
-        spectrum_distance_categories = string_to_file(spectrum_distance_categories,
+        spectrum_distance_categories = string_to_file(
+                spectrum_distance_categories,
                 name=recreation_spectrum)
         # remove_at_exit.append(spectrum_distance_categories) -- Not a map!
         remove_normal_files_at_exit.append(spectrum_distance_categories)
@@ -3659,7 +3667,8 @@ def main():
 
         draw_map(lakes)  # REMOVEME
         if lakes_coefficients:
-            metric, constant, kappa, alpha, score = get_coefficients(lakes_coefficients)
+            metric, constant, kappa, alpha, score = get_coefficients(
+                    lakes_coefficients)
 
         lakes_proximity = compute_attractiveness(
                 raster = lakes,
@@ -3701,7 +3710,9 @@ def main():
         try:
 
             if not coastline:
-                msg = "The coastline map is required in order to compute attractiveness based on the coast geomorphology raster map"
+                msg = "The coastline map is required in order to "
+                msg += "compute attractiveness based on the "
+                msg += "coast geomorphology raster map"
                 msg = msg.format(c=water_component)
                 grass.fatal(_(msg))
 
@@ -3724,7 +3735,8 @@ def main():
         draw_map(bathing_water)  # REMOVEME
 
         if bathing_water_coefficients:
-            metric, constant, kappa, alpha = get_coefficients(bathing_water_coefficients)
+            metric, constant, kappa, alpha = get_coefficients(
+                    bathing_water_coefficients)
 
         bathing_water_proximity = compute_attractiveness(
                 raster = bathing_water,
@@ -3999,7 +4011,7 @@ def main():
 
         zerofy_and_normalise_component(
                 components = recreation_opportunity_component,
-                threshhold = THRESHHOLD_0003,
+                threshhold = THRESHHOLD_0001,
                 output_name = tmp_recreation_opportunity)
 
         # Why threshhold 0.0003? How and why it differs from 0.0001?

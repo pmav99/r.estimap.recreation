@@ -1044,94 +1044,6 @@ def string_to_file(string, **kwargs):
             # outside the function?
         # Wrap complete main() in a `try` statement?
 
-def draw_map(mapname, **kwargs):
-    """
-    Set the GRASS_RENDER_FILE and draw the requested raster map using
-    Terminology's `tycat` utility.
-
-    Parameters
-    ----------
-    mapname :
-        Name of input raster map to draw on terminology
-
-    width :
-        Optional parameter to set the width
-
-    height :
-        Optional parameter to set the height
-
-    Returns
-    -------
-    This function does not return any object
-
-    Examples
-    --------
-    ..
-    draw_map(raster_map_name)
-    draw_map(raster_map_name, width='50', height='50')
-    ..
-    """
-    if flags['d']:
-
-        # Local globals
-        width = 30
-        height = 30
-
-        # g.message(_("Map name: {m}".format(m=mapname)))
-        # Do not draw maps that are all 0
-        minimum = grass.raster_info(mapname)['min']
-        grass.debug(_("Minimum: {m}".format(m=minimum)))
-        # g.message(_("Minimum: {m}".format(m=minimum)))
-        maximum = grass.raster_info(mapname)['max']
-        grass.debug(_("Maximum: {m}".format(m=maximum)))
-        # g.message(_("Maximum: {m}".format(m=maximum)))
-
-        if minimum == None and maximum == None:
-            msg = "All cells in map '{name}' are NULL. "
-            msg += "If unexpected, please check for processing errors."
-            msg = msg.format(name=mapname)
-            grass.warning(_(msg))
-            return
-
-        if minimum == 0 and maximum == 0:
-            msg = "Map '{name}' is all 0. Not drawing".format(name=mapname)
-            grass.warning(_(msg))
-            return
-
-        render_file = "{directory}/{prefix}{name}{suffix}.{extension}"
-        if 'prefix' in kwargs:
-            prefix = kwargs.get('prefix') + '_'
-        else:
-            prefix = ''
-
-        if 'suffix' in kwargs:
-            suffix = '_' + kwargs.get('suffix')
-        else:
-            suffix = ''
-
-        render_file = render_file.format(
-                directory = grass_render_directory,
-                prefix=prefix,
-                name = mapname,
-                suffix=suffix,
-                extension = 'png')
-
-        os.putenv("GRASS_RENDER_FILE", render_file)
-        # os.environ[GRASS_RENDER_FILE] = render_file
-
-        run("d.erase", bgcolor='black', flags='f')
-        run("d.rast", map=mapname)
-        # run("d.rast.leg", map=mapname)
-
-        if 'width' in kwargs and 'height' in kwargs:
-            width = kwargs.get('width')
-            height = kwargs.get('height')
-
-        g.message(_(" >>> Map file: {f}".format(f=render_file)))
-        command = "tycat -g {w}x{h} {filename}"
-        command = command.format(filename=render_file, w=width, h=height)
-        subprocess.Popen(command.split())
-
 def save_map(mapname):
     """Helper function to save some in-between maps, assisting in debugging
 
@@ -1340,7 +1252,7 @@ def recode_map(raster, rules, colors, output):
     r.null(map=raster, null=0)  # Set NULLs to 0
     msg = "To Do: confirm if setting the '{raster}' map's NULL cells to 0 is right"
     msg = msg.format(raster=raster)
-    grass.warning(_(msg))
+    grass.debug(_(msg))
     # Is this right?
     # ------------------------------------------
 
@@ -1357,7 +1269,6 @@ def recode_map(raster, rules, colors, output):
     #     tmp_output = save_map(output)
 
     grass.verbose(_("Scored map {name}:".format(name=raster)))
-    draw_map(output)  # REMOVEME
 
 def float_to_integer(double):
     """Converts an FCELL or DCELL raster map into a CELL raster map
@@ -1550,7 +1461,6 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     ...
 
     """
-    draw_map(raster)  # REMOVEME
     distance_terms = [str(raster),
                       str(metric),
                       'distance',
@@ -1579,9 +1489,6 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         msg = msg.format(mask=mask)
         grass.verbose(_(msg))
         r.mask(raster=mask, flags='i', overwrite=True, quiet=True)
-        draw_map('MASK')
-
-    draw_map(tmp_distance)  # REMOVEME
 
     # FIXME: use a parameters dictionary, avoid conditionals
     if 'score' in kwargs:
@@ -1627,7 +1534,6 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     del(distance_function)
 
     tmp_output = save_map(tmp_distance_map)
-    draw_map(tmp_distance_map)  # REMOVEME
     return tmp_distance_map
 
 def neighborhood_function(raster, method, size, distance_map):
@@ -1668,29 +1574,13 @@ def neighborhood_function(raster, method, size, distance_map):
             size=size,
             overwrite=True)
 
-    # ----------------------------------------------------- REMOVEME
-    msg = "In neighborhood_function(), output of r.neighbors: {name}"
-    msg = msg.format(name=neighborhood_output)
-    grass.debug(_(neighborhood_output))
-    # ---------------------------------------------------------------
-
     scoring_function = "{neighborhood} * {distance}"
     scoring_function = scoring_function.format(
             neighborhood=neighborhood_output,
             distance=distance_map)
 
-    # ----------------------------------------------------- REMOVEME
-    msg = "Scoring function: {f}".format(f=scoring_function)
-    grass.debug(_(msg))
-    # ---------------------------------------------------------------
-
     filtered_output = distance_map
     filtered_output += '_' + method + '_' + str(size)
-
-    # ----------------------------------------------------- REMOVEME
-    msg = "Filtered output: {o}".format(o=filtered_output)
-    grass.debug(_(msg))
-    # ---------------------------------------------------------------
 
     neighborhood_function = equation.format(result=filtered_output,
             expression=scoring_function)
@@ -1698,8 +1588,6 @@ def neighborhood_function(raster, method, size, distance_map):
     grass.debug(_("Expression: {e}".format(e=neighborhood_function)))
     # ---------------------------------------------------------------
     grass.mapcalc(neighborhood_function, overwrite=True)
-
-    draw_map(filtered_output)  # REMOVEME
 
     # tmp_distance_map = filtered_output
 
@@ -1751,13 +1639,10 @@ def smooth_component(component, method, size):
                 smooth_map(item,
                         method=method,
                         size=size)
-                draw_map(item)  # REMOVEME
-
         else:
             smooth_map(component[0],
                     method=method,
                     size=size)
-            draw_map(component)  # REMOVEME
 
     except IndexError:
         grass.verbose(_("Index Error"))  # FIXME: some useful message... ?
@@ -1852,7 +1737,6 @@ def normalize_map (raster, output_name):
         expression=normalisation)
     grass.mapcalc(normalisation_equation, overwrite=True)
 
-    draw_map(output_name)  # REMOVEME
     get_univariate_statistics(output_name)
 
     del(minimum)
@@ -1978,7 +1862,6 @@ def classify_recreation_component(component, rules, output_name):
             rules='-',
             stdin=rules,
             output=output_name)
-    draw_map(output_name)  # REMOVEME
 
 def compute_artificial_proximity(raster, distance_categories, **kwargs):
     """
@@ -2041,7 +1924,6 @@ def compute_artificial_proximity(raster, distance_categories, **kwargs):
 #     else:
 #         g.message(_("Output map {name}:".format(name=tmp_output)))
 
-    draw_map(tmp_output)  # REMOVEME
     return tmp_output
 
 def artificial_accessibility_expression(artificial_proximity, roads_proximity):
@@ -2156,7 +2038,6 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
     del(accessibility_expression)
     del(accessibility_equation)
 
-    draw_map(tmp_output)  # REMOVEME
     output = save_map(tmp_output)
 
     return output
@@ -2255,7 +2136,6 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
-    draw_map(spectrum)  # REMOVEME
     del(spectrum_expression)
     del(spectrum_equation)
     return spectrum
@@ -2861,19 +2741,7 @@ def compute_supply(base,
     # MASK areas of high quality recreation
     r.mask(raster=highest_spectrum, overwrite=True, quiet=True)
 
-    draw_map('MASK')
-
     # Reclassify land cover map to MAES ecosystem types
-    # ------------------------------------------------------------ REMOVEME
-    msg = "Land cover reclassified rules: {r}"
-    msg = msg.format(r=base_reclassification_rules)
-    grass.debug(_(msg))
-    with open(base_reclassification_rules) as f:
-            grass.debug(f.read())
-    # ------------------------------------------------------------ REMOVEME
-
-    draw_map(base)  # REMOVEME
-
     r.reclass(input=base,
             rules=base_reclassification_rules,
             output=reclassified_base,
@@ -2885,8 +2753,6 @@ def compute_supply(base,
             expression=reclassified_base)
     r.mapcalc(copy_equation, overwrite=True)
     del(copy_equation)
-
-    draw_map(reclassified_base)  # REMOVEME
 
     # Count flow within each land cover category
     r.stats_zonal(base=base,
@@ -2901,8 +2767,6 @@ def compute_supply(base,
     r.colors(map=flow_in_base,
         color=MOBILITY_COLORS,
         quiet=True)
-
-    draw_map(flow_in_base)  # REMOVEME
 
     # Parse aggregation raster categories and labels
     categories = grass.parse_command('r.category',
@@ -2987,9 +2851,6 @@ def compute_supply(base,
                 ewres=ew_resolution,
                 quiet=True)
 
-        draw_map('MASK')  # REMOVEME
-        draw_map(highest_spectrum)  # REMOVEME
-
         # Count number of cells within each land category
         r.stats_zonal(
                 flags='r',
@@ -3024,8 +2885,6 @@ def compute_supply(base,
                 separator=':')
         del(cells_rules)
 
-        draw_map(cells)  # REMOVEME
-
         # Compute extent of each land category
         extent_expression = "@{cells} * area()"
         extent_expression = extent_expression.format(cells=cells)
@@ -3044,13 +2903,6 @@ def compute_supply(base,
                 overwrite=True,
                 verbose=False,
                 quiet=True)
-
-        # ------------------------------------------- REMOVEME
-        extent_map = grass.parse_command('r.category',
-                map=extent,
-                delimiter='\t')
-        grass.debug(_("Extent: {e}".format(e=extent_map)))
-        # ------------------------------------------- REMOVEME
 
         # Write land suitability scores as an ASCII file
         suitability_scores_as_labels = string_to_file(
@@ -3100,12 +2952,6 @@ def compute_supply(base,
             for x
             in weighted_extents.values()])
         weighted_extents['sum'] = category_sum
-
-        # ------------------------------------------- REMOVEME
-        msg = "Weighted extents: {we}".format(we=weighted_extents)
-        grass.debug(_(msg))
-        del(msg)
-        # ------------------------------------------- REMOVEME
 
         # Create a map to hold fractions of each weighted extent to the sum
         # See also:
@@ -3163,8 +3009,6 @@ def compute_supply(base,
                 result=flow,
                 expression=flow_expression)
         r.mapcalc(flow_equation, overwrite=True)
-
-        draw_map(flow)  # REMOVEME
 
         # Write flow figures as raster category labels
         r.stats_zonal(base=reclassified_base,
@@ -3603,7 +3447,6 @@ def main():
         msg = "Masking NULL cells based on '{mask}'".format(mask=mask)
         grass.verbose(_(msg))
         r.mask(raster=mask, overwrite=True, quiet=True)
-        draw_map(mask)  # REMOVEME
 
     if landuse_extent:
         grass.use_temp_region()  # to safely modify the region
@@ -3619,12 +3462,9 @@ def main():
 
     if land:
 
-        draw_map(land)  # REMOVEME
         land_component = land.split(',')
 
     if landuse and suitability_scores:
-
-        draw_map(landuse)  # REMOVEME
 
         msg = "Deriving land suitability from '{landuse}' "
         msg += "based on rules described in file '{rules}'"
@@ -3635,8 +3475,6 @@ def main():
                 rules=suitability_scores,
                 colors=SCORE_COLORS,
                 output=suitability_map_name)
-
-        draw_map(suitability_map_name)  # REMOVEME
 
         append_map_to_component(
                 raster=suitability_map_name,
@@ -3651,13 +3489,6 @@ def main():
     if water:
 
         water_component = water.split(',')
-
-        if len(water_component) > 1:
-            for component in water_component:
-                draw_map(component)  # REMOVEME
-        if len(water_component) == 1:
-            draw_map(water_component)  # REMOVEME
-
         msg = "Water component includes currently: {component}"
         msg = msg.format(component=water_component)
         grass.debug(_(msg))
@@ -3665,7 +3496,6 @@ def main():
 
     if lakes:
 
-        draw_map(lakes)  # REMOVEME
         if lakes_coefficients:
             metric, constant, kappa, alpha, score = get_coefficients(
                     lakes_coefficients)
@@ -3691,7 +3521,6 @@ def main():
 
     if coastline:
 
-        draw_map(coastline)  # REMOVEME
         coast_proximity = compute_attractiveness(
                 raster = coastline,
                 metric = EUCLIDEAN,
@@ -3732,8 +3561,6 @@ def main():
 
     if bathing_water:
 
-        draw_map(bathing_water)  # REMOVEME
-
         if bathing_water_coefficients:
             metric, constant, kappa, alpha = get_coefficients(
                     bathing_water_coefficients)
@@ -3766,16 +3593,9 @@ def main():
 
         natural_component = natural.split(',')
 
-        if len(natural_component) > 1:
-            for component in natural_component:
-                draw_map(component)  # REMOVEME
-        if len(natural_component) == 1:
-            draw_map(natural_component)  # REMOVEME
-
     if protected:
         msg = "Scoring protected areas '{protected}' based on '{rules}'"
         grass.verbose(_(msg.format(protected=protected, rules=protected_scores)))
-        draw_map(protected)  # REMOVEME
 
         protected_areas = protected_areas_map_name
 
@@ -3804,7 +3624,6 @@ def main():
             # remove 'land_map' from 'land_component'
             # process and add it back afterwards
             land_map = land_component.pop(0)
-            draw_map(land_map)  # REMOVEME
 
             '''
             This section sets NULL cells to 0.
@@ -3814,15 +3633,7 @@ def main():
             suitability_map = tmp_map_name(name=land_map)
             subset_land = equation.format(result = suitability_map,
                     expression = land_map)
-
-            # REMOVEME
-            msg = "Subsetting '{subset}' map".format(subset=suitability_map)
-            grass.debug(_(msg))
-            del(msg)
-
             r.mapcalc(subset_land)
-
-            draw_map(suitability_map)  # REMOVEME
 
             grass.debug(_("Setting NULL cells to 0"))  # REMOVEME ?
             r.null(map=suitability_map, null=0)  # Set NULLs to 0
@@ -3931,7 +3742,6 @@ def main():
         infrastructure_components = []
 
         if infrastructure:
-            draw_map(infrastructure)  # REMOVEME
             infrastructure_component.append(infrastructure)
 
         '''Artificial surfaces (includung Roads)'''
@@ -3980,8 +3790,6 @@ def main():
     if any([recreation_spectrum, demand, flow, supply]):
 
         recreation_opportunity_component = []
-
-        draw_map(infrastructure_component)  # REMOVEME
 
         # input
         zerofy_and_normalise_component(
@@ -4101,7 +3909,6 @@ def main():
         highest_spectrum_equation = equation.format(result=highest_spectrum,
                 expression=highest_spectrum_expression)
         r.mapcalc(highest_spectrum_equation, overwrite=True)
-        draw_map(highest_spectrum)  # REMOVEME
 
         '''Distance map'''
 
@@ -4111,7 +3918,6 @@ def main():
                 metric=metric,
                 quiet=True,
                 overwrite=True)
-        draw_map(distance_to_highest_spectrum)  # REMOVEME
 
         '''Distance categories'''
 
@@ -4123,8 +3929,6 @@ def main():
                 rules=spectrum_distance_categories,
                 colors=SCORE_COLORS,
                 output=distance_categories_to_highest_spectrum)
-
-        draw_map(distance_categories_to_highest_spectrum)  # REMOVEME
 
         spectrum_distance_category_labels = string_to_file(
                 SPECTRUM_DISTANCE_CATEGORY_LABELS,
@@ -4142,8 +3946,6 @@ def main():
                 flags='z',
                 output=tmp_crossmap,
                 quiet=True)
-
-        draw_map(tmp_crossmap)  # REMOVEME
 
         grass.use_temp_region()  # to safely modify the region
         g.region(nsres=population_ns_resolution,
@@ -4173,7 +3975,6 @@ def main():
                 quiet=True)
 
         # ------------------------------------------- REMOVEME
-        draw_map(demand)
         # if info:
         #     r.report(map=demand, units=('k','c','p'))
         # ------------------------------------------- REMOVEME
@@ -4221,8 +4022,6 @@ def main():
                     expression=unmet_demand_expression)
             r.mapcalc(unmet_demand_equation, overwrite=True)
 
-            draw_map(unmet_demand, width='45', height='45')  # REMOVEME
-
             if base_vector:
                 update_vector(vector=base_vector,
                         raster=unmet_demand,
@@ -4257,8 +4056,6 @@ def main():
             mobility_equation = equation.format(result=flow,
                     expression=mobility_expression)
             r.mapcalc(mobility_equation, overwrite=True)
-
-            draw_map(flow, width='45', height='45')  # REMOVEME
 
             if base_vector:
                 update_vector(vector=base_vector,

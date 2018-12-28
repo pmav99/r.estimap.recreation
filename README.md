@@ -11,11 +11,8 @@ For the sake of demonstrating the usage of the module, we use the
 following "component" maps
 
 -   area_of_interest
-
 -   land_suitability
-
 -   water_resources
-
 -   protected_areas
 
 (available to download at: ...) to derive a recreation *potential* map.

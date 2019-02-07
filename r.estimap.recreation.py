@@ -3101,9 +3101,6 @@ def compute_supply(
     # Maybe return list of flow maps?  Requires unique flow map names
     return flows
 
-    grass.del_temp_region()  # restoring previous region settings
-    # grass.verbose("Original Region restored")
-
 
 def main():
     """

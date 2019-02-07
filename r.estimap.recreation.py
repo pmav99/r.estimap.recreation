@@ -647,7 +647,6 @@ from grass.pygrass.modules.shortcuts import vector as v
 # from scoring_schemes import corine
 
 # globals
-remove_at_exit = []
 remove_normal_files_at_exit = []
 rename_at_exit = []
 
@@ -922,6 +921,22 @@ def run(cmd, **kwargs):
     grass.run_command(cmd, quiet=True, **kwargs)
 
 
+def remove_map(map_name):
+    """ Remove the provided map """
+    grass.verbose("Removing %s" % map_name)
+    g.remove(
+        flags="f",
+        type=("raster", "vector"),
+        name=map_name,
+        quiet=True,
+    )
+
+
+def remove_map_at_exit(map_name):
+    """ Remove the provided map when the program exits """
+    atexit.register(lambda: remove_map(map_name))
+
+
 def tmp_map_name(**kwargs):
     """Return a temporary map name, for example:
 
@@ -961,7 +976,7 @@ def cleanup():
     )
 
     # inform
-    if any([temporary_raster_maps, remove_at_exit, remove_normal_files_at_exit]):
+    if any([temporary_raster_maps, remove_normal_files_at_exit]):
         g.message("Removing temporary files")
 
         # remove temporary maps
@@ -970,15 +985,6 @@ def cleanup():
                 flags="f",
                 type="raster",
                 pattern="tmp.{pid}*".format(pid=os.getpid()),
-                quiet=True,
-            )
-
-        # remove raster and vector maps in handcrafted list
-        if remove_at_exit:
-            g.remove(
-                flags="f",
-                type=("raster", "vector"),
-                name=",".join(remove_at_exit),
                 quiet=True,
             )
 
@@ -2722,25 +2728,25 @@ def compute_supply(
         # Intermediate names
 
         cells = highest_spectrum + ".cells" + "." + category
-        remove_at_exit.append(cells)
+        remove_map_at_exit(cells)
 
         extent = highest_spectrum + ".extent" + "." + category
-        remove_at_exit.append(extent)
+        remove_map_at_exit(extent)
 
         weighted = highest_spectrum + ".weighted" + "." + category
-        remove_at_exit.append(weighted)
+        remove_map_at_exit(weighted)
 
         fractions = base + ".fractions" + "." + category
-        remove_at_exit.append(fractions)
+        remove_map_at_exit(fractions)
 
         flow_category = "_flow_" + category
         flow = base + flow_category
-        remove_at_exit.append(flow)
+        remove_map_at_exit(flow)
 
         flow_in_reclassified_base = reclassified_base + "_flow"
         flow_in_category = reclassified_base + flow_category
         flows.append(flow_in_category)  # add to list for patching
-        remove_at_exit.append(flow_in_category)
+        remove_map_at_exit(flow_in_category)
 
         # Output names
 
@@ -2845,7 +2851,7 @@ def compute_supply(
             quiet=True,
             verbose=False,
         )
-        remove_at_exit.append(base_scores)
+        remove_map_at_exit(base_scores)
 
         # Compute weighted extents
         weighted_expression = "@{extent} * float(@{scores})"
@@ -3068,7 +3074,7 @@ def compute_supply(
 
     # remove the map 'reclassified_base'
     # g.remove(flags='f', type='raster', name=reclassified_base, quiet=True)
-    # remove_at_exit.append(reclassified_base)
+    # remove_map_at_exit(reclassified_base)
 
     if not print_only:
 
@@ -3329,7 +3335,6 @@ def main():
         spectrum_distance_categories = string_to_file(
             spectrum_distance_categories, name=recreation_spectrum
         )
-        # remove_at_exit.append(spectrum_distance_categories) -- Not a map!
         remove_normal_files_at_exit.append(spectrum_distance_categories)
 
     highest_spectrum = "highest_recreation_spectrum"
@@ -3565,7 +3570,7 @@ def main():
     if land_component and average_filter:
         smooth_component(land_component, method="average", size=7)
 
-    # remove_at_exit.extend(land_component)
+    remove_map_at_exit(land_component)
 
     if len(water_component) > 1:
         grass.verbose(_("\nNormalize 'Water' component\n"))
@@ -3576,7 +3581,7 @@ def main():
     else:
         recreation_potential_component.extend(water_component)
 
-    # remove_at_exit.append(water_component_map_name)
+    remove_map_at_exit(water_component_map_name)
 
     if len(natural_component) > 1:
         grass.verbose(_("\nNormalize 'Natural' component\n"))
@@ -3592,7 +3597,7 @@ def main():
     if natural_component and average_filter:
         smooth_component(natural_component, method="average", size=7)
 
-    # remove_at_exit.append(natural_component_map_name)
+    remove_map_at_exit(natural_component_map_name)
 
     """ Recreation Potential [Output] """
 
@@ -3717,7 +3722,7 @@ def main():
         # zerofy_and_normalise_component(recreation_component,
         #         THRESHHOLD_0001, recreation_component_map_name)
         # recreation_opportunity_component.append(recreation_component_map_name)
-        # remove_at_exit.append(recreation_component_map_name)
+        # remove_map_at_exit(recreation_component_map_name)
 
         # intermediate
 
@@ -3771,7 +3776,7 @@ def main():
 
         if not recreation_spectrum and any([demand, flow, supply]):
             recreation_spectrum = tmp_map_name(name="recreation_spectrum")
-            remove_at_exit.append(recreation_spectrum)
+            remove_map_at_exit(recreation_spectrum)
 
         recreation_spectrum = compute_recreation_spectrum(
             potential=tmp_recreation_potential_categories,
@@ -3846,7 +3851,7 @@ def main():
 
         distance_categories_to_highest_spectrum = "categories_of_"
         distance_categories_to_highest_spectrum += distance_to_highest_spectrum
-        remove_at_exit.append(distance_categories_to_highest_spectrum)  # FIXME
+        remove_map_at_exit(distance_categories_to_highest_spectrum)  # FIXME
 
         recode_map(
             raster=distance_to_highest_spectrum,
@@ -3966,7 +3971,7 @@ def main():
         if not flow and any([supply, aggregation]):
 
             flow = flow_map_name
-            remove_at_exit.append(flow)
+            remove_map_at_exit(flow)
 
         if flow or any([supply, aggregation]):
 

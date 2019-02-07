@@ -2163,7 +2163,7 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     return spectrum
 
 
-def update_meta(raster, title):
+def update_meta(raster, title, timestamp=None):
     """
     Update metadata of given raster map
 
@@ -2214,7 +2214,7 @@ def update_meta(raster, title):
     del (source2)
 
 
-def export_map(input_name, title, categories, colors, output_name):
+def export_map(input_name, title, categories, colors, output_name, timestamp):
     """
     Export a raster map by renaming the (temporary) raster map name
     'input_name' to the requested output raster map name 'output_name'.
@@ -2270,7 +2270,7 @@ def export_map(input_name, title, categories, colors, output_name):
     r.category(map=input_name, rules=raster_category_labels, separator=":")
 
     # update meta and colors
-    update_meta(input_name, title)
+    update_meta(input_name, title, timestamp)
     r.colors(map=input_name, rules="-", stdin=colors, quiet=True)
     # rename to requested output name
     g.rename(raster=(input_name, output_name), quiet=True)
@@ -3226,9 +3226,7 @@ def main():
     info = flags["i"]
     print_only = flags["p"]
 
-    global timestamp
     timestamp = options["timestamp"]
-
 
     metric = options["metric"]
     units = options["units"]
@@ -3750,6 +3748,7 @@ def main():
             categories=POTENTIAL_CATEGORY_LABELS,
             colors=POTENTIAL_COLORS,
             output_name=recreation_potential,
+            timestamp=timestamp,
         )
 
     # Infrastructure to access recreational facilities, amenities, services
@@ -3883,6 +3882,7 @@ def main():
                 categories=OPPORTUNITY_CATEGORY_LABELS,
                 colors=OPPORTUNITY_COLORS,
                 output_name=recreation_opportunity,
+                timestamp=timestamp,
             )
 
         # Recreation Spectrum: Potential + Opportunity [Output]

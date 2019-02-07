@@ -2586,6 +2586,7 @@ def compute_supply(
     aggregation,
     ns_resolution,
     ew_resolution,
+    print_only=False,
     **kwargs
 ):
     """
@@ -3116,10 +3117,9 @@ def main():
     info = flags["i"]
     save_temporary_maps = flags["s"]
 
+    # Flags that are being used
     average_filter = flags["f"]
     landuse_extent = flags["e"]
-
-    global print_only
     print_only = flags["p"]
 
     timestamp = options["timestamp"]
@@ -4029,6 +4029,7 @@ def main():
             aggregation=aggregation,
             ns_resolution=population_ns_resolution,
             ew_resolution=population_ew_resolution,
+            print_only=print_only,
             **supply_parameters
         )
 

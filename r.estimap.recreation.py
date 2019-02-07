@@ -647,7 +647,6 @@ from grass.pygrass.modules.shortcuts import vector as v
 # from scoring_schemes import corine
 
 # globals
-remove_normal_files_at_exit = []
 rename_at_exit = []
 
 CITATION_RECREATION_POTENTIAL = "Zulian (2014)"
@@ -937,6 +936,11 @@ def remove_map_at_exit(map_name):
     atexit.register(lambda: remove_map(map_name))
 
 
+def remove_files_at_exit(filename):
+    """ Remove the specified file when the program exits """
+    atexit.register(lambda: os.unlink(filename))
+
+
 def tmp_map_name(**kwargs):
     """Return a temporary map name, for example:
 
@@ -976,7 +980,7 @@ def cleanup():
     )
 
     # inform
-    if any([temporary_raster_maps, remove_normal_files_at_exit]):
+    if any([temporary_raster_maps]):
         g.message("Removing temporary files")
 
         # remove temporary maps
@@ -987,11 +991,6 @@ def cleanup():
                 pattern="tmp.{pid}*".format(pid=os.getpid()),
                 quiet=True,
             )
-
-        # remove normal files at OS level
-        if remove_normal_files_at_exit:
-            for item in remove_normal_files_at_exit:
-                os.unlink(item)
 
     # # remove MASK ? FIXME
     # if grass.find_file(name='MASK', element='cell')['file']:
@@ -2185,7 +2184,7 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
     raster_category_labels = string_to_file(string=categories, name=raster_categories)
 
     # add ascii file to removal list
-    remove_normal_files_at_exit.append(raster_category_labels)
+    remove_files_at_exit(raster_category_labels)
 
     # apply categories and description
     r.category(map=input_name, rules=raster_category_labels, separator=":")
@@ -2840,7 +2839,7 @@ def compute_supply(
         suitability_scores_as_labels = string_to_file(
             SUITABILITY_SCORES_LABELS, name=reclassified_base
         )
-        remove_normal_files_at_exit.append(suitability_scores_as_labels)
+        remove_files_at_exit(suitability_scores_as_labels)
 
         # Write scores as raster category labels
         r.reclass(
@@ -3189,7 +3188,7 @@ def main():
         suitability_scores = string_to_file(
             SUITABILITY_SCORES, name=suitability_map_name
         )
-        remove_normal_files_at_exit.append(suitability_scores)
+        remove_files_at_exit(suitability_scores)
 
     if landuse and suitability_scores and ":" in suitability_scores:
         msg = "Using provided string of rules to score land use classes in {map}"
@@ -3198,7 +3197,7 @@ def main():
         suitability_scores = string_to_file(
             suitability_scores, name=suitability_map_name
         )
-        remove_normal_files_at_exit.append(suitability_scores)
+        remove_files_at_exit(suitability_scores)
 
     # FIXME -----------------------------------------------------------------
 
@@ -3244,7 +3243,7 @@ def main():
         landcover_reclassification_rules = string_to_file(
             URBAN_ATLAS_TO_MAES_NOMENCLATURE, name=maes_ecosystem_types
         )
-        remove_normal_files_at_exit.append(landcover_reclassification_rules)
+        remove_files_at_exit(landcover_reclassification_rules)
 
         # if landcover is a "MAES" land cover, no need to reclassify!
 
@@ -3259,7 +3258,7 @@ def main():
         landcover_reclassification_rules = string_to_file(
             landcover_reclassification_rules, name=maes_land_classes
         )
-        remove_normal_files_at_exit.append(landcover_reclassification_rules)
+        remove_files_at_exit(landcover_reclassification_rules)
 
     # FIXME -----------------------------------------------------------------
 
@@ -3335,7 +3334,7 @@ def main():
         spectrum_distance_categories = string_to_file(
             spectrum_distance_categories, name=recreation_spectrum
         )
-        remove_normal_files_at_exit.append(spectrum_distance_categories)
+        remove_files_at_exit(spectrum_distance_categories)
 
     highest_spectrum = "highest_recreation_spectrum"
     crossmap = "crossmap"  # REMOVEME
@@ -3797,7 +3796,7 @@ def main():
         )
 
         # add to list for removal
-        remove_normal_files_at_exit.append(spectrum_category_labels)
+        remove_files_at_exit(spectrum_category_labels)
 
         # update category labels, meta and colors
         spectrum_categories = "categories_of_"
@@ -3864,7 +3863,7 @@ def main():
             SPECTRUM_DISTANCE_CATEGORY_LABELS,
             name=distance_categories_to_highest_spectrum,
         )
-        remove_normal_files_at_exit.append(spectrum_distance_category_labels)
+        remove_files_at_exit(spectrum_distance_category_labels)
 
         r.category(
             map=distance_categories_to_highest_spectrum,

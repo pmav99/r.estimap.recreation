@@ -1215,14 +1215,13 @@ def get_univariate_statistics(raster):
     ...
     """
     univariate = grass.parse_command("r.univar", flags="g", map=raster)
-    if info:
-        minimum = univariate["min"]
-        mean = univariate["mean"]
-        maximum = univariate["max"]
-        variance = univariate["variance"]
-        msg = "min {mn} | mean {avg} | max {mx} | variance {v}"
-        msg = msg.format(mn=minimum, avg=mean, mx=maximum, v=variance)
-        grass.verbose(_(msg))
+    minimum = univariate["min"]
+    mean = univariate["mean"]
+    maximum = univariate["max"]
+    variance = univariate["variance"]
+    msg = "min {mn} | mean {avg} | max {mx} | variance {v}"
+    msg = msg.format(mn=minimum, avg=mean, mx=maximum, v=variance)
+    grass.verbose(_(msg))
     return univariate
 
 
@@ -1723,11 +1722,9 @@ def normalize_map(raster, output_name):
     )
 
     # Maybe this can go in the parent function? 'raster' names are too long!
-    if info:
-        msg = "Normalization expression: "
-        msg += normalisation
-        grass.verbose(_(msg))
-    #
+    # msg = "Normalization expression: "
+    # msg += normalisation
+    # grass.verbose(_(msg))
 
     normalisation_equation = EQUATION.format(
         result=output_name, expression=normalisation
@@ -2019,10 +2016,9 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
         result=tmp_output, expression=accessibility_expression
     )
 
-    if info:
-        msg = "Equation for proximity to artificial areas: \n"
-        msg += accessibility_equation
-        grass.debug(msg)
+    msg = "Equation for proximity to artificial areas: \n"
+    msg += accessibility_equation
+    grass.verbose(msg)
 
     grass.verbose(_("Computing accessibility to artificial surfaces"))
     grass.mapcalc(accessibility_equation, overwrite=True)
@@ -2118,10 +2114,9 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
 
     spectrum_equation = EQUATION.format(result=spectrum, expression=spectrum_expression)
 
-    if info:
-        msg = "Recreation Spectrum equation: \n"
-        msg += spectrum_equation
-        g.message(msg)
+    msg = "Recreation Spectrum equation: \n"
+    msg += spectrum_equation
+    grass.verbose(msg)
 
     grass.mapcalc(spectrum_equation, overwrite=True)
 
@@ -3016,10 +3011,12 @@ def compute_supply(
         reclassified_base_title += " " + category
         r.support(flow_in_category, title=reclassified_base_title)
 
-        # if info:
-        #     r.report(flags='hn',
-        #             map=(flow_in_category),
-        #             units=('k','c','p'))
+        # debugging
+        # r.report(
+            # flags='hn',
+            # map=(flow_in_category),
+            # units=('k','c','p'),
+        # )
 
         if print_only:
             r.stats(
@@ -3151,12 +3148,12 @@ def main():
     """Flags and Options"""
     options, flags = grass.parser()
 
+    info = flags["i"]
     average_filter = flags["f"]
     landuse_extent = flags["e"]
 
-    global info, save_temporary_maps, print_only
+    global save_temporary_maps, print_only
     save_temporary_maps = flags["s"]
-    info = flags["i"]
     print_only = flags["p"]
 
     timestamp = options["timestamp"]
@@ -3925,11 +3922,10 @@ def main():
         msg = msg.format(raster=landuse)
         grass.verbose(_(msg))
 
-        # if info:
-        #     population_statistics = get_univariate_statistics(population)
-        #     population_total = population_statistics['sum']
-        #     msg = "|i Population statistics: {s}".format(s=population_total)
-        #     g.message(_(msg))
+        population_statistics = get_univariate_statistics(population)
+        population_total = population_statistics['sum']
+        msg = "|i Population statistics: {s}".format(s=population_total)
+        grass.verbose(_(msg))
 
         """Demand Distribution"""
 
@@ -3945,11 +3941,6 @@ def main():
             overwrite=True,
             quiet=True,
         )
-
-        # ------------------------------------------- REMOVEME
-        # if info:
-        #     r.report(map=demand, units=('k','c','p'))
-        # ------------------------------------------- REMOVEME
 
         # copy 'reclassed' as 'normal' map (r.mapcalc)
         # so as to enable removal of it and its 'base' map
@@ -4081,9 +4072,8 @@ def main():
         grass.verbose("Original Region restored")
 
     # print citation
-    if info:
-        citation = "Citation: " + CITATION_RECREATION_POTENTIAL
-        g.message(citation)
+    citation = "Citation: " + CITATION_RECREATION_POTENTIAL
+    grass.verbose(citation)
 
 
 if __name__ == "__main__":

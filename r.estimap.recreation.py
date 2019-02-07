@@ -1049,36 +1049,6 @@ def string_to_file(string, **kwargs):
         # Wrap complete main() in a `try` statement?
 
 
-def save_map(mapname):
-    """Helper function to save some in-between maps, assisting in debugging
-
-    Parameters
-    ----------
-    mapname :
-        ...
-
-    Returns
-    -------
-    newname :
-        New name for the input raster map
-
-    Examples
-    --------
-    """
-    # run('r.info', map=mapname, flags='r')
-    # run('g.copy', raster=(mapname, 'DebuggingMap'))
-
-    #
-    # Needs re-design! FIXME
-    #
-
-    newname = mapname
-    if save_temporary_maps:
-        newname = "output_" + mapname
-        run("g.rename", raster=(mapname, newname))
-    return newname
-
-
 def merge_two_dictionaries(a, b):
     """Merge two dictionaries in via shallow copy.
     Source: https://stackoverflow.com/a/26853961/1172302"""
@@ -1267,9 +1237,6 @@ def recode_map(raster, rules, colors, output):
     r.recode(input=raster, rules=rules, output=output)
 
     r.colors(map=output, rules="-", stdin=SCORE_COLORS, quiet=True)
-
-    # if save_temporary_maps:
-    #     tmp_output = save_map(output)
 
     grass.verbose(_("Scored map {name}:".format(name=raster)))
 
@@ -1527,7 +1494,6 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     compress_status = grass.read_command("r.compress", flags="g", map=tmp_distance_map)
     grass.verbose(_("Compress status: {s}".format(s=compress_status)))
 
-    tmp_output = save_map(tmp_distance_map)
     return tmp_distance_map
 
 
@@ -2023,9 +1989,7 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
     grass.verbose(_("Computing accessibility to artificial surfaces"))
     grass.mapcalc(accessibility_equation, overwrite=True)
 
-    output = save_map(tmp_output)
-
-    return output
+    return tmp_output
 
 
 def recreation_spectrum_expression(potential, opportunity):
@@ -3148,12 +3112,14 @@ def main():
     """Flags and Options"""
     options, flags = grass.parser()
 
+    # Flags that are not being used
     info = flags["i"]
+    save_temporary_maps = flags["s"]
+
     average_filter = flags["f"]
     landuse_extent = flags["e"]
 
-    global save_temporary_maps, print_only
-    save_temporary_maps = flags["s"]
+    global print_only
     print_only = flags["p"]
 
     timestamp = options["timestamp"]

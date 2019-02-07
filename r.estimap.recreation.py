@@ -646,8 +646,6 @@ from grass.pygrass.modules.shortcuts import vector as v
 
 # from scoring_schemes import corine
 
-# globals
-rename_at_exit = []
 
 CITATION_RECREATION_POTENTIAL = "Zulian (2014)"
 SPACY_PLUS = " + "
@@ -967,30 +965,23 @@ def tmp_map_name(**kwargs):
     return temporary_filename
 
 
-def cleanup():
+def remove_temporary_maps():
     """Clean up temporary maps"""
 
-    if rename_at_exit:
-        if demand in rename_at_exit:
-            g.rename(raster=(demand_copy, demand))
-
     # get list of temporary maps
-    temporary_raster_maps = grass.list_strings(
-        type="raster", pattern="tmp.{pid}*".format(pid=os.getpid())
+    # temporary_raster_maps = grass.list_strings(
+        # type="raster", pattern="tmp.{pid}*".format(pid=os.getpid())
+    # )
+
+    # # remove temporary maps
+    # if temporary_raster_maps:
+    g.message("Removing temporary maps")
+    g.remove(
+        flags="f",
+        type="raster",
+        pattern="tmp.{pid}*".format(pid=os.getpid()),
+        quiet=True,
     )
-
-    # inform
-    if any([temporary_raster_maps]):
-        g.message("Removing temporary files")
-
-        # remove temporary maps
-        if temporary_raster_maps:
-            g.remove(
-                flags="f",
-                type="raster",
-                pattern="tmp.{pid}*".format(pid=os.getpid()),
-                quiet=True,
-            )
 
     # # remove MASK ? FIXME
     # if grass.find_file(name='MASK', element='cell')['file']:
@@ -4045,5 +4036,5 @@ def main():
 
 
 if __name__ == "__main__":
-    atexit.register(cleanup)
+    atexit.register(remove_temporary_maps)
     sys.exit(main())

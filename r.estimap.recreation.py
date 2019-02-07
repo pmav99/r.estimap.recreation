@@ -1485,7 +1485,6 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
 
     if "mask" in kwargs:
         mask = kwargs.get("mask")
-        # global mask
         msg = "Inverted masking to exclude non-NULL cells "
         msg += "from distance related computations based on '{mask}'"
         msg = msg.format(mask=mask)
@@ -2598,8 +2597,7 @@ def compile_use_table(supply):
     """
     uses = {}
     for outer_key, outer_value in supply.items():
-        dictionaries = statistics_dictionary[outer_key]
-
+        dictionaries = outer_value
         use_values = []
         for key, value in dictionaries.items():
             use_value = value[0]
@@ -2720,10 +2718,9 @@ def compute_supply(
     base_scores = base + ".scores"
 
     # Define lists and dictionaries to hold intermediate data
+    statistics_dictionary = {}
     weighted_extents = {}
     flows = []
-    global statistics_dictionary
-    statistics_dictionary = {}
 
     # MASK areas of high quality recreation
     r.mask(raster=highest_spectrum, overwrite=True, quiet=True)

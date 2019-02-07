@@ -647,19 +647,17 @@ from grass.pygrass.modules.shortcuts import vector as v
 # from scoring_schemes import corine
 
 # globals
-
-global grass_render_directory
-grass_render_directory = "/geo/grassdb/render"
+remove_at_exit = []
+remove_normal_files_at_exit = []
+rename_at_exit = []
 
 CITATION_RECREATION_POTENTIAL = "Zulian (2014)"
 SPACY_PLUS = " + "
 EQUATION = "{result} = {expression}"  # basic equation for mapcalc
 
-global THRESHHOLD_ZERO, THRESHHOLD_0001, THRESHHOLD_0003
 THRESHHOLD_ZERO = 0
 THRESHHOLD_0001 = 0.0001
 
-global CSV_EXTENSION, COMMA, EUCLIDEAN, NEIGHBORHOOD_SIZE, NEIGHBORHOOD_METHOD
 CSV_EXTENSION = ".csv"
 COMMA = "comma"
 EUCLIDEAN = "euclidean"
@@ -3218,12 +3216,12 @@ def main():
     """
 
     """Flags and Options"""
+    options, flags = grass.parser()
 
-    global average_filter
     average_filter = flags["f"]
+    landuse_extent = flags["e"]
 
     global info, save_temporary_maps, print_only
-    landuse_extent = flags["e"]
     save_temporary_maps = flags["s"]
     info = flags["i"]
     print_only = flags["p"]
@@ -3231,12 +3229,7 @@ def main():
     global timestamp
     timestamp = options["timestamp"]
 
-    global remove_at_exit, remove_normal_files_at_exit, rename_at_exit
-    remove_at_exit = []
-    remove_normal_files_at_exit = []
-    rename_at_exit = []
 
-    global metric, units
     metric = options["metric"]
     units = options["units"]
     if len(units) > 1:
@@ -4174,6 +4167,5 @@ def main():
 
 
 if __name__ == "__main__":
-    options, flags = grass.parser()
     atexit.register(cleanup)
     sys.exit(main())

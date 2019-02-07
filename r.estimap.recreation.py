@@ -623,29 +623,26 @@ collective: all or nothing; if any option is given, all must be given
 
 # required librairies
 
-
-
-import os, sys, subprocess
-import datetime, time
-import csv
-import math
-
-# import heapq
-
-"""Fake a file-like object from an in-script hardcoded string?"""
-# import StringIO
-# from cStringIO import StringIO
-
 import atexit
+import csv
+import datetime
+import math
+import os
+import subprocess
+import sys
+import time
+
+from pprint import pprint as pp
+
+if "GISBASE" not in os.environ:
+    g.message(_("You must be in GRASS GIS to run this program."))
+    sys.exit(1)
+
 import grass.script as grass
 from grass.exceptions import CalledModuleError
 from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
-
-if "GISBASE" not in os.environ:
-    g.message(_("You must be in GRASS GIS to run this program."))
-    sys.exit(1)
 
 # from scoring_schemes import corine
 

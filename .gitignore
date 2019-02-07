@@ -130,5 +130,7 @@ venv.bak/
 ### Python Patch ###
 .venv/
 
-
 # End of https://www.gitignore.io/api/python
+
+current.*
+master.*

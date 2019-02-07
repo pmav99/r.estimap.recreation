@@ -3235,7 +3235,6 @@ def main():
 
     """names for input, output, output suffix, options"""
 
-    global mask
     mask = options["mask"]
 
     """

@@ -651,10 +651,9 @@ from grass.pygrass.modules.shortcuts import vector as v
 global grass_render_directory
 grass_render_directory = "/geo/grassdb/render"
 
-global equation, citation, spacy_plus
-citation_recreation_potential = "Zulian (2014)"
-spacy_plus = " + "
-equation = "{result} = {expression}"  # basic equation for mapcalc
+CITATION_RECREATION_POTENTIAL = "Zulian (2014)"
+SPACY_PLUS = " + "
+EQUATION = "{result} = {expression}"  # basic equation for mapcalc
 
 global THRESHHOLD_ZERO, THRESHHOLD_0001, THRESHHOLD_0003
 THRESHHOLD_ZERO = 0
@@ -1296,7 +1295,7 @@ def float_to_integer(double):
     """
     expression = "int({double})"
     expression = expression.format(double=double)
-    equation = equation.format(result=double, expression=expression)
+    equation = EQUATION.format(result=double, expression=expression)
     r.mapcalc(equation)
 
 
@@ -1521,7 +1520,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         basename = "_".join([raster, "attractiveness"])
         tmp_distance_map = tmp_map_name(name=basename)
 
-    distance_function = equation.format(
+    distance_function = EQUATION.format(
         result=tmp_distance_map, expression=distance_function
     )
 
@@ -1590,7 +1589,7 @@ def neighborhood_function(raster, method, size, distance_map):
     filtered_output = distance_map
     filtered_output += "_" + method + "_" + str(size)
 
-    neighborhood_function = equation.format(
+    neighborhood_function = EQUATION.format(
         result=filtered_output, expression=scoring_function
     )
     # ---------------------------------------------------------------
@@ -1682,7 +1681,7 @@ def zerofy_small_values(raster, threshhold, output_name):
     """
     rounding = "if({raster} < {threshhold}, 0, {raster})"
     rounding = rounding.format(raster=raster, threshhold=threshhold)
-    rounding_equation = equation.format(result=output_name, expression=rounding)
+    rounding_equation = EQUATION.format(result=output_name, expression=rounding)
     grass.mapcalc(rounding_equation, overwrite=True)
 
 
@@ -1744,7 +1743,7 @@ def normalize_map(raster, output_name):
         grass.verbose(_(msg))
     #
 
-    normalisation_equation = equation.format(
+    normalisation_equation = EQUATION.format(
         result=output_name, expression=normalisation
     )
     grass.mapcalc(normalisation_equation, overwrite=True)
@@ -1796,7 +1795,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
 
         # prepare string for mapcalc expression
         components = [name.split("@")[0] for name in components]
-        components_string = spacy_plus.join(components)
+        components_string = SPACY_PLUS.join(components)
         components_string = components_string.replace(" ", "")
         components_string = components_string.replace("+", "_")
 
@@ -1805,8 +1804,8 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
         tmp_output = tmp_map_name(name=components_string)
 
         # build mapcalc expression
-        component_expression = spacy_plus.join(components)
-        component_equation = equation.format(
+        component_expression = SPACY_PLUS.join(components)
+        component_equation = EQUATION.format(
             result=tmp_intermediate, expression=component_expression
         )
 
@@ -2045,7 +2044,7 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
         basename = "artificial_accessibility"
         tmp_output = tmp_map_name(name=basename)
 
-    accessibility_equation = equation.format(
+    accessibility_equation = EQUATION.format(
         result=tmp_output, expression=accessibility_expression
     )
 
@@ -2151,7 +2150,7 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
         potential=potential, opportunity=opportunity
     )
 
-    spectrum_equation = equation.format(result=spectrum, expression=spectrum_expression)
+    spectrum_equation = EQUATION.format(result=spectrum, expression=spectrum_expression)
 
     if info:
         msg = "Recreation Spectrum equation: \n"
@@ -2186,7 +2185,7 @@ def update_meta(raster, title):
     --------
     ...
     """
-    history = "\n" + citation_recreation_potential
+    history = "\n" + CITATION_RECREATION_POTENTIAL
     description_string = "Recreation {raster} map"
     description = description_string.format(raster=raster)
 
@@ -2784,7 +2783,7 @@ def compute_supply(
     # add to "remove_at_exit" after the reclassified maps!
 
     # Discard areas out of MASK
-    copy_equation = equation.format(
+    copy_equation = EQUATION.format(
         result=reclassified_base, expression=reclassified_base
     )
     r.mapcalc(copy_equation, overwrite=True)
@@ -2873,7 +2872,7 @@ def compute_supply(
             category=category,
         )
 
-        masking_equation = equation.format(result="MASK", expression=masking)
+        masking_equation = EQUATION.format(result="MASK", expression=masking)
 
         grass.mapcalc(masking_equation, overwrite=True)
 
@@ -2903,7 +2902,7 @@ def compute_supply(
         del (cells_categories)
 
         # Discard areas out of MASK
-        copy_equation = equation.format(result=cells, expression=cells)
+        copy_equation = EQUATION.format(result=cells, expression=cells)
         r.mapcalc(copy_equation, overwrite=True)
         del (copy_equation)
 
@@ -2914,7 +2913,7 @@ def compute_supply(
         # Compute extent of each land category
         extent_expression = "@{cells} * area()"
         extent_expression = extent_expression.format(cells=cells)
-        extent_equation = equation.format(result=extent, expression=extent_expression)
+        extent_equation = EQUATION.format(result=extent, expression=extent_expression)
         r.mapcalc(extent_equation, overwrite=True)
 
         # Write extent figures as labels
@@ -2951,7 +2950,7 @@ def compute_supply(
         weighted_expression = weighted_expression.format(
             extent=extent, scores=base_scores
         )
-        weighted_equation = equation.format(
+        weighted_equation = EQUATION.format(
             result=weighted, expression=weighted_expression
         )
         r.mapcalc(weighted_equation, overwrite=True)
@@ -3035,7 +3034,7 @@ def compute_supply(
         # Compute flow
         flow_expression = "@{fractions} * @{flow}"
         flow_expression = flow_expression.format(fractions=fractions, flow=flow_in_base)
-        flow_equation = equation.format(result=flow, expression=flow_expression)
+        flow_equation = EQUATION.format(result=flow, expression=flow_expression)
         r.mapcalc(flow_equation, overwrite=True)
 
         # Write flow figures as raster category labels
@@ -3067,7 +3066,7 @@ def compute_supply(
         # Check here again!
         # Output patch of all flow maps?
 
-        copy_equation = equation.format(
+        copy_equation = EQUATION.format(
             result=flow_in_category, expression=flow_in_category
         )
         r.mapcalc(copy_equation, overwrite=True)
@@ -3666,7 +3665,7 @@ def main():
             manually subsetting the input map is required.
             """
             suitability_map = tmp_map_name(name=land_map)
-            subset_land = equation.format(result=suitability_map, expression=land_map)
+            subset_land = EQUATION.format(result=suitability_map, expression=land_map)
             r.mapcalc(subset_land)
 
             grass.debug(_("Setting NULL cells to 0"))  # REMOVEME ?
@@ -3953,7 +3952,7 @@ def main():
             spectrum=recreation_spectrum,
             highest_recreation_category=HIGHEST_RECREATION_CATEGORY,
         )
-        highest_spectrum_equation = equation.format(
+        highest_spectrum_equation = EQUATION.format(
             result=highest_spectrum, expression=highest_spectrum_expression
         )
         r.mapcalc(highest_spectrum_equation, overwrite=True)
@@ -4043,7 +4042,7 @@ def main():
         demand_copy = demand + "_copy"
         copy_expression = "{input_raster}"
         copy_expression = copy_expression.format(input_raster=demand)
-        copy_equation = equation.format(result=demand_copy, expression=copy_expression)
+        copy_equation = EQUATION.format(result=demand_copy, expression=copy_expression)
         r.mapcalc(copy_equation, overwrite=True)
 
         # remove the reclassed map 'demand'
@@ -4081,7 +4080,7 @@ def main():
                 _("Unmet demand function: {f}".format(f=unmet_demand_expression))
             )
 
-            unmet_demand_equation = equation.format(
+            unmet_demand_equation = EQUATION.format(
                 result=unmet_demand, expression=unmet_demand_expression
             )
             r.mapcalc(unmet_demand_equation, overwrite=True)
@@ -4120,7 +4119,7 @@ def main():
 
             """Flow map"""
 
-            mobility_equation = equation.format(
+            mobility_equation = EQUATION.format(
                 result=flow, expression=mobility_expression
             )
             r.mapcalc(mobility_equation, overwrite=True)
@@ -4170,7 +4169,7 @@ def main():
 
     # print citation
     if info:
-        citation = "Citation: " + citation_recreation_potential
+        citation = "Citation: " + CITATION_RECREATION_POTENTIAL
         g.message(citation)
 
 

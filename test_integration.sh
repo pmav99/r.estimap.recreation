@@ -1,36 +1,54 @@
-#!/usr/bin/env bash
+#!/bin/bash - 
+#===============================================================================
+#
+#          FILE: test_integration_x.sh
+# 
+#         USAGE: ./test_integration_x.sh 
+# 
+#   DESCRIPTION: 
+# 
+#       OPTIONS: ---
+#  REQUIREMENTS: ---
+#          BUGS: ---
+#         NOTES: First implementation by pmav99
+#        AUTHOR: Nikos Alexandris (), nik@nikosalexandris.net
+#  ORGANIZATION: 
+#       CREATED: 02/08/2019 12:48
+#      REVISION:  ---
+#===============================================================================
 
+# set -o nounset                              # Treat unset variables as an error
 set -xeuo pipefail
 
-# Before starting to refactor we need to have a "known working state".
-# These are the maps and the files that we will use as a "known working state"
+# Map and file names of interest
 map_names=( demand flow spectrum unmet_demand potential opportunity flow_corine_land_cover_2006 maes_ecosystem_types maes_ecosystem_types_flow )
 csv_names=( supply.csv use.csv )
 
-# # This for-loop will create this state.
-#map_names=( demand flow spectrum unmet_demand potential opportunity flow_corine_land_cover_2006 maes_ecosystem_types maes_ecosystem_types_flow )
-#for name in "${map_names[@]}"
-#do
-#  rm -rf "${name}".master
-#  r.univar "${name}" > master."${name}"
-#done
-#
-#csv_names=( supply.csv use.csv )
-#for name in "${csv_names[@]}"
-#do
-#  echo "${name}"
-#  rm -rf "${name}".master
-#  cp "${name}" .master."${name}"
-#done
+# ------------------- FIXME: check if unnecessarily querying any input maps ---
+# # Query existing maps
+# for name in "${map_names[@]}" ;do
+#   mv -f master."${name}" /tmp
+#   r.univar "${name}" > master."${name}"
+# done
 
-g.region  raster=area_of_interest
+# csv_names=( supply.csv use.csv )
+# for name in "${csv_names[@]}" ;do
+#   echo "${name}"
+#   mv -f master."${name}" /tmp
+#   cp "${name}" master."${name}"
+# done
+# -----------------------------------------------------------------------------
 
-r.reclass --overwrite input="local_administrative_units_AT" output="regions" rules="lau_to_regions_for_test.rules"
+# First grassy things first
+g.region raster=area_of_interest -p
 
-g.remove type=raster name=potential_corine -f
+# Clean output maps from previous run(s)
+g.remove \
+    -f -b \
+    type=raster \
+    name=demand,flow,maes_ecosystem_types,maes_ecosystem_types_flow,flow_corine_land_cover_2006,opportunity,potential,potential_1,potential_2,potential_3,potential_4,recreation_opportunity,spectrum,highest_recreation_spectrum,demand,unmet,unmet_demand,mobility,crossmap
 
-#r.estimap.recreation  land=land_suitability  infrastructure=distance_to_infrastructure  population=population_2015  base=local_administrative_units  landcover=corine_land_cover_2006  aggregation=regions  land_classes=corine_accounting_to_maes_land_classes.rules  potential=potential_corine supply=supply --o --verbose
-
+# Re-run the module
 r.estimap.recreation \
   --verbose \
   --overwrite \
@@ -51,15 +69,27 @@ r.estimap.recreation \
   aggregation=regions \
   land_classes=corine_accounting_to_maes_land_classes.rules \
   supply=supply \
-  use=use \
+  use=use
 
-rm -rf flow_corine_land_cover_2006.current maes_ecosystem_types.current maes_ecosystem_types_flow.current
-
-for name in "${map_names[@]}"
-do
-  rm -rf current."${name}"
-  r.univar "${name}" > current."${name}"
-  echo "${name}"
-  diff master."${name}" current."${name}"
+# compare 'master' (old) with 'current' (new) maps
+for name in "${map_names[@]}" ;do
+    # remove 'old'
+    mv -f current."${name}" /tmp
+    # create 'new'
+    echo "${name}"
+    r.univar "${name}" > current."${name}"
+    # compare
+    diff master."${name}" current."${name}"
+    echo
 done
 
+for name in "${csv_names[@]}" ;do
+    # remove 'old'
+    mv -f current."${name}" /tmp
+    # create 'new' from the module's last run
+    echo "${name}"
+    cp "${name}" current."${name}"
+    # compare
+    diff master."${name}" current."${name}"
+    echo
+done

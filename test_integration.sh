@@ -1,18 +1,18 @@
-#!/bin/bash - 
+#!/bin/bash -
 #===============================================================================
 #
 #          FILE: test_integration_x.sh
-# 
-#         USAGE: ./test_integration_x.sh 
-# 
-#   DESCRIPTION: 
-# 
+#
+#         USAGE: ./test_integration_x.sh
+#
+#   DESCRIPTION:
+#
 #       OPTIONS: ---
 #  REQUIREMENTS: ---
 #          BUGS: ---
 #         NOTES: First implementation by pmav99
 #        AUTHOR: Nikos Alexandris (), nik@nikosalexandris.net
-#  ORGANIZATION: 
+#  ORGANIZATION:
 #       CREATED: 02/08/2019 12:48
 #      REVISION:  ---
 #===============================================================================

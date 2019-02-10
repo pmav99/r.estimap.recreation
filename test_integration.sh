@@ -74,6 +74,7 @@ r.estimap.recreation \
 # compare 'master' (old) with 'current' (new) maps
 for name in "${map_names[@]}" ;do
     # remove 'old'
+    touch current."${name}"
     mv -f current."${name}" /tmp
     # create 'new'
     echo "${name}"
@@ -85,6 +86,7 @@ done
 
 for name in "${csv_names[@]}" ;do
     # remove 'old'
+    touch current."${name}"
     mv -f current."${name}" /tmp
     # create 'new' from the module's last run
     echo "${name}"

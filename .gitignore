@@ -1,3 +1,7 @@
+### Module related ASCII files ###
+master.*
+current.*
+
 ### PDF ###
 *.pdf
 

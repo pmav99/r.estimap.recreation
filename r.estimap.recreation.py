@@ -939,7 +939,7 @@ def remove_files_at_exit(filename):
     atexit.register(lambda: os.unlink(filename))
 
 
-def tmp_map_name(**kwargs):
+def tmp_map_name(name=None):
     """Return a temporary map name, for example:
 
     Parameters
@@ -959,8 +959,7 @@ def tmp_map_name(**kwargs):
     """
     temporary_absolute_filename = grass.tempfile()
     temporary_filename = "tmp." + grass.basename(temporary_absolute_filename)
-    if "name" in kwargs:
-        name = kwargs.get("name")
+    if name:
         temporary_filename = temporary_filename + "." + str(name)
     return temporary_filename
 
@@ -988,7 +987,7 @@ def remove_temporary_maps():
     #     r.mask(flags='r', verbose=True)
 
 
-def string_to_file(string, **kwargs):
+def string_to_file(string, name=None):
     """Split series of strings separated by comma in lines and write as an
     ASCII file
 
@@ -997,8 +996,8 @@ def string_to_file(string, **kwargs):
     string :
         A string where commas will be replaced by a newline
 
-    kwargs :
-        Optional key-word argument 'name'
+    name :
+        A string for tmp_map_name() to create a temporary file name 'filename'
 
     Returns
     -------
@@ -1012,12 +1011,9 @@ def string_to_file(string, **kwargs):
     string = string.split(",")
     string = "\n".join(string)
     # string = string.splitlines()
-
     msg = "String split in lines: {s}".format(s=string)
     grass.debug(_(msg))
 
-    if "name" in kwargs:
-        name = kwargs.get("name")
     filename = tmp_map_name(name=name)
 
     # # Use a file-like object instead?
@@ -1312,7 +1308,7 @@ def get_coefficients(coefficients_string):
     return metric, constant, kappa, alpha
 
 
-def build_distance_function(constant, kappa, alpha, variable, **kwargs):
+def build_distance_function(constant, kappa, alpha, variable, score=None, suitability=None):
     """
     Build a valid `r.mapcalc` expression based on the following "space-time"
     function:
@@ -1334,16 +1330,16 @@ def build_distance_function(constant, kappa, alpha, variable, **kwargs):
         The main input variable: for 'attractiveness' it is 'distance', for
         'flow' it is 'population'
 
-    kwargs :
-        More keyword arguments such as: 'score', 'suitability'
+    score :
+        If 'score' is given, it is used as a multiplication factor to the base
+        equation.
 
-        score :
-            If 'score' is given, it used as a multiplication factor to the base
-            equation.
-
-        suitability :
-            If 'suitability' is given, it is used as a multiplication factor to
-            the base equation.
+    suitability :
+        [ NOTE: this argument is yet unused!  It is meant to be used only after
+        successful integration of land suitability scores in
+        build_distance_function(). ]
+        If 'suitability' is given, it is used as a multiplication
+        factor to the base equation.
 
     Returns
     -------
@@ -1366,27 +1362,23 @@ def build_distance_function(constant, kappa, alpha, variable, **kwargs):
     function = function.format(numerator=numerator, denominator=denominator)
     grass.debug("Function without score: {f}".format(f=function))
 
-    if "score" in kwargs:
-        score = kwargs.get("score")
+    if score:
         function += " * {score}"  # need for float()?
         function = function.format(score=score)
     grass.debug(_("Function after adding 'score': {f}".format(f=function)))
 
-    # Integrate land suitability scores in the distance function ? ------------
-
-    # if 'suitability' in kwargs:
-    #     suitability = kwargs.get('suitability')
+    # -------------------------------------------------------------------------
+    # if suitability:
     #     function += " * {suitability}"  # FIXME : Confirm Correctness
     #     function = function.format(suitability=suitability)
     # msg = "Function after adding 'suitability': {f}".format(f=function)
     # grass.debug(_(msg))
-
     # -------------------------------------------------------------------------
 
     return function
 
 
-def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
+def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, output_name=None):
     """
     Compute a raster map whose values follow an (euclidean) distance function
     ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {distance}) ), where:
@@ -1409,11 +1401,12 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     score :
         A score term to multiply the distance function
 
-    kwargs :
-        Optional keyword arguments, such as 'mask' and 'output'. The 'mask'
-        is inverted to selectively exclude non-NULL cells from distance
-        related computations. The 'output' is used to name the computed
-        proximity map.
+    mask :
+        Optional raster MASK which is inverted to selectively exclude non-NULL
+        cells from distance related computations.
+
+    output_name :
+        Name to pass to tmp_map_name() to create a temporary map name
 
     Returns
     -------
@@ -1434,8 +1427,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         str(alpha),
     ]
 
-    if "score" in kwargs:
-        score = kwargs.get("score")
+    if score:
         grass.debug(_("Score for attractiveness equation: {s}".format(s=score)))
         distance_terms += str(score)
 
@@ -1445,8 +1437,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         input=raster, distance=tmp_distance, metric=metric, quiet=True, overwrite=True
     )
 
-    if "mask" in kwargs:
-        mask = kwargs.get("mask")
+    if mask:
         msg = "Inverted masking to exclude non-NULL cells "
         msg += "from distance related computations based on '{mask}'"
         msg = msg.format(mask=mask)
@@ -1454,7 +1445,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         r.mask(raster=mask, flags="i", overwrite=True, quiet=True)
 
     # FIXME: use a parameters dictionary, avoid conditionals
-    if "score" in kwargs:
+    if score:
         distance_function = build_distance_function(
             constant=constant,
             kappa=kappa,
@@ -1464,14 +1455,17 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
         )
 
     # FIXME: use a parameters dictionary, avoid conditionals
-    if not "score" in kwargs:
+    if not score:
         distance_function = build_distance_function(
-            constant=constant, kappa=kappa, alpha=alpha, variable=tmp_distance
+            constant=constant,
+            kappa=kappa,
+            alpha=alpha,
+            variable=tmp_distance
         )
 
     # temporary maps will be removed
-    if "output_name" in kwargs:
-        tmp_distance_map = tmp_map_name(name=kwargs.get("output_name"))
+    if output_name:
+        tmp_distance_map = tmp_map_name(name=output_name)
     else:
         basename = "_".join([raster, "attractiveness"])
         tmp_distance_map = tmp_map_name(name=basename)
@@ -1479,16 +1473,14 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, **kwargs):
     distance_function = EQUATION.format(
         result=tmp_distance_map, expression=distance_function
     )
-
     msg = "Distance function: {f}".format(f=distance_function)
     grass.verbose(_(msg))
-
     grass.mapcalc(distance_function, overwrite=True)
 
     r.null(map=tmp_distance_map, null=0)  # Set NULLs to 0
 
     compress_status = grass.read_command("r.compress", flags="g", map=tmp_distance_map)
-    grass.verbose(_("Compress status: {s}".format(s=compress_status)))
+    grass.verbose(_("Compress status: {s}".format(s=compress_status)))  # REMOVEME
 
     return tmp_distance_map
 
@@ -1806,7 +1798,7 @@ def classify_recreation_component(component, rules, output_name):
     r.recode(input=component, rules="-", stdin=rules, output=output_name)
 
 
-def compute_artificial_proximity(raster, distance_categories, **kwargs):
+def compute_artificial_proximity(raster, distance_categories, output_name=None):
     """
     Compute proximity to artificial surfaces
 
@@ -1821,8 +1813,8 @@ def compute_artificial_proximity(raster, distance_categories, **kwargs):
     distance_categories :
         Category rules to recode the input distance map
 
-    kwargs :
-        Optional arguments: output_file
+    output_name :
+        Name to pass to tmp_map_name() to create a temporary map name
 
     Returns
     -------
@@ -1844,9 +1836,9 @@ def compute_artificial_proximity(raster, distance_categories, **kwargs):
         overwrite=True,
     )
 
-    if "output_name" in kwargs:
-        # temporary maps will be removed
-        tmp_output = tmp_map_name(name=kwargs.get("output_name"))
+    # temporary maps will be removed
+    if output_name:
+        tmp_output = tmp_map_name(name=output_name)
         grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
 
     else:
@@ -1933,7 +1925,7 @@ def artificial_accessibility_expression(artificial_proximity, roads_proximity):
     return expression
 
 
-def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kwargs):
+def compute_artificial_accessibility(artificial_proximity, roads_proximity, output_name=None):
     """Compute artificial proximity
 
     Parameters
@@ -1944,8 +1936,8 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
     roads_proximity :
         Road infrastructure
 
-    kwargs :
-        Optional input parameters
+    output_name :
+        Name to pass to tmp_map_name() to create a temporary map name
 
     Returns
     -------
@@ -1967,9 +1959,9 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, **kw
     accessibility_expression = artificial_accessibility_expression(
         artificial_proximity, roads_proximity
     )
-    if "output_name" in kwargs:
-        # temporary maps will be removed!
-        tmp_output = tmp_map_name(name=kwargs.get("output_name"))
+    # temporary maps will be removed!
+    if output_name:
+        tmp_output = tmp_map_name(name=output_name)
     else:
         basename = "artificial_accessibility"
         tmp_output = tmp_map_name(name=basename)
@@ -2189,7 +2181,8 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
     return output_name
 
 
-def mobility_function(distance, constant, coefficients, population, score, **kwargs):
+def mobility_function(distance, constant, coefficients, population, score,
+        suitability=None):
     """
     The following 'mobility' function, is identical to the one used in
     `compute_attractiveness()`, excluding, however, the 'score' term:
@@ -2248,9 +2241,13 @@ def mobility_function(distance, constant, coefficients, population, score, **kwa
     score :
         A score value for the mobility function
 
-    **kwargs :
-        Optional parameters. For example, the land suitability if integration
-        in the build_distance_function() will be successfull.
+    suitability :
+        [ NOTE: this argument is yet unused!  It is meant to be used only after
+        successful integration of land suitability scores in
+        build_distance_function(). ]
+        If 'suitability' is given, it is used as a multiplication
+        factor to the base equation.
+
 
     Returns
     -------
@@ -2265,15 +2262,7 @@ def mobility_function(distance, constant, coefficients, population, score, **kwa
     """
     expressions = {}  # create a dictionary of expressions
 
-    # Not used. It can be though if integration to build_distance_function() is
-    # successfull. ------------------------------------------------------------
-
-    # if 'suitability' in kwargs:
-    #     suitability = kwargs.get('suitability')
-    # -------------------------------------------------------------------------
-
     for distance_category, parameters in coefficients.items():
-
         kappa, alpha = parameters
 
         # Note, alpha gets a minus, that is: -alpha
@@ -2335,7 +2324,8 @@ def mobility_function(distance, constant, coefficients, population, score, **kwa
     return mobility_expression
 
 
-def compute_unmet_demand(distance, constant, coefficients, population, score, **kwargs):
+def compute_unmet_demand(distance, constant, coefficients, population, score,
+        suitability=None):
     """
     Parameters
     ----------
@@ -2370,9 +2360,12 @@ def compute_unmet_demand(distance, constant, coefficients, population, score, **
     score :
         A score value for the mobility function
 
-    **kwargs :
-        Optional parameters. For example, the land suitability if integration
-        in the build_distance_function() will be successfull.
+    suitability :
+        [ NOTE: this argument is yet unused!  It is meant to be used only after
+        successful integration of land suitability scores in
+        build_distance_function(). ]
+        If 'suitability' is given, it is used as a multiplication
+        factor to the base equation.
 
     Returns
     -------
@@ -2583,7 +2576,10 @@ def compute_supply(
     ns_resolution,
     ew_resolution,
     print_only=False,
-    **kwargs
+    flow_column_name=None,
+    vector=None,
+    supply_filename=None,
+    use_filename=None,
 ):
     """
      Algorithmic description of the "Contribution of Ecosysten Types"
@@ -2652,8 +2648,18 @@ def compute_supply(
 
     statistics_filename :
 
-    **kwargs :
-        Optional keyword arguments, such as: 'csv_prefix'
+    supply_filename :
+        Name for CSV output file of the supply table
+
+    use_filename :
+        Name for CSV output file of the use table
+
+    flow_column_name :
+        Name for column to populate with 'flow' values
+
+    vector :
+        If 'vector' is given, a vector map of the 'flow' along with appropriate
+        attributes will be produced.
 
     ? :
         Land cover class percentages in ROS9 (this is: relative percentage)
@@ -2990,17 +2996,14 @@ def compute_supply(
 
         if not print_only:
 
-            if "flow_column_name" in kwargs:
-                flow_column_name = kwargs.get("flow_column_name")
+            if flow_column_name:
                 flow_column_prefix = flow_column_name + category
             else:
                 flow_column_name = "flow"
                 flow_column_prefix = flow_column_name + category
 
             # Produce vector map(s)
-            if "vector" in kwargs:
-
-                vector = kwargs.get("vector")
+            if vector:
 
                 # The following is wrong
 
@@ -3067,10 +3070,9 @@ def compute_supply(
     # remove_map_at_exit(reclassified_base)
 
     if not print_only:
-
         r.patch(flags="", input=flows, output=flow_in_reclassified_base, quiet=True)
 
-        if "vector" in kwargs:
+        if vector:
             # Patch all flow vector maps in one
             v.patch(
                 flags="e",
@@ -3081,15 +3083,11 @@ def compute_supply(
             )
 
         # export to csv
-        if "supply_filename" in kwargs:
-
-            supply_filename = kwargs.get("supply_filename")
+        if supply_filename:
             supply_filename += CSV_EXTENSION
             nested_dictionary_to_csv(supply_filename, statistics_dictionary)
 
-        if "use_filename" in kwargs:
-
-            use_filename = kwargs.get("use_filename")
+        if use_filename:
             use_filename += CSV_EXTENSION
             uses = compile_use_table(statistics_dictionary)
             dictionary_to_csv(use_filename, uses)

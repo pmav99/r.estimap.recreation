@@ -90,7 +90,7 @@ for name in "${csv_names[@]}" ;do
     mv -f current."${name}" /tmp
     # create 'new' from the module's last run
     echo "${name}"
-    cp "${name}" current."${name}"
+    mv "${name}" current."${name}"
     # compare
     diff master."${name}" current."${name}"
     echo

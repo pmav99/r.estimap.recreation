@@ -346,3 +346,80 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
     g.rename(raster=(input_name, output_name), quiet=True)
 
     return output_name
+
+
+def get_raster_statistics(map_one, map_two, separator, flags):
+    """
+    Parameters
+    ----------
+    map_one :
+        First map as input to `r.stats`
+
+    map_two :
+        Second map as input to `r.stats`
+
+    separator :
+        Character to use as separator in `r.stats`
+
+    flags :
+        Flags for `r.stats`
+
+    Returns
+    -------
+    dictionary :
+        A nested dictionary that holds categorical statistics for both maps
+        'map_one' and 'map_two'.
+
+        - The 'outer_key' is the raster category _and_ label of 'map_one'.
+        - The 'inner_key' is the raster map category of 'map_two'.
+        - The 'inner_value' is the list of statistics for map two, as returned
+          for `r.stats`.
+
+        Example of a nested dictionary:
+
+        {(u'3',
+            u'Region 3'):
+            {u'1': [
+                u'355.747658',
+                u'6000000.000000',
+                u'6',
+                u'6.38%'],
+            u'3': [
+                u'216304.146140',
+                u'46000000.000000',
+                u'46',
+                u'48.94%'],
+            u'2': [
+                u'26627.415787',
+                u'46000000.000000',
+                u'46',
+                u'48.94%']}}
+    """
+
+    statistics = grass.read_command(
+        "r.stats",
+        input=(map_one, map_two),
+        output="-",
+        flags=flags,
+        separator=separator,
+        quiet=True,
+    )
+    statistics = statistics.split("\n")[:-1]
+
+    dictionary = dict()
+
+    # build a nested dictionary where:
+    for row in statistics:
+        row = row.split("|")
+        outer_key = (row[0], row[1])
+        inner_key = row[2]
+        inner_value = row[3:]
+        inner_dictionary = {inner_key: inner_value}
+        try:
+            dictionary[outer_key][inner_key] = inner_value
+        except KeyError:
+            dictionary[outer_key] = {inner_key: inner_value}
+
+    return dictionary
+
+

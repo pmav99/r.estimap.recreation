@@ -643,6 +643,7 @@ from estimap_recreation.labels import *
 from estimap_recreation.utilities import *
 from estimap_recreation.distance_functions import *
 from estimap_recreation.normalisation_functions import *
+from estimap_recreation.accessibility_functions import *
 
 # helper functions
 
@@ -671,6 +672,7 @@ def append_map_to_component(raster, component_name, component_list):
     msg = "Map {name} included in the '{component}' component"
     msg = msg.format(name=raster, component=component_name)
     grass.verbose(_(msg))
+
 
 def neighborhood_function(raster, method, size, distance_map):
     """
@@ -876,121 +878,6 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
         grass.fatal("Proximity map {name} not created!".format(name=raster))
     #     else:
     #         g.message(_("Output map {name}:".format(name=tmp_output)))
-
-    return tmp_output
-
-
-def artificial_accessibility_expression(artificial_proximity, roads_proximity):
-    """
-    Build an r.mapcalc compatible expression to compute accessibility to
-    artificial surfaces based on the following accessibility classification
-    rules for artificial surfaces:
-
-|-------------------+-------+------------+-------------+--------------+---------|
-| Anthropic \ Roads | < 500 | 500 - 1000 | 1000 - 5000 | 5000 - 10000 | > 10000 |
-|-------------------+-------+------------+-------------+--------------+---------|
-| < 500             | 1     | 1          | 2           | 3            | 4       |
-|-------------------+-------+------------+-------------+--------------+---------|
-| 500 - 1000        | 1     | 1          | 2           | 3            | 4       |
-|-------------------+-------+------------+-------------+--------------+---------|
-| 1000 - 5000       | 2     | 2          | 2           | 4            | 5       |
-|-------------------+-------+------------+-------------+--------------+---------|
-| 5000 - 10000      | 3     | 3          | 4           | 5            | 5       |
-|-------------------+-------+------------+-------------+--------------+---------|
-| > 10000           | 3     | 4          | 4           | 5            | 5       |
-|-------------------+-------+------------+-------------+--------------+---------|
-
-    Parameters
-    ----------
-    artificial :
-        Proximity to artificial surfaces
-
-    roads :
-        Proximity to roads
-
-    Returns
-    -------
-    expression
-        Valid r.mapcalc expression
-
-
-    Examples
-    --------
-    ...
-    """
-    expression = (
-        "if( {artificial} <= 2 && {roads} <= 2, 1,"
-        " \ \n if( {artificial} == 1 && {roads} == 3, 2,"
-        " \ \n if( {artificial} == 2 && {roads} == 3, 2,"
-        " \ \n if( {artificial} == 3 && {roads} <= 3, 2,"
-        " \ \n if( {artificial} <= 2 && {roads} == 4, 3,"
-        " \ \n if( {artificial} == 4 && {roads} == 2, 3,"
-        " \ \n if( {artificial} >= 4 && {roads} == 1, 3,"
-        " \ \n if( {artificial} <= 2 && {roads} == 5, 4,"
-        " \ \n if( {artificial} == 3 && {roads} == 4, 4,"
-        " \ \n if( {artificial} >= 4 && {roads} == 3, 4,"
-        " \ \n if( {artificial} == 5 && {roads} == 2, 4,"
-        " \ \n if( {artificial} >= 3 && {roads} == 5, 5,"
-        " \ \n if( {artificial} >= 4 && {roads} == 4, 5)))))))))))))"
-    )
-
-    expression = expression.format(
-        artificial=artificial_proximity, roads=roads_proximity
-    )
-    return expression
-
-
-def compute_artificial_accessibility(artificial_proximity, roads_proximity, output_name=None):
-    """Compute artificial proximity
-
-    Parameters
-    ----------
-    artificial_proximity :
-        Artificial surfaces...
-
-    roads_proximity :
-        Road infrastructure
-
-    output_name :
-        Name to pass to tmp_map_name() to create a temporary map name
-
-    Returns
-    -------
-    output :
-        ...
-
-    Examples
-    --------
-    ...
-    """
-    artificial = grass.find_file(name=artificial_proximity, element="cell")
-    if not artificial["file"]:
-        grass.fatal("Raster map {name} not found".format(name=artificial_proximity))
-
-    roads = grass.find_file(name=roads_proximity, element="cell")
-    if not roads["file"]:
-        grass.fatal("Raster map {name} not found".format(name=roads_proximity))
-
-    accessibility_expression = artificial_accessibility_expression(
-        artificial_proximity, roads_proximity
-    )
-    # temporary maps will be removed!
-    if output_name:
-        tmp_output = tmp_map_name(name=output_name)
-    else:
-        basename = "artificial_accessibility"
-        tmp_output = tmp_map_name(name=basename)
-
-    accessibility_equation = EQUATION.format(
-        result=tmp_output, expression=accessibility_expression
-    )
-
-    msg = "Equation for proximity to artificial areas: \n"
-    msg += accessibility_equation
-    grass.verbose(msg)
-
-    grass.verbose(_("Computing accessibility to artificial surfaces"))
-    grass.mapcalc(accessibility_equation, overwrite=True)
 
     return tmp_output
 

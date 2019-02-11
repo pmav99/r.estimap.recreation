@@ -645,35 +645,9 @@ from estimap_recreation.distance_functions import *
 from estimap_recreation.normalisation_functions import *
 from estimap_recreation.accessibility_functions import *
 from estimap_recreation.spectrum_functions import *
+from estimap_recreation.components import *
 
 # helper functions
-
-def append_map_to_component(raster, component_name, component_list):
-    """Appends raster map to given list of components
-
-    Parameters
-    ----------
-    raster :
-        Input raster map name
-
-    component_name :
-        Name of the component to add the raster map to
-
-    component_list :
-        List of raster maps to add the input 'raster' map
-
-    Returns
-    -------
-
-    Examples
-    --------
-    ...
-    """
-    component_list.append(raster)
-    msg = "Map {name} included in the '{component}' component"
-    msg = msg.format(name=raster, component=component_name)
-    grass.verbose(_(msg))
-
 
 def neighborhood_function(raster, method, size, distance_map):
     """
@@ -763,57 +737,6 @@ def smooth_map(raster, method, size):
         overwrite=True,
         quiet=True,
     )
-
-
-def smooth_component(component, method, size):
-    """
-    component:
-
-    method:
-
-    size:
-    """
-    try:
-        if len(component) > 1:
-            for item in component:
-                smooth_map(item, method=method, size=size)
-        else:
-            smooth_map(component[0], method=method, size=size)
-
-    except IndexError:
-        grass.verbose(_("Index Error"))  # FIXME: some useful message... ?
-
-
-def classify_recreation_component(component, rules, output_name):
-    """
-    Recode an input recreation component based on given rules
-
-    To Do:
-
-    - Potentially, test range of input recreation component, i.e. ranging in
-      [0,1]
-
-    Parameters
-    ----------
-    component :
-        Name of input raster map
-
-    rules :
-        Rules for r.recode
-
-    output_name :
-        Name for output raster map
-
-    Returns
-    -------
-        Does not return any value
-
-    Examples
-    --------
-    ...
-
-    """
-    r.recode(input=component, rules="-", stdin=rules, output=output_name)
 
 
 def compute_artificial_proximity(raster, distance_categories, output_name=None):
@@ -1153,81 +1076,6 @@ def update_vector(vector, raster, methods, column_prefix):
         overwrite=True,
     )
     # grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
-
-
-def get_raster_statistics(map_one, map_two, separator, flags):
-    """
-    Parameters
-    ----------
-    map_one :
-        First map as input to `r.stats`
-
-    map_two :
-        Second map as input to `r.stats`
-
-    separator :
-        Character to use as separator in `r.stats`
-
-    flags :
-        Flags for `r.stats`
-
-    Returns
-    -------
-    dictionary :
-        A nested dictionary that holds categorical statistics for both maps
-        'map_one' and 'map_two'.
-
-        - The 'outer_key' is the raster category _and_ label of 'map_one'.
-        - The 'inner_key' is the raster map category of 'map_two'.
-        - The 'inner_value' is the list of statistics for map two, as returned
-          for `r.stats`.
-
-        Example of a nested dictionary:
-
-        {(u'3',
-            u'Region 3'):
-            {u'1': [
-                u'355.747658',
-                u'6000000.000000',
-                u'6',
-                u'6.38%'],
-            u'3': [
-                u'216304.146140',
-                u'46000000.000000',
-                u'46',
-                u'48.94%'],
-            u'2': [
-                u'26627.415787',
-                u'46000000.000000',
-                u'46',
-                u'48.94%']}}
-    """
-
-    statistics = grass.read_command(
-        "r.stats",
-        input=(map_one, map_two),
-        output="-",
-        flags=flags,
-        separator=separator,
-        quiet=True,
-    )
-    statistics = statistics.split("\n")[:-1]
-
-    dictionary = dict()
-
-    # build a nested dictionary where:
-    for row in statistics:
-        row = row.split("|")
-        outer_key = (row[0], row[1])
-        inner_key = row[2]
-        inner_value = row[3:]
-        inner_dictionary = {inner_key: inner_value}
-        try:
-            dictionary[outer_key][inner_key] = inner_value
-        except KeyError:
-            dictionary[outer_key] = {inner_key: inner_value}
-
-    return dictionary
 
 
 def compile_use_table(supply):

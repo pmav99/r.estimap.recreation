@@ -624,7 +624,6 @@ collective: all or nothing; if any option is given, all must be given
 # required librairies
 
 import atexit
-import csv
 import datetime
 import math
 import os
@@ -644,14 +643,10 @@ from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
 
- 
-sys.path.insert(1, os.path.join(os.path.dirname(sys.path[0]),
-                                'etc', 'r.estimap.recreation'))
-
-from colors import *
-from constants import *
-from labels import *
-from utilities import *
+from estimap_recreation.colors import *
+from estimap_recreation.constants import *
+from estimap_recreation.labels import *
+from estimap_recreation.utilities import *
 
 # helper functions
 

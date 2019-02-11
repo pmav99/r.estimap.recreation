@@ -1,9 +1,15 @@
-#!/usr/bin/python\<nl>\
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
 @author Nikos Alexandris |
 """
+
+import grass.script as grass
+from grass.exceptions import CalledModuleError
+from grass.pygrass.modules.shortcuts import general as g
+from grass.pygrass.modules.shortcuts import raster as r
+from grass.pygrass.modules.shortcuts import vector as v
 
 def build_distance_function(constant, kappa, alpha, variable, score=None, suitability=None):
     """

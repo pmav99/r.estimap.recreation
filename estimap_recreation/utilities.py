@@ -96,33 +96,6 @@ def nested_dictionary_to_csv(filename, dictionary):
     f.close()
 
 
-def append_map_to_component(raster, component_name, component_list):
-    """Appends raster map to given list of components
-
-    Parameters
-    ----------
-    raster :
-        Input raster map name
-
-    component_name :
-        Name of the component to add the raster map to
-
-    component_list :
-        List of raster maps to add the input 'raster' map
-
-    Returns
-    -------
-
-    Examples
-    --------
-    ...
-    """
-    component_list.append(raster)
-    msg = "Map {name} included in the '{component}' component"
-    msg = msg.format(name=raster, component=component_name)
-    grass.verbose(_(msg))
-
-
 # This function should be better off this module  # FIXME
 def get_coefficients(coefficients_string):
     """Returns coefficients from an input coefficients_string

@@ -188,4 +188,68 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
     return tmp_distance_map
 
 
+def compute_artificial_proximity(raster, distance_categories, output_name=None):
+    """
+    Compute proximity to artificial surfaces
 
+    1. Distance to features
+    2. Classify distances
+
+    Parameters
+    ----------
+    raster :
+        Name of input raster map
+
+    distance_categories :
+        Category rules to recode the input distance map
+
+    output_name :
+        Name to pass to tmp_map_name() to create a temporary map name
+
+    Returns
+    -------
+    tmp_output :
+        Name of the temporary output map for internal, in-script, re-use
+
+    Examples
+    --------
+    ...
+    """
+    artificial_distances = tmp_map_name(name=raster)
+
+    grass.run_command(
+        "r.grow.distance",
+        input=raster,
+        distance=artificial_distances,
+        metric=EUCLIDEAN,
+        quiet=True,
+        overwrite=True,
+    )
+
+    # temporary maps will be removed
+    if output_name:
+        tmp_output = tmp_map_name(name=output_name)
+        grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
+
+    else:
+        tmp_output = tmp_map_name(name="artificial_proximity")
+        grass.debug(_("Hardcoded temporary map name {name}".format(name=tmp_output)))
+
+    msg = "Computing proximity to '{mapname}'"
+    msg = msg.format(mapname=raster)
+    grass.verbose(_(msg))
+    grass.run_command(
+        "r.recode",
+        input=artificial_distances,
+        output=tmp_output,
+        rules=distance_categories,
+        overwrite=True,
+    )
+
+    output = grass.find_file(name=tmp_output, element="cell")
+    if not output["file"]:
+        grass.fatal("Proximity map {name} not created!".format(name=raster))
+    #     else:
+    #         g.message(_("Output map {name}:".format(name=tmp_output)))
+
+    return tmp_output

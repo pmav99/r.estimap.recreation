@@ -5,6 +5,8 @@
 @author Nikos Alexandris |
 """
 
+import csv
+
 def merge_two_dictionaries(first, second):
     """Merge two dictionaries in via shallow copy.
     Source: https://stackoverflow.com/a/26853961/1172302"""
@@ -119,5 +121,3 @@ def append_map_to_component(raster, component_name, component_list):
     msg = "Map {name} included in the '{component}' component"
     msg = msg.format(name=raster, component=component_name)
     grass.verbose(_(msg))
-
-

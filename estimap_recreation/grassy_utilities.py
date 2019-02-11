@@ -14,6 +14,7 @@ from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
 
 from .colors import SCORE_COLORS
+from .constants import CITATION_RECREATION_POTENTIAL
 
 def run(cmd, **kwargs):
     """Pass required arguments to grass commands (?)"""
@@ -239,3 +240,47 @@ def float_to_integer(double):
     expression = expression.format(double=double)
     equation = EQUATION.format(result=double, expression=expression)
     r.mapcalc(equation)
+
+
+def update_meta(raster, title, timestamp=None):
+    """
+    Update metadata of given raster map
+
+    Parameters
+    ----------
+    raster :
+        ...
+
+    title :
+        ...
+
+    Returns
+    -------
+        Does not return any value
+
+    Examples
+    --------
+    ...
+    """
+    history = "\n" + CITATION_RECREATION_POTENTIAL
+    description_string = "Recreation {raster} map"
+    description = description_string.format(raster=raster)
+
+    title = "{title}".format(title=title)
+    units = "Meters"
+
+    source1 = "Source 1"
+    source2 = "Source 2"
+
+    r.support(
+        map=raster,
+        title=title,
+        description=description,
+        units=units,
+        source1=source1,
+        source2=source2,
+        history=history,
+    )
+
+    if timestamp:
+        r.timestamp(map=raster, date=timestamp)

@@ -883,50 +883,6 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
     return tmp_output
 
 
-def update_meta(raster, title, timestamp=None):
-    """
-    Update metadata of given raster map
-
-    Parameters
-    ----------
-    raster :
-        ...
-
-    title :
-        ...
-
-    Returns
-    -------
-        Does not return any value
-
-    Examples
-    --------
-    ...
-    """
-    history = "\n" + CITATION_RECREATION_POTENTIAL
-    description_string = "Recreation {raster} map"
-    description = description_string.format(raster=raster)
-
-    title = "{title}".format(title=title)
-    units = "Meters"
-
-    source1 = "Source 1"
-    source2 = "Source 2"
-
-    r.support(
-        map=raster,
-        title=title,
-        description=description,
-        units=units,
-        source1=source1,
-        source2=source2,
-        history=history,
-    )
-
-    if timestamp:
-        r.timestamp(map=raster, date=timestamp)
-
-
 def export_map(input_name, title, categories, colors, output_name, timestamp):
     """
     Export a raster map by renaming the (temporary) raster map name

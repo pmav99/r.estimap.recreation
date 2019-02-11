@@ -713,32 +713,6 @@ def neighborhood_function(raster, method, size, distance_map):
     return filtered_output
 
 
-def smooth_map(raster, method, size):
-    """
-    Parameters
-    ----------
-    raster :
-
-    method :
-
-    size :
-
-    Returns
-    -------
-
-    Examples
-    --------
-    """
-    r.neighbors(
-        input=raster,
-        output=raster,
-        method=method,
-        size=size,
-        overwrite=True,
-        quiet=True,
-    )
-
-
 def compute_artificial_proximity(raster, distance_categories, output_name=None):
     """
     Compute proximity to artificial surfaces

@@ -423,3 +423,29 @@ def get_raster_statistics(map_one, map_two, separator, flags):
     return dictionary
 
 
+def smooth_map(raster, method, size):
+    """
+    Parameters
+    ----------
+    raster :
+
+    method :
+
+    size :
+
+    Returns
+    -------
+
+    Examples
+    --------
+    """
+    r.neighbors(
+        input=raster,
+        output=raster,
+        method=method,
+        size=size,
+        overwrite=True,
+        quiet=True,
+    )
+
+

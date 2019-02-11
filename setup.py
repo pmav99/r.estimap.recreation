@@ -6,11 +6,14 @@ from setuptools import setup, find_packages
 
 os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
-    name="estimap-recreation",
+    name="r.estimap.recreation",
     version="3",
     description="Implementation of ESTIMAP recreation as a GRASS GIS add-on",
-    long_description=open("README.rst", "rt").read(),
+    long_description=long_description,
     url="https://gitlab.com/natcapes/r.estimap.recreation",
     author="Nikos Alexandris",
     author_email="nik@nikosalexandris.net",

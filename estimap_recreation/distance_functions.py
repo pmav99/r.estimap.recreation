@@ -188,6 +188,69 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
     return tmp_distance_map
 
 
+def neighborhood_function(raster, method, size, distance_map):
+    """
+    Parameters
+    ----------
+    raster :
+        Name of input raster map for which to apply r.neighbors
+
+    method :
+        Method for r.neighbors
+
+    size :
+        Size for r.neighbors
+
+    distance :
+        A distance map
+
+    Returns
+    -------
+    filtered_output :
+        A neighborhood filtered raster map
+
+    Examples
+    --------
+    ...
+    """
+    r.null(map=raster, null=0)  # Set NULLs to 0
+
+    neighborhood_output = distance_map + "_" + method
+    msg = "Neighborhood operator '{method}' and size '{size}' for map '{name}'"
+    msg = msg.format(method=method, size=size, name=neighborhood_output)
+    grass.verbose(_(msg))
+
+    r.neighbors(
+        input=raster,
+        output=neighborhood_output,
+        method=method,
+        size=size,
+        overwrite=True,
+    )
+
+    scoring_function = "{neighborhood} * {distance}"
+    scoring_function = scoring_function.format(
+        neighborhood=neighborhood_output, distance=distance_map
+    )
+
+    filtered_output = distance_map
+    filtered_output += "_" + method + "_" + str(size)
+
+    neighborhood_function = EQUATION.format(
+        result=filtered_output, expression=scoring_function
+    )
+    # ---------------------------------------------------------------
+    grass.debug(_("Expression: {e}".format(e=neighborhood_function)))
+    # ---------------------------------------------------------------
+    grass.mapcalc(neighborhood_function, overwrite=True)
+
+    # tmp_distance_map = filtered_output
+
+    # r.compress(distance_map, flags='g')
+
+    return filtered_output
+
+
 def compute_artificial_proximity(raster, distance_categories, output_name=None):
     """
     Compute proximity to artificial surfaces

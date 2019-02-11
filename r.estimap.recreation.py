@@ -621,6 +621,12 @@ collective: all or nothing; if any option is given, all must be given
 #% required: no
 #%end
 
+# import constants
+
+from estimap_recreation.colors import *
+from estimap_recreation.constants import *
+from estimap_recreation.labels import *
+
 # required librairies
 
 import datetime
@@ -629,18 +635,18 @@ import subprocess
 import sys
 import time
 
-from pprint import pprint as pp
-
 if "GISBASE" not in os.environ:
     g.message(_("You must be in GRASS GIS to run this program."))
     sys.exit(1)
 
-from estimap_recreation.grassy_utilities import *
-from estimap_recreation.colors import *
-from estimap_recreation.constants import *
-from estimap_recreation.labels import *
+# import utilities
 
+from pprint import pprint as pp
+from estimap_recreation.grassy_utilities import *
 from estimap_recreation.utilities import *
+
+# import algorithms
+
 from estimap_recreation.distance_functions import *
 from estimap_recreation.normalisation_functions import *
 from estimap_recreation.accessibility_functions import *
@@ -648,70 +654,6 @@ from estimap_recreation.spectrum_functions import *
 from estimap_recreation.components import *
 from estimap_recreation.mobility_functions import *
 from estimap_recreation.supply_and_use_functions import *
-
-# helper functions
-
-def neighborhood_function(raster, method, size, distance_map):
-    """
-    Parameters
-    ----------
-    raster :
-        Name of input raster map for which to apply r.neighbors
-
-    method :
-        Method for r.neighbors
-
-    size :
-        Size for r.neighbors
-
-    distance :
-        A distance map
-
-    Returns
-    -------
-    filtered_output :
-        A neighborhood filtered raster map
-
-    Examples
-    --------
-    ...
-    """
-    r.null(map=raster, null=0)  # Set NULLs to 0
-
-    neighborhood_output = distance_map + "_" + method
-    msg = "Neighborhood operator '{method}' and size '{size}' for map '{name}'"
-    msg = msg.format(method=method, size=size, name=neighborhood_output)
-    grass.verbose(_(msg))
-
-    r.neighbors(
-        input=raster,
-        output=neighborhood_output,
-        method=method,
-        size=size,
-        overwrite=True,
-    )
-
-    scoring_function = "{neighborhood} * {distance}"
-    scoring_function = scoring_function.format(
-        neighborhood=neighborhood_output, distance=distance_map
-    )
-
-    filtered_output = distance_map
-    filtered_output += "_" + method + "_" + str(size)
-
-    neighborhood_function = EQUATION.format(
-        result=filtered_output, expression=scoring_function
-    )
-    # ---------------------------------------------------------------
-    grass.debug(_("Expression: {e}".format(e=neighborhood_function)))
-    # ---------------------------------------------------------------
-    grass.mapcalc(neighborhood_function, overwrite=True)
-
-    # tmp_distance_map = filtered_output
-
-    # r.compress(distance_map, flags='g')
-
-    return filtered_output
 
 
 def main():

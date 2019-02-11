@@ -623,7 +623,6 @@ collective: all or nothing; if any option is given, all must be given
 
 # required librairies
 
-import atexit
 import datetime
 import math
 import os
@@ -644,59 +643,6 @@ from estimap_recreation.labels import *
 from estimap_recreation.utilities import *
 
 # helper functions
-
-def get_coefficients(coefficients_string):
-    """Returns coefficients from an input coefficients_string
-
-    Parameters
-    ----------
-    coefficients_string:
-        One string which lists a metric and coefficients separated by comma
-        without spaces
-
-    Returns
-    -------
-    metric:
-        Metric to use an input option to the `r.grow.distance` module
-
-    constant:
-        A constant value for the 'attractiveness' function
-
-    kappa:
-        A Kappa coefficients for the 'attractiveness' function
-
-    alpha:
-        An alpha coefficient for the 'attractiveness' function
-
-    score
-        A score value to multiply by the generic 'attractiveness' function
-
-    Examples
-    --------
-    ...
-    """
-    coefficients = coefficients_string.split(",")
-    msg = "Distance function coefficients: "
-    metric = coefficients[0]
-    msg += "Metric='{metric}', ".format(metric=metric)
-    constant = coefficients[1]
-    msg += "Constant='{constant}', ".format(constant=constant)
-    kappa = coefficients[2]
-    msg += "Kappa='{Kappa}', ".format(Kappa=kappa)
-    alpha = coefficients[3]
-    msg += "Alpha='{alpha}', ".format(alpha=alpha)
-    try:
-        if coefficients[4]:
-            score = coefficients[4]
-            msg += "Score='{score}'".format(score=score)
-            grass.verbose(_(msg))
-            return metric, constant, kappa, alpha, score
-    except IndexError:
-        grass.verbose(_("Score not provided"))
-
-    grass.verbose(_(msg))
-    return metric, constant, kappa, alpha
-
 
 def build_distance_function(constant, kappa, alpha, variable, score=None, suitability=None):
     """

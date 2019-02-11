@@ -239,5 +239,3 @@ def float_to_integer(double):
     expression = expression.format(double=double)
     equation = EQUATION.format(result=double, expression=expression)
     r.mapcalc(equation)
-
-

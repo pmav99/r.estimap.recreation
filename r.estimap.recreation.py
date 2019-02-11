@@ -644,6 +644,7 @@ from estimap_recreation.utilities import *
 from estimap_recreation.distance_functions import *
 from estimap_recreation.normalisation_functions import *
 from estimap_recreation.accessibility_functions import *
+from estimap_recreation.spectrum_functions import *
 
 # helper functions
 
@@ -880,101 +881,6 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
     #         g.message(_("Output map {name}:".format(name=tmp_output)))
 
     return tmp_output
-
-
-def recreation_spectrum_expression(potential, opportunity):
-    """
-    Build and return a valid mapcalc expression for deriving
-    the Recreation Opportunity Spectrum
-
-    |-------------------------+-----+----------+------|
-    | Potential / Opportunity | Far | Midrange | Near |
-    |-------------------------+-----+----------+------|
-    | Low                     | 1   | 2        | 3    |
-    |-------------------------+-----+----------+------|
-    | Moderate                | 4   | 5        | 6    |
-    |-------------------------+-----+----------+------|
-    | High                    | 7   | 8        | 9    |
-    |-------------------------+-----+----------+------|
-
-    Questions:
-
-    - Why not use `r.cross`?
-    - Use DUMMY strings for potential and opportunity raster map names?
-
-    Parameters
-    ----------
-    potential :
-        Map depicting potential for recreation
-
-    opportunity :
-        Map depicting opportunity for recreation
-
-    Returns
-    -------
-    expression :
-        A valid r.mapcalc expression
-
-    Examples
-    --------
-    ...
-    """
-    expression = (
-        "if( {potential} == 1 && {opportunity} == 1, 1,"
-        " \ \n if( {potential} == 1 && {opportunity} == 2, 2,"
-        " \ \n if( {potential} == 1 && {opportunity} == 3, 3,"
-        " \ \n if( {potential} == 2 && {opportunity} == 1, 4,"
-        " \ \n if( {potential} == 2 && {opportunity} == 2, 5,"
-        " \ \n if( {potential} == 2 && {opportunity} == 3, 6,"
-        " \ \n if( {potential} == 3 && {opportunity} == 1, 7,"
-        " \ \n if( {potential} == 3 && {opportunity} == 2, 8,"
-        " \ \n if( {potential} == 3 && {opportunity} == 3, 9)))))))))"
-    )
-
-    expression = expression.format(potential=potential, opportunity=opportunity)
-
-    msg = "Recreation Spectrum expression: \n"
-    msg += expression
-    grass.debug(msg)
-
-    return expression
-
-
-def compute_recreation_spectrum(potential, opportunity, spectrum):
-    """
-    Computes spectrum for recreation based on maps of potential and opportunity
-    for recreation
-
-    Parameters
-    ----------
-    potential :
-        Name for input potential for recreation map
-
-    opportunity :
-        Name for input opportunity for recreation map
-
-    Returns
-    -------
-    spectrum :
-        Name for output spectrum of recreation map
-
-    Examples
-    --------
-    ...
-    """
-    spectrum_expression = recreation_spectrum_expression(
-        potential=potential, opportunity=opportunity
-    )
-
-    spectrum_equation = EQUATION.format(result=spectrum, expression=spectrum_expression)
-
-    msg = "Recreation Spectrum equation: \n"
-    msg += spectrum_equation
-    grass.verbose(msg)
-
-    grass.mapcalc(spectrum_equation, overwrite=True)
-
-    return spectrum
 
 
 def update_meta(raster, title, timestamp=None):

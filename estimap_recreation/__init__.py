@@ -5,9 +5,6 @@
 @author Nikos Alexandris |
 """
 
-__all__ = ['colors', 'constants']
-
-# from estimap-recreation.colors import *
-# from estimap-recreation.constants import *
+__all__ = ['colors', 'constants', 'labels']
 
 version = "0.3"

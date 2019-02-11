@@ -449,3 +449,40 @@ def smooth_map(raster, method, size):
     )
 
 
+def update_vector(vector, raster, methods, column_prefix):
+    """
+
+    Parameters
+    ----------
+    vector :
+        Vector map whose attribute table to update with results of the
+        v.rast.stats call
+
+    raster :
+        Source raster map for statistics
+
+    methods :
+        Descriptive statistics for the `v.rast.stats` call
+
+    column_prefix :
+        Prefix for the names of the columns created by the `v.rast.stats` call
+
+    Returns
+    -------
+        This helper function executes `v.rast.stats`. It does not return any
+        value.
+
+    Examples
+    --------
+    ..
+    """
+    run(
+        "v.rast.stats",
+        map=vector,
+        flags="c",
+        raster=raster,
+        method=methods,
+        column_prefix=column_prefix,
+        overwrite=True,
+    )
+    # grass.verbose(_("Updating vector map '{v}'".format(v=vector)))

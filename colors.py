@@ -1,9 +1,12 @@
-#!/usr/bin/python\<nl>\
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
 @author Nikos Alexandris |
 """
+
+MOBILITY_COLORS = "wave"
+LANDCOVER_FRACTIONS_COLOR = "wave"
 
 SCORE_COLORS = """ # http://colorbrewer2.org/?type=diverging&scheme=RdYlGn&n=11
 0.0% 165:0:38

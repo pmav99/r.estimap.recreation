@@ -1,4 +1,4 @@
-#!/usr/bin/python\<nl>\
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -14,6 +14,7 @@ THRESHHOLD_0001 = 0.0001
 
 CSV_EXTENSION = ".csv"
 COMMA = "comma"
+METHODS = "sum"
 EUCLIDEAN = "euclidean"
 # units='k'
 NEIGHBORHOOD_SIZE = 11  # this and below, required for neighborhood_function
@@ -157,50 +158,17 @@ URBAN_ATLAS_TO_MAES_NOMENCLATURE = """
 50000 = 5 Heathland and shrub
 """
 
+'''Recreation'''
+
 RECREATION_POTENTIAL_CATEGORIES = """0.0:0.2:1
 0.2:0.4:2
 0.4:*:3"""
 # artificial_distance_categories=
 #'0:500:1,500.000001:1000:2,1000.000001:5000:3,5000.000001:10000:4,10000.00001:*:5'
 RECREATION_OPPORTUNITY_CATEGORIES = RECREATION_POTENTIAL_CATEGORIES
-
-#
-## FIXME -- No hardcodings please.
-#
-
-POTENTIAL_CATEGORY_LABELS = """1:Low
-2:Moderate
-3:High
-"""
-
-OPPORTUNITY_CATEGORY_LABELS = """1:Far
-2:Midrange
-3:Near
-"""
-
-SPECTRUM_CATEGORY_LABELS = """1:Low provision (far)
-2:Low provision (midrange)
-3:Low provision (near)
-4:Moderate provision (far)
-5:Moderate provision (midrange)
-6:Moderate provision (near)
-7:High provision (far)
-8:High provision (midrange)
-9:High provision (near)
-"""
-
-SPECTRUM_DISTANCE_CATEGORY_LABELS = """1:0 to 1 km
-2:1 to 2 km
-3:2 to 3 km
-4:3 to 4 km
-5:>4 km
-"""
-
-#
-## FIXME -- No hardcodings please.
-#
-
 HIGHEST_RECREATION_CATEGORY = 9
+
+'''Mobility'''
 
 MOBILITY_CONSTANT = 1
 MOBILITY_COEFFICIENTS = {
@@ -211,7 +179,3 @@ MOBILITY_COEFFICIENTS = {
     4: (0.06930, 0.00057),
 }
 MOBILITY_SCORE = 52
-MOBILITY_COLORS = "wave"
-LANDCOVER_FRACTIONS_COLOR = "wave"
-
-METHODS = "sum"

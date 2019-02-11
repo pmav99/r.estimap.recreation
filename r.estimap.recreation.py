@@ -883,68 +883,6 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
     return tmp_output
 
 
-def export_map(input_name, title, categories, colors, output_name, timestamp):
-    """
-    Export a raster map by renaming the (temporary) raster map name
-    'input_name' to the requested output raster map name 'output_name'.
-    This function is (mainly) used to export either of the intermediate
-    recreation 'potential' or 'opportunity' maps.
-
-    Parameters
-    ----------
-    raster :
-        Input raster map name
-
-    title :
-        Title for the output raster map
-
-    categories :
-        Categories and labels for the output raster map
-
-    colors :
-        Colors for the output raster map
-
-    output_name :
-        Output raster map name
-
-    Returns
-    -------
-    output_name :
-        This function will return the requested 'output_name'
-
-    Examples
-    --------
-    ..
-    """
-    finding = grass.find_file(name=input_name, element="cell")
-    if not finding["file"]:
-        grass.fatal("Raster map {name} not found".format(name=input_name))
-
-    # inform
-    msg = "\nOutputting '{raster}' map\n"
-    msg = msg.format(raster=input_name)
-    grass.verbose(_(msg))
-
-    # get categories and labels
-    raster_categories = "categories_of_"
-    raster_categories += input_name
-    raster_category_labels = string_to_file(string=categories, name=raster_categories)
-
-    # add ascii file to removal list
-    remove_files_at_exit(raster_category_labels)
-
-    # apply categories and description
-    r.category(map=input_name, rules=raster_category_labels, separator=":")
-
-    # update meta and colors
-    update_meta(input_name, title, timestamp)
-    r.colors(map=input_name, rules="-", stdin=colors, quiet=True)
-    # rename to requested output name
-    g.rename(raster=(input_name, output_name), quiet=True)
-
-    return output_name
-
-
 def mobility_function(distance, constant, coefficients, population, score,
         suitability=None):
     """

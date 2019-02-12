@@ -448,6 +448,7 @@ def smooth_map(raster, method, size):
     )
 
 
+# This function is not used.  Review and Fix or Remove!
 def update_vector(vector, raster, methods, column_prefix):
     """
 
@@ -485,3 +486,49 @@ def update_vector(vector, raster, methods, column_prefix):
         overwrite=True,
     )
     # grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
+
+def raster_to_vector(raster, vector, type):
+    """Converts a raster to a vector map
+
+    Parameters
+    ----------
+
+    raster :
+        Name of the input raster map
+
+    vector :
+        Name for the output vector map
+
+    type :
+        Type for the output vector map
+
+    Returns
+    -------
+
+    Examples
+    --------
+    ..
+    """
+    r.to_vect(
+            input=flow_in_category,
+            output=flow_in_category,
+            type="area",
+            quiet=True,
+            )
+
+    # Value is the ecosystem type
+    v.db_renamecolumn(map=flow_in_category, column=("value", "ecosystem"))
+
+    # New column for flow values
+    addcolumn_string = flow_column_name + " double"
+    v.db_addcolumn(map=flow_in_category, columns=addcolumn_string)
+
+    # The raster category 'label' is the 'flow'
+    v.db_update(map=flow_in_category, column="flow", query_column="label")
+    v.db_dropcolumn(map=flow_in_category, columns="label")
+
+    # Update the aggregation raster categories
+    v.db_addcolumn(map=flow_in_category, columns="aggregation_id int")
+    v.db_update(map=flow_in_category, column="aggregation_id", value=category)
+
+    v.colors(map=flow_in_category, raster=flow_in_category, quiet=True)

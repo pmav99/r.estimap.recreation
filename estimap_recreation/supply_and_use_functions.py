@@ -267,9 +267,7 @@ def compute_supply(
             aggregation=aggregation,
             category=category,
         )
-
         masking_equation = EQUATION.format(result="MASK", expression=masking)
-
         grass.mapcalc(masking_equation, overwrite=True)
 
 
@@ -506,31 +504,11 @@ def compute_supply(
                 # the following vectorised raster map(s)
                 # ?
 
-                r.to_vect(
-                    input=flow_in_category,
-                    output=flow_in_category,
-                    type="area",
-                    quiet=True,
+                raster_to_vector(
+                    raster=flow_in_category,
+                    vector=flow_in_category,
+                    type="area"
                 )
-
-                # Value is the ecosystem type
-                v.db_renamecolumn(map=flow_in_category, column=("value", "ecosystem"))
-
-                # New column for flow values
-                addcolumn_string = flow_column_name + " double"
-                v.db_addcolumn(map=flow_in_category, columns=addcolumn_string)
-
-                # The raster category 'label' is the 'flow'
-                v.db_update(map=flow_in_category, column="flow", query_column="label")
-                v.db_dropcolumn(map=flow_in_category, columns="label")
-
-                # Update the aggregation raster categories
-                v.db_addcolumn(map=flow_in_category, columns="aggregation_id int")
-                v.db_update(
-                    map=flow_in_category, column="aggregation_id", value=category
-                )
-
-                v.colors(map=flow_in_category, raster=flow_in_category, quiet=True)
 
             # get statistics
             dictionary = get_raster_statistics(

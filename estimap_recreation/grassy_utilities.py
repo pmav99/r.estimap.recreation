@@ -42,28 +42,29 @@ def remove_files_at_exit(filename):
     atexit.register(lambda: os.unlink(filename))
 
 
-def tmp_map_name(name=None):
-    """Return a temporary map name, for example:
+def temporary_filename(filename=None):
+    """Returns a temporary filename using grass.script.tempfile() and
+    grass.script.basename()
 
     Parameters
     ----------
-    name :
-        Name of input raster map
+    filename :
+        Name for a file
 
     Returns
     -------
     temporary_filename :
-        A temporary file name for the input raster map
+        A temporary file name
 
     Examples
     --------
-    >>> tmp_map_name(potential)
+    >>> temporary_filename(potential)
     tmp.SomeTemporaryString.potential
     """
     temporary_absolute_filename = grass.tempfile()
     temporary_filename = "tmp." + grass.basename(temporary_absolute_filename)
-    if name:
-        temporary_filename = temporary_filename + "." + str(name)
+    if filename:
+        temporary_filename = temporary_filename + "." + str(filename)
     return temporary_filename
 
 
@@ -100,7 +101,7 @@ def string_to_file(string, filename=None):
         A string where commas will be replaced by a newline
 
     name :
-        A string for tmp_map_name() to create a temporary file name 'filename'
+        A string for temporary_filename() to create a temporary file name 'filename'
 
     Returns
     -------
@@ -327,7 +328,7 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
     grass.verbose(_(msg))
 
     # get categories and labels
-    temporary_raster_categories_map = tmp_map_name("categories_of_" + input_name)
+    temporary_raster_categories_map = temporary_filename("categories_of_" + input_name)
     raster_category_labels = string_to_file(string=categories,
             filename=temporary_raster_categories_map)
 

@@ -109,7 +109,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
         cells from distance related computations.
 
     output_name :
-        Name to pass to tmp_map_name() to create a temporary map name
+        Name to pass to temporary_filename() to create a temporary map name
 
     Returns
     -------
@@ -134,8 +134,8 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
         grass.debug(_("Score for attractiveness equation: {s}".format(s=score)))
         distance_terms += str(score)
 
-    # tmp_distance = tmp_map_name('_'.join(distance_terms))
-    tmp_distance = tmp_map_name(name="_".join([raster, metric]))
+    # tmp_distance = temporary_filename('_'.join(distance_terms))
+    tmp_distance = temporary_filename(filename="_".join([raster, metric]))
     r.grow_distance(
         input=raster, distance=tmp_distance, metric=metric, quiet=True, overwrite=True
     )
@@ -168,10 +168,10 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
 
     # temporary maps will be removed
     if output_name:
-        tmp_distance_map = tmp_map_name(name=output_name)
+        tmp_distance_map = temporary_filename(filename=output_name)
     else:
         basename = "_".join([raster, "attractiveness"])
-        tmp_distance_map = tmp_map_name(name=basename)
+        tmp_distance_map = temporary_filename(filename=basename)
 
     distance_function = EQUATION.format(
         result=tmp_distance_map, expression=distance_function
@@ -267,7 +267,7 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
         Category rules to recode the input distance map
 
     output_name :
-        Name to pass to tmp_map_name() to create a temporary map name
+        Name to pass to temporary_filename() to create a temporary map name
 
     Returns
     -------
@@ -278,7 +278,7 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
     --------
     ...
     """
-    artificial_distances = tmp_map_name(name=raster)
+    artificial_distances = temporary_filename(filename=raster)
 
     grass.run_command(
         "r.grow.distance",
@@ -291,11 +291,11 @@ def compute_artificial_proximity(raster, distance_categories, output_name=None):
 
     # temporary maps will be removed
     if output_name:
-        tmp_output = tmp_map_name(name=output_name)
+        tmp_output = temporary_filename(filename=output_name)
         grass.debug(_("Pre-defined output map name {name}".format(name=tmp_output)))
 
     else:
-        tmp_output = tmp_map_name(name="artificial_proximity")
+        tmp_output = temporary_filename(filename="artificial_proximity")
         grass.debug(_("Hardcoded temporary map name {name}".format(name=tmp_output)))
 
     msg = "Computing proximity to '{mapname}'"

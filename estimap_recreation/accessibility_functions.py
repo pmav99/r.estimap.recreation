@@ -82,7 +82,7 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, outp
         Road infrastructure
 
     output_name :
-        Name to pass to tmp_map_name() to create a temporary map name
+        Name to pass to temporary_filename() to create a temporary map name
 
     Returns
     -------
@@ -106,10 +106,10 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, outp
     )
     # temporary maps will be removed!
     if output_name:
-        tmp_output = tmp_map_name(name=output_name)
+        tmp_output = temporary_filename(filename=output_name)
     else:
         basename = "artificial_accessibility"
-        tmp_output = tmp_map_name(name=basename)
+        tmp_output = temporary_filename(filename=basename)
 
     accessibility_equation = EQUATION.format(
         result=tmp_output, expression=accessibility_expression
@@ -123,5 +123,3 @@ def compute_artificial_accessibility(artificial_proximity, roads_proximity, outp
     grass.mapcalc(accessibility_equation, overwrite=True)
 
     return tmp_output
-
-

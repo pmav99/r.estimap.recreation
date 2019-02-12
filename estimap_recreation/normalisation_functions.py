@@ -152,8 +152,8 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
         components_string = components_string.replace("+", "_")
 
         # temporary map names
-        tmp_intermediate = tmp_map_name(name=components_string)
-        tmp_output = tmp_map_name(name=components_string)
+        tmp_intermediate = temporary_filename(filename=components_string)
+        tmp_output = temporary_filename(filename=components_string)
 
         # build mapcalc expression
         component_expression = SPACY_PLUS.join(components)
@@ -166,7 +166,7 @@ def zerofy_and_normalise_component(components, threshhold, output_name):
     elif len(components) == 1:
         # temporary map names, if components contains one element
         tmp_intermediate = components[0]
-        tmp_output = tmp_map_name(name=tmp_intermediate)
+        tmp_output = temporary_filename(filename=tmp_intermediate)
 
     if threshhold > THRESHHOLD_ZERO:
         msg = "Setting values < {threshhold} in '{raster}' to zero"

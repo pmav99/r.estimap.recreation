@@ -689,22 +689,22 @@ def main():
     """
 
     land = options["land"]
-    land_component_map_name = tmp_map_name(name="land_component")
+    land_component_map_name = temporary_filename(filename="land_component")
 
     water = options["water"]
-    water_component_map_name = tmp_map_name(name="water_component")
+    water_component_map_name = temporary_filename(filename="water_component")
 
     natural = options["natural"]
-    natural_component_map_name = tmp_map_name(name="natural_component")
+    natural_component_map_name = temporary_filename(filename="natural_component")
 
     urban = options["urban"]
     urban_component_map = "urban_component"
 
     infrastructure = options["infrastructure"]
-    infrastructure_component_map_name = tmp_map_name(name="infrastructure_component")
+    infrastructure_component_map_name = temporary_filename(filename="infrastructure_component")
 
     recreation = options["recreation"]
-    recreation_component_map_name = tmp_map_name(name="recreation_component")
+    recreation_component_map_name = temporary_filename(filename="recreation_component")
 
     """Land components"""
 
@@ -721,7 +721,7 @@ def main():
             )
             grass.fatal(_(msg.format(landuse=landuse)))
 
-    suitability_map_name = tmp_map_name(name="suitability")
+    suitability_map_name = temporary_filename(filename="suitability")
     suitability_scores = options["suitability_scores"]
 
     if landuse and suitability_scores and ":" not in suitability_scores:
@@ -734,7 +734,7 @@ def main():
         msg = msg.format(map=landuse)
         grass.warning(_(msg))
 
-        temporary_suitability_map_name = tmp_map_name(suitability_map_name)
+        temporary_suitability_map_name = temporary_filename(filename=suitability_map_name)
         suitability_scores = string_to_file(
             SUITABILITY_SCORES, filename=temporary_suitability_map_name
         )
@@ -744,7 +744,7 @@ def main():
         msg = "Using provided string of rules to score land use classes in {map}"
         msg = msg.format(map=landuse)
         grass.verbose(_(msg))
-        temporary_suitability_map_name = tmp_map_name(suitability_map_name)
+        temporary_suitability_map_name = temporary_filename(filename=suitability_map_name)
         suitability_scores = string_to_file(
             suitability_scores, filename=temporary_suitability_map_name
         )
@@ -791,7 +791,7 @@ def main():
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
 
-        temporary_maes_ecosystem_types = tmp_map_name(maes_ecosystem_types)
+        temporary_maes_ecosystem_types = temporary_filename(filename=maes_ecosystem_types)
         landcover_reclassification_rules = string_to_file(
             URBAN_ATLAS_TO_MAES_NOMENCLATURE, filename=maes_ecosystem_types
         )
@@ -807,7 +807,7 @@ def main():
         msg = "Using provided string of rules to reclassify the '{map}' map"
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
-        temporary_maes_land_classes = tmp_map_name(maes_land_classes)
+        temporary_maes_land_classes = temporary_filename(filename=maes_land_classes)
         landcover_reclassification_rules = string_to_file(
             landcover_reclassification_rules, filename=maes_land_classes
         )
@@ -868,7 +868,7 @@ def main():
 
     potential_title = "Recreation potential"
     recreation_potential = options["potential"]  # intermediate / output
-    recreation_potential_map_name = tmp_map_name(name="recreation_potential")
+    recreation_potential_map_name = temporary_filename(filename="recreation_potential")
 
     opportunity_title = "Recreation opportunity"
     recreation_opportunity = options["opportunity"]
@@ -880,11 +880,11 @@ def main():
     # else:
     #     recreation_spectrum = 'recreation_spectrum'
     # recreation_spectrum_component_map_name =
-    #       tmp_map_name(name='recreation_spectrum_component_map')
+    #       temporary_filename(filename='recreation_spectrum_component_map')
 
     spectrum_distance_categories = options["spectrum_distances"]
     if ":" in spectrum_distance_categories:
-        temporary_recreation_spectrum = tmp_map_name(recreation_spectrum)
+        temporary_recreation_spectrum = temporary_filename(filename=recreation_spectrum)
         spectrum_distance_categories = string_to_file(
             spectrum_distance_categories,
             filename=temporary_recreation_spectrum
@@ -1097,7 +1097,7 @@ def main():
             Because `r.null` operates on the complete input raster map,
             manually subsetting the input map is required.
             """
-            suitability_map = tmp_map_name(name=land_map)
+            suitability_map = temporary_filename(filename=land_map)
             subset_land = EQUATION.format(result=suitability_map, expression=land_map)
             r.mapcalc(subset_land)
 
@@ -1155,7 +1155,7 @@ def main():
 
     """ Recreation Potential [Output] """
 
-    tmp_recreation_potential = tmp_map_name(name=recreation_potential_map_name)
+    tmp_recreation_potential = temporary_filename(filename=recreation_potential_map_name)
 
     msg = "Computing intermediate 'Recreation Potential' map: '{potential}'"
     grass.verbose(_(msg.format(potential=tmp_recreation_potential)))
@@ -1168,7 +1168,7 @@ def main():
     )
 
     # recode recreation_potential
-    tmp_recreation_potential_categories = tmp_map_name(name=recreation_potential)
+    tmp_recreation_potential_categories = temporary_filename(filename=recreation_potential)
 
     msg = "\nClassifying '{potential}' map"
     msg = msg.format(potential=tmp_recreation_potential)
@@ -1281,7 +1281,7 @@ def main():
         # intermediate
 
         # REVIEW --------------------------------------------------------------
-        tmp_recreation_opportunity = tmp_map_name(name=recreation_opportunity_map_name)
+        tmp_recreation_opportunity = temporary_filename(filename=recreation_opportunity_map_name)
         msg = "Computing intermediate opportunity map '{opportunity}'"
         grass.debug(_(msg.format(opportunity=tmp_recreation_opportunity)))
 
@@ -1301,10 +1301,7 @@ def main():
         grass.verbose(msg.format(opportunity=tmp_recreation_opportunity))
 
         # recode opportunity_component
-        tmp_recreation_opportunity_categories = tmp_map_name(
-            name=recreation_opportunity
-        )
-
+        tmp_recreation_opportunity_categories = temporary_filename(filename=recreation_opportunity)
         classify_recreation_component(
             component=tmp_recreation_opportunity,
             rules=RECREATION_OPPORTUNITY_CATEGORIES,
@@ -1329,7 +1326,7 @@ def main():
         # Recreation Spectrum: Potential + Opportunity [Output]
 
         if not recreation_spectrum and any([demand, flow, supply]):
-            recreation_spectrum = tmp_map_name(name="recreation_spectrum")
+            recreation_spectrum = temporary_filename(filename="recreation_spectrum")
             remove_map_at_exit(recreation_spectrum)
 
         recreation_spectrum = compute_recreation_spectrum(
@@ -1344,7 +1341,7 @@ def main():
         get_univariate_statistics(recreation_spectrum)
 
         # get category labels
-        temporary_spectrum_categories = tmp_map_name("categories_of_" + recreation_spectrum)
+        temporary_spectrum_categories = temporary_filename(filename="categories_of_" + recreation_spectrum)
         spectrum_category_labels = string_to_file(
             SPECTRUM_CATEGORY_LABELS, filename=temporary_spectrum_categories
         )
@@ -1391,7 +1388,7 @@ def main():
 
         """Distance map"""
 
-        distance_to_highest_spectrum = tmp_map_name(name=highest_spectrum)
+        distance_to_highest_spectrum = temporary_filename(filename=highest_spectrum)
         r.grow_distance(
             input=highest_spectrum,
             distance=distance_to_highest_spectrum,
@@ -1413,7 +1410,7 @@ def main():
             output=distance_categories_to_highest_spectrum,
         )
 
-        temporary_distance_categories_to_highest_spectrum = tmp_map_name(distance_categories_to_highest_spectrum)
+        temporary_distance_categories_to_highest_spectrum = temporary_filename(filename=distance_categories_to_highest_spectrum)
         spectrum_distance_category_labels = string_to_file(
             SPECTRUM_DISTANCE_CATEGORY_LABELS,
             filename=temporary_distance_categories_to_highest_spectrum,
@@ -1428,7 +1425,7 @@ def main():
 
         """Combine Base map and Distance Categories"""
 
-        tmp_crossmap = tmp_map_name(name=crossmap)
+        tmp_crossmap = temporary_filename(filename=crossmap)
         r.cross(
             input=(distance_categories_to_highest_spectrum, base),
             flags="z",
@@ -1452,7 +1449,7 @@ def main():
         """Demand Distribution"""
 
         if any([flow, supply, aggregation]) and not demand:
-            demand = tmp_map_name(name="demand")
+            demand = temporary_filename(filename="demand")
 
         r.stats_zonal(
             base=tmp_crossmap,

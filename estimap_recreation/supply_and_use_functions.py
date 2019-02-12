@@ -320,7 +320,7 @@ def compute_supply(
         )
 
         # Write land suitability scores as an ASCII file
-        temporary_reclassified_base_map = tmp_map_name(reclassified_base)
+        temporary_reclassified_base_map = temporary_filename(filename=reclassified_base)
         suitability_scores_as_labels = string_to_file(
             SUITABILITY_SCORES_LABELS, filename=temporary_reclassified_base_map
         )

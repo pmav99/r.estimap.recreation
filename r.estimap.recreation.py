@@ -734,8 +734,9 @@ def main():
         msg = msg.format(map=landuse)
         grass.warning(_(msg))
 
+        temporary_suitability_map_name = tmp_map_name(suitability_map_name)
         suitability_scores = string_to_file(
-            SUITABILITY_SCORES, name=suitability_map_name
+            SUITABILITY_SCORES, filename=temporary_suitability_map_name
         )
         remove_files_at_exit(suitability_scores)
 
@@ -743,8 +744,9 @@ def main():
         msg = "Using provided string of rules to score land use classes in {map}"
         msg = msg.format(map=landuse)
         grass.verbose(_(msg))
+        temporary_suitability_map_name = tmp_map_name(suitability_map_name)
         suitability_scores = string_to_file(
-            suitability_scores, name=suitability_map_name
+            suitability_scores, filename=temporary_suitability_map_name
         )
         remove_files_at_exit(suitability_scores)
 
@@ -789,8 +791,9 @@ def main():
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
 
+        temporary_maes_ecosystem_types = tmp_map_name(maes_ecosystem_types)
         landcover_reclassification_rules = string_to_file(
-            URBAN_ATLAS_TO_MAES_NOMENCLATURE, name=maes_ecosystem_types
+            URBAN_ATLAS_TO_MAES_NOMENCLATURE, filename=maes_ecosystem_types
         )
         remove_files_at_exit(landcover_reclassification_rules)
 
@@ -804,8 +807,9 @@ def main():
         msg = "Using provided string of rules to reclassify the '{map}' map"
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
+        temporary_maes_land_classes = tmp_map_name(maes_land_classes)
         landcover_reclassification_rules = string_to_file(
-            landcover_reclassification_rules, name=maes_land_classes
+            landcover_reclassification_rules, filename=maes_land_classes
         )
         remove_files_at_exit(landcover_reclassification_rules)
 
@@ -880,8 +884,10 @@ def main():
 
     spectrum_distance_categories = options["spectrum_distances"]
     if ":" in spectrum_distance_categories:
+        temporary_recreation_spectrum = tmp_map_name(recreation_spectrum)
         spectrum_distance_categories = string_to_file(
-            spectrum_distance_categories, name=recreation_spectrum
+            spectrum_distance_categories,
+            filename=temporary_recreation_spectrum
         )
         remove_files_at_exit(spectrum_distance_categories)
 
@@ -1338,10 +1344,9 @@ def main():
         get_univariate_statistics(recreation_spectrum)
 
         # get category labels
-        spectrum_categories = "categories_of_"
-        spectrum_categories += recreation_spectrum
+        temporary_spectrum_categories = tmp_map_name("categories_of_" + recreation_spectrum)
         spectrum_category_labels = string_to_file(
-            SPECTRUM_CATEGORY_LABELS, name=spectrum_categories
+            SPECTRUM_CATEGORY_LABELS, filename=temporary_spectrum_categories
         )
 
         # add to list for removal
@@ -1408,9 +1413,10 @@ def main():
             output=distance_categories_to_highest_spectrum,
         )
 
+        temporary_distance_categories_to_highest_spectrum = tmp_map_name(distance_categories_to_highest_spectrum)
         spectrum_distance_category_labels = string_to_file(
             SPECTRUM_DISTANCE_CATEGORY_LABELS,
-            name=distance_categories_to_highest_spectrum,
+            filename=temporary_distance_categories_to_highest_spectrum,
         )
         remove_files_at_exit(spectrum_distance_category_labels)
 

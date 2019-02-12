@@ -90,7 +90,7 @@ def remove_temporary_maps():
     #     r.mask(flags='r', verbose=True)
 
 
-def string_to_file(string, name=None):
+def string_to_file(string, filename=None):
     """Split series of strings separated by comma in lines and write as an
     ASCII file
 
@@ -116,8 +116,6 @@ def string_to_file(string, name=None):
     # string = string.splitlines()
     msg = "String split in lines: {s}".format(s=string)
     grass.debug(_(msg))
-
-    filename = tmp_map_name(name=name)
 
     # # Use a file-like object instead?
     # import tempfile
@@ -329,9 +327,9 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
     grass.verbose(_(msg))
 
     # get categories and labels
-    raster_categories = "categories_of_"
-    raster_categories += input_name
-    raster_category_labels = string_to_file(string=categories, name=raster_categories)
+    temporary_raster_categories_map = tmp_map_name("categories_of_" + input_name)
+    raster_category_labels = string_to_file(string=categories,
+            filename=temporary_raster_categories_map)
 
     # add ascii file to removal list
     remove_files_at_exit(raster_category_labels)

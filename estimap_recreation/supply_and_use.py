@@ -10,10 +10,20 @@ import grass.script as grass
 from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
+
 from .colors import MOBILITY_COLORS
-from .constants import *
-from .grassy_utilities import *
-from .utilities import merge_two_dictionaries, nested_dictionary_to_csv, dictionary_to_csv
+from .constants import EQUATION
+from .constants import HIGHEST_RECREATION_CATEGORY
+from .constants import SUITABILITY_SCORES_LABELS
+from .constants import COMMA
+from .constants import CSV_EXTENSION
+from .grassy_utilities import temporary_filename
+from .grassy_utilities import remove_map_at_exit, remove_files_at_exit
+from .grassy_utilities import string_to_file
+from .grassy_utilities import get_raster_statistics
+from .utilities import merge_two_dictionaries
+from .utilities import nested_dictionary_to_csv
+from .utilities import dictionary_to_csv
 
 def compile_use_table(supply):
     """Compile the 'use' table out of a 'supply' table

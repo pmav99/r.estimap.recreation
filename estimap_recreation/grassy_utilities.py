@@ -7,6 +7,7 @@
 
 import atexit
 import os
+
 import grass.script as grass
 from grass.exceptions import CalledModuleError
 from grass.pygrass.modules.shortcuts import general as g

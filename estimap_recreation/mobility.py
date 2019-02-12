@@ -5,7 +5,8 @@
 @author Nikos Alexandris |
 """
 
-from .distance_functions import *
+import grass.script as grass
+from .distance import build_distance_function
 
 def mobility_function(distance, constant, coefficients, population, score,
         suitability=None):

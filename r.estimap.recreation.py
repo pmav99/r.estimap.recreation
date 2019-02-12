@@ -646,13 +646,13 @@ from estimap_recreation.utilities import *
 
 # algorithms
 
-from estimap_recreation.distance_functions import *
-from estimap_recreation.normalisation_functions import *
-from estimap_recreation.accessibility_functions import *
-from estimap_recreation.spectrum_functions import *
+from estimap_recreation.distance import *
+from estimap_recreation.normalisation import *
+from estimap_recreation.accessibility import *
+from estimap_recreation.spectrum import *
 from estimap_recreation.components import *
-from estimap_recreation.mobility_functions import *
-from estimap_recreation.supply_and_use_functions import *
+from estimap_recreation.mobility import *
+from estimap_recreation.supply_and_use import *
 
 
 def main():

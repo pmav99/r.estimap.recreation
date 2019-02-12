@@ -11,7 +11,7 @@ from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
 
-from estimap_recreation.constants import *
+from .constants import EQUATION
 
 
 def recreation_spectrum_expression(potential, opportunity):

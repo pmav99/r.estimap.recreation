@@ -621,7 +621,7 @@ collective: all or nothing; if any option is given, all must be given
 #% required: no
 #%end
 
-# import constants
+# constants
 
 from estimap_recreation.colors import *
 from estimap_recreation.constants import *
@@ -634,18 +634,18 @@ import os
 import subprocess
 import sys
 import time
+from pprint import pprint as pp
 
 if "GISBASE" not in os.environ:
-    g.message(_("You must be in GRASS GIS to run this program."))
+    pp("You must be in GRASS GIS to run this program.")
     sys.exit(1)
 
-# import utilities
+# utilities
 
-from pprint import pprint as pp
 from estimap_recreation.grassy_utilities import *
 from estimap_recreation.utilities import *
 
-# import algorithms
+# algorithms
 
 from estimap_recreation.distance_functions import *
 from estimap_recreation.normalisation_functions import *

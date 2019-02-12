@@ -637,8 +637,7 @@ import time
 from pprint import pprint as pp
 
 if "GISBASE" not in os.environ:
-    pp("You must be in GRASS GIS to run this program.")
-    sys.exit(1)
+    sys.exit("Exiting: You must be in GRASS GIS to run this program.")
 
 # utilities
 

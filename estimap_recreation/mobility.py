@@ -12,8 +12,10 @@ from __future__ import print_function
 import grass.script as grass
 from .distance import build_distance_function
 
-def mobility_function(distance, constant, coefficients, population, score,
-        suitability=None):
+
+def mobility_function(
+    distance, constant, coefficients, population, score, suitability=None
+):
     """
     The following 'mobility' function, is identical to the one used in
     `compute_attractiveness()`, excluding, however, the 'score' term:
@@ -155,8 +157,9 @@ def mobility_function(distance, constant, coefficients, population, score,
     return mobility_expression
 
 
-def compute_unmet_demand(distance, constant, coefficients, population, score,
-        suitability=None):
+def compute_unmet_demand(
+    distance, constant, coefficients, population, score, suitability=None
+):
     """
     Parameters
     ----------

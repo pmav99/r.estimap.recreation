@@ -111,5 +111,3 @@ def compute_recreation_spectrum(potential, opportunity, spectrum):
     grass.mapcalc(spectrum_equation, overwrite=True)
 
     return spectrum
-
-

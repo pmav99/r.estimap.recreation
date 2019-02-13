@@ -8,6 +8,7 @@
 import grass.script as grass
 from grass.pygrass.modules.shortcuts import raster as r
 
+
 def append_map_to_component(raster, component_name, component_list):
     """Appends raster map to given list of components
 

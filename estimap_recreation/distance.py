@@ -15,7 +15,10 @@ from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
 
-def build_distance_function(constant, kappa, alpha, variable, score=None, suitability=None):
+
+def build_distance_function(
+    constant, kappa, alpha, variable, score=None, suitability=None
+):
     """
     Build a valid `r.mapcalc` expression based on the following "space-time"
     function:
@@ -85,7 +88,9 @@ def build_distance_function(constant, kappa, alpha, variable, score=None, suitab
     return function
 
 
-def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, output_name=None):
+def compute_attractiveness(
+    raster, metric, constant, kappa, alpha, mask=None, output_name=None
+):
     """
     Compute a raster map whose values follow an (euclidean) distance function
     ( {constant} + {kappa} ) / ( {kappa} + exp({alpha} * {distance}) ), where:
@@ -164,10 +169,7 @@ def compute_attractiveness(raster, metric, constant, kappa, alpha, mask=None, ou
     # FIXME: use a parameters dictionary, avoid conditionals
     if not score:
         distance_function = build_distance_function(
-            constant=constant,
-            kappa=kappa,
-            alpha=alpha,
-            variable=tmp_distance
+            constant=constant, kappa=kappa, alpha=alpha, variable=tmp_distance
         )
 
     # temporary maps will be removed

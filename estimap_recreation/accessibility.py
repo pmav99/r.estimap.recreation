@@ -14,6 +14,7 @@ from grass.pygrass.modules.shortcuts import general as g
 from grass.pygrass.modules.shortcuts import raster as r
 from grass.pygrass.modules.shortcuts import vector as v
 
+
 def artificial_accessibility_expression(artificial_proximity, roads_proximity):
     """
     Build an r.mapcalc compatible expression to compute accessibility to
@@ -74,7 +75,9 @@ def artificial_accessibility_expression(artificial_proximity, roads_proximity):
     return expression
 
 
-def compute_artificial_accessibility(artificial_proximity, roads_proximity, output_name=None):
+def compute_artificial_accessibility(
+    artificial_proximity, roads_proximity, output_name=None
+):
     """Compute artificial proximity
 
     Parameters

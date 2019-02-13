@@ -21,6 +21,7 @@ from grass.pygrass.modules.shortcuts import vector as v
 from .colors import SCORE_COLORS
 from .constants import CITATION_RECREATION_POTENTIAL
 
+
 def run(cmd, **kwargs):
     """Pass required arguments to grass commands (?)"""
     grass.run_command(cmd, quiet=True, **kwargs)
@@ -29,12 +30,7 @@ def run(cmd, **kwargs):
 def remove_map(map_name):
     """ Remove the provided map """
     grass.verbose("Removing %s" % map_name)
-    g.remove(
-        flags="f",
-        type=("raster", "vector"),
-        name=map_name,
-        quiet=True,
-    )
+    g.remove(flags="f", type=("raster", "vector"), name=map_name, quiet=True)
 
 
 def remove_map_at_exit(map_name):
@@ -78,7 +74,7 @@ def remove_temporary_maps():
 
     # get list of temporary maps
     # temporary_raster_maps = grass.list_strings(
-        # type="raster", pattern="tmp.{pid}*".format(pid=os.getpid())
+    #     type="raster", pattern="tmp.{pid}*".format(pid=os.getpid())
     # )
 
     # # remove temporary maps
@@ -334,8 +330,9 @@ def export_map(input_name, title, categories, colors, output_name, timestamp):
 
     # get categories and labels
     temporary_raster_categories_map = temporary_filename("categories_of_" + input_name)
-    raster_category_labels = string_to_file(string=categories,
-            filename=temporary_raster_categories_map)
+    raster_category_labels = string_to_file(
+        string=categories, filename=temporary_raster_categories_map
+    )
 
     # add ascii file to removal list
     remove_files_at_exit(raster_category_labels)
@@ -492,6 +489,7 @@ def update_vector(vector, raster, methods, column_prefix):
     )
     # grass.verbose(_("Updating vector map '{v}'".format(v=vector)))
 
+
 def raster_to_vector(raster, vector, type):
     """Converts a raster to a vector map
 
@@ -514,12 +512,7 @@ def raster_to_vector(raster, vector, type):
     --------
     ..
     """
-    r.to_vect(
-            input=flow_in_category,
-            output=flow_in_category,
-            type="area",
-            quiet=True,
-            )
+    r.to_vect(input=flow_in_category, output=flow_in_category, type="area", quiet=True)
 
     # Value is the ecosystem type
     v.db_renamecolumn(map=flow_in_category, column=("value", "ecosystem"))

@@ -18,6 +18,7 @@ from grass.pygrass.modules.shortcuts import vector as v
 from estimap_recreation.constants import *
 from estimap_recreation.grassy_utilities import *
 
+
 def zerofy_small_values(raster, threshhold, output_name):
     """
     Set the input raster map cell values to 0 if they are smaller than the

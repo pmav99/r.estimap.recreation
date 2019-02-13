@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import csv
 
+
 def merge_two_dictionaries(first, second):
     """Merge two dictionaries in via shallow copy.
     Source: https://stackoverflow.com/a/26853961/1172302"""
@@ -152,5 +153,3 @@ def get_coefficients(coefficients_string):
 
     grass.verbose(_(msg))  # FIXME REMOVEME ?
     return metric, constant, kappa, alpha
-
-

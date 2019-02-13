@@ -702,7 +702,9 @@ def main():
     urban_component_map = "urban_component"
 
     infrastructure = options["infrastructure"]
-    infrastructure_component_map_name = temporary_filename(filename="infrastructure_component")
+    infrastructure_component_map_name = temporary_filename(
+        filename="infrastructure_component"
+    )
 
     recreation = options["recreation"]
     recreation_component_map_name = temporary_filename(filename="recreation_component")
@@ -735,7 +737,9 @@ def main():
         msg = msg.format(map=landuse)
         grass.warning(_(msg))
 
-        temporary_suitability_map_name = temporary_filename(filename=suitability_map_name)
+        temporary_suitability_map_name = temporary_filename(
+            filename=suitability_map_name
+        )
         suitability_scores = string_to_file(
             SUITABILITY_SCORES, filename=temporary_suitability_map_name
         )
@@ -745,7 +749,9 @@ def main():
         msg = "Using provided string of rules to score land use classes in {map}"
         msg = msg.format(map=landuse)
         grass.verbose(_(msg))
-        temporary_suitability_map_name = temporary_filename(filename=suitability_map_name)
+        temporary_suitability_map_name = temporary_filename(
+            filename=suitability_map_name
+        )
         suitability_scores = string_to_file(
             suitability_scores, filename=temporary_suitability_map_name
         )
@@ -792,7 +798,9 @@ def main():
         msg = msg.format(map=landcover)
         grass.verbose(_(msg))
 
-        temporary_maes_ecosystem_types = temporary_filename(filename=maes_ecosystem_types)
+        temporary_maes_ecosystem_types = temporary_filename(
+            filename=maes_ecosystem_types
+        )
         landcover_reclassification_rules = string_to_file(
             URBAN_ATLAS_TO_MAES_NOMENCLATURE, filename=maes_ecosystem_types
         )
@@ -887,8 +895,7 @@ def main():
     if ":" in spectrum_distance_categories:
         temporary_recreation_spectrum = temporary_filename(filename=recreation_spectrum)
         spectrum_distance_categories = string_to_file(
-            spectrum_distance_categories,
-            filename=temporary_recreation_spectrum
+            spectrum_distance_categories, filename=temporary_recreation_spectrum
         )
         remove_files_at_exit(spectrum_distance_categories)
 
@@ -1156,7 +1163,9 @@ def main():
 
     """ Recreation Potential [Output] """
 
-    tmp_recreation_potential = temporary_filename(filename=recreation_potential_map_name)
+    tmp_recreation_potential = temporary_filename(
+        filename=recreation_potential_map_name
+    )
 
     msg = "Computing intermediate 'Recreation Potential' map: '{potential}'"
     grass.verbose(_(msg.format(potential=tmp_recreation_potential)))
@@ -1169,7 +1178,9 @@ def main():
     )
 
     # recode recreation_potential
-    tmp_recreation_potential_categories = temporary_filename(filename=recreation_potential)
+    tmp_recreation_potential_categories = temporary_filename(
+        filename=recreation_potential
+    )
 
     msg = "\nClassifying '{potential}' map"
     msg = msg.format(potential=tmp_recreation_potential)
@@ -1282,7 +1293,9 @@ def main():
         # intermediate
 
         # REVIEW --------------------------------------------------------------
-        tmp_recreation_opportunity = temporary_filename(filename=recreation_opportunity_map_name)
+        tmp_recreation_opportunity = temporary_filename(
+            filename=recreation_opportunity_map_name
+        )
         msg = "Computing intermediate opportunity map '{opportunity}'"
         grass.debug(_(msg.format(opportunity=tmp_recreation_opportunity)))
 
@@ -1302,7 +1315,9 @@ def main():
         grass.verbose(msg.format(opportunity=tmp_recreation_opportunity))
 
         # recode opportunity_component
-        tmp_recreation_opportunity_categories = temporary_filename(filename=recreation_opportunity)
+        tmp_recreation_opportunity_categories = temporary_filename(
+            filename=recreation_opportunity
+        )
         classify_recreation_component(
             component=tmp_recreation_opportunity,
             rules=RECREATION_OPPORTUNITY_CATEGORIES,
@@ -1342,7 +1357,9 @@ def main():
         get_univariate_statistics(recreation_spectrum)
 
         # get category labels
-        temporary_spectrum_categories = temporary_filename(filename="categories_of_" + recreation_spectrum)
+        temporary_spectrum_categories = temporary_filename(
+            filename="categories_of_" + recreation_spectrum
+        )
         spectrum_category_labels = string_to_file(
             SPECTRUM_CATEGORY_LABELS, filename=temporary_spectrum_categories
         )
@@ -1411,7 +1428,9 @@ def main():
             output=distance_categories_to_highest_spectrum,
         )
 
-        temporary_distance_categories_to_highest_spectrum = temporary_filename(filename=distance_categories_to_highest_spectrum)
+        temporary_distance_categories_to_highest_spectrum = temporary_filename(
+            filename=distance_categories_to_highest_spectrum
+        )
         spectrum_distance_category_labels = string_to_file(
             SPECTRUM_DISTANCE_CATEGORY_LABELS,
             filename=temporary_distance_categories_to_highest_spectrum,
@@ -1443,7 +1462,7 @@ def main():
         grass.verbose(_(msg))
 
         population_statistics = get_univariate_statistics(population)
-        population_total = population_statistics['sum']
+        population_total = population_statistics["sum"]
         msg = "|i Population statistics: {s}".format(s=population_total)
         grass.verbose(_(msg))
 

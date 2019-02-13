@@ -29,6 +29,7 @@ from .utilities import merge_two_dictionaries
 from .utilities import nested_dictionary_to_csv
 from .utilities import dictionary_to_csv
 
+
 def compile_use_table(supply):
     """Compile the 'use' table out of a 'supply' table
 
@@ -284,7 +285,6 @@ def compute_supply(
         masking_equation = EQUATION.format(result="MASK", expression=masking)
         grass.mapcalc(masking_equation, overwrite=True)
 
-
         # zoom to MASK
         g.region(zoom="MASK", nsres=ns_resolution, ewres=ew_resolution, quiet=True)
 
@@ -480,9 +480,9 @@ def compute_supply(
 
         # debugging
         # r.report(
-            # flags='hn',
-            # map=(flow_in_category),
-            # units=('k','c','p'),
+        #     flags='hn',
+        #     map=(flow_in_category),
+        #     units=('k','c','p'),
         # )
 
         if print_only:
@@ -519,9 +519,7 @@ def compute_supply(
                 # ?
 
                 raster_to_vector(
-                    raster=flow_in_category,
-                    vector=flow_in_category,
-                    type="area"
+                    raster=flow_in_category, vector=flow_in_category, type="area"
                 )
 
             # get statistics
@@ -574,5 +572,3 @@ def compute_supply(
 
     # Maybe return list of flow maps?  Requires unique flow map names
     return flows
-
-

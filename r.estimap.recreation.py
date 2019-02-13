@@ -36,6 +36,8 @@
                Consult the LICENCE file for details.
 """
 
+from __future__ import division
+from __future__ import absolute_import
 from __future__ import print_function
 
 '''Flags'''
@@ -1593,7 +1595,6 @@ def main():
     # print citation
     citation = "Citation: " + CITATION_RECREATION_POTENTIAL
     grass.verbose(citation)
-
 
 if __name__ == "__main__":
     atexit.register(remove_temporary_maps)

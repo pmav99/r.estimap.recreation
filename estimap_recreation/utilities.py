@@ -5,6 +5,10 @@
 @author Nikos Alexandris |
 """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import csv
 
 def merge_two_dictionaries(first, second):

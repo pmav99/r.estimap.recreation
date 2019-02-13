@@ -40,7 +40,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-'''Flags'''
+# --- Flags ---
 
 #%Module
 #%  description: Implementation of ESTIMAP to support mapping and modelling of ecosystem services (Zulian, 2014)
@@ -74,16 +74,16 @@ from __future__ import print_function
 #%  description: Print out results (i.e. supply table), don't export to file
 #%end
 
-'''
+"""
 exclusive: at most one of the options may be given
 required: at least one of the options must be given
 requires: if the first option is given, at least one of the subsequent options must also be given
 requires_all: if the first option is given, all of the subsequent options must also be given
 excludes: if the first option is given, none of the subsequent options may be given
 collective: all or nothing; if any option is given, all must be given
-'''
+"""
 
-'''Components section'''
+# --- Components section ---
 
 #%option G_OPT_R_INPUT
 #% key: land
@@ -141,7 +141,7 @@ collective: all or nothing; if any option is given, all must be given
 #% guisection: Components
 #%end
 
-'''Land'''
+# ---Land---
 
 #%option G_OPT_R_INPUT
 #% key: landuse
@@ -191,7 +191,7 @@ collective: all or nothing; if any option is given, all must be given
 #% guisection: Land
 #%end
 
-'''Water'''
+# --- Water ---
 
 #%option G_OPT_R_INPUT
 #% key: lakes
@@ -301,7 +301,7 @@ collective: all or nothing; if any option is given, all must be given
 ##%  excludes: water, coast_geomorphology, coast_proximity, marine, lakes, lakes_proximity, bathing_water
 ##%end
 
-'''Natural'''
+# --- Natural ---
 
 #%option G_OPT_R_INPUT
 #% key: protected
@@ -329,7 +329,7 @@ collective: all or nothing; if any option is given, all must be given
 ###% requires: protected, protected_scores
 ##%end
 
-'''Artificial areas'''
+# --- Artificial areas ---
 
 #%option G_OPT_R_INPUT
 #% key: artificial
@@ -355,7 +355,7 @@ collective: all or nothing; if any option is given, all must be given
 #%  requires: artificial, artificial_distances
 #%end
 
-'''Roads'''
+# --- Road ---
 
 #%option G_OPT_R_INPUT
 #% key: roads
@@ -383,7 +383,7 @@ collective: all or nothing; if any option is given, all must be given
 #%  collective: artificial, roads
 #%end
 
-'''Recreation'''
+# --- Recreation ---
 
 #######################################################################
 # Offer input for potential?
@@ -406,7 +406,7 @@ collective: all or nothing; if any option is given, all must be given
 ##%  excludes: infrastructure, roads
 ##%end
 
-'''Devaluation'''
+# --- Devaluation ---
 
 #%option G_OPT_R_INPUTS
 #% key: devaluation
@@ -417,7 +417,7 @@ collective: all or nothing; if any option is given, all must be given
 #% guisection: Devaluation
 #%end
 
-'''MASK'''
+# --- MASK ---
 
 #%option G_OPT_R_INPUT
 #% key: mask
@@ -426,7 +426,7 @@ collective: all or nothing; if any option is given, all must be given
 #% required : no
 #%end
 
-'''Output'''
+# --- Output ---
 
 #%option G_OPT_R_OUTPUT
 #% key: potential
@@ -480,7 +480,7 @@ collective: all or nothing; if any option is given, all must be given
 #% answer: 0:1000:1,1000:2000:2,2000:3000:3,3000:4000:4,4000:*:5
 #%end
 
-'''Required for Cumulative Opportunity Model'''
+# --- Required for Cumulative Opportunity Model ---
 
 #%option G_OPT_R_INPUT
 #% key: base
@@ -589,7 +589,7 @@ collective: all or nothing; if any option is given, all must be given
 #%  requires: use, landcover, landuse
 #%end
 
-'''Various'''
+# --- Various ---
 
 #%option
 #% key: metric

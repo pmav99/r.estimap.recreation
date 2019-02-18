@@ -623,12 +623,6 @@ collective: all or nothing; if any option is given, all must be given
 #% required: no
 #%end
 
-# constants
-
-from estimap_recreation.colors import *
-from estimap_recreation.constants import *
-from estimap_recreation.labels import *
-
 # required librairies
 
 import datetime
@@ -640,6 +634,18 @@ from pprint import pprint as pp
 
 if "GISBASE" not in os.environ:
     sys.exit("Exiting: You must be in GRASS GIS to run this program.")
+
+from grass.script.utils import get_lib_path
+path = get_lib_path(modname='estimap_recreation', libname='colors')
+if path is None:
+    gscript.fatal('Not able to find the estimap_recreation library directory.')
+sys.path.append(os.path.dirname(path))
+
+# constants
+
+from estimap_recreation.colors import *
+from estimap_recreation.constants import *
+from estimap_recreation.labels import *
 
 from estimap_recreation.main import main
 

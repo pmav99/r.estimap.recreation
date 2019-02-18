@@ -2,7 +2,8 @@ MODULE_TOPDIR = ../..
 
 PGM = r.estimap.recreation
 
-SUBDIRS = estimap_recreation
+SUBDIRS = estimap_recreation \
+          r.estimap.recreation
 
 include $(MODULE_TOPDIR)/include/Make/Dir.make
 

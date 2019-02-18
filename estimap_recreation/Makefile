@@ -3,7 +3,7 @@ MODULE_TOPDIR = ../../..
 include $(MODULE_TOPDIR)/include/Make/Other.make
 include $(MODULE_TOPDIR)/include/Make/Python.make
 
-MODULES = __init__ accessibility colors components constants distance grassy_utilities labels main Makefile mobility normalisation panos spectrum supply_and_use utilities
+MODULES = __init__ accessibility colors components constants distance grassy_utilities labels main mobility normalisation panos spectrum supply_and_use utilities
 
 PGM = r.estimap_recreation
 LIBDIR = estimap_recreation

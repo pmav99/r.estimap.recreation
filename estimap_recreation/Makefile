@@ -5,7 +5,9 @@ include $(MODULE_TOPDIR)/include/Make/Python.make
 
 MODULES = __init__ accessibility colors components constants distance grassy_utilities labels main Makefile mobility normalisation panos spectrum supply_and_use utilities
 
-ETCDIR = $(ETC)/estimap_recreation
+PGM = r.estimap_recreation
+LIBDIR = estimap_recreation
+ETCDIR = $(ETC)/$(PGM)/$(LIBDIR)
 
 PYFILES := $(patsubst %,$(ETCDIR)/%.py,$(MODULES))
 PYCFILES := $(patsubst %,$(ETCDIR)/%.pyc,$(MODULES))

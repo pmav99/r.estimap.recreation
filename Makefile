@@ -6,7 +6,7 @@ SUBDIRS = estimap_recreation
 
 include $(MODULE_TOPDIR)/include/Make/Dir.make
 
-default: parsubdirs htmldir
+default: parsubdirs htmldir script
 
 install: installsubdirs
 	$(INSTALL_DATA) $(PGM).html $(INST_DIR)/docs/html/

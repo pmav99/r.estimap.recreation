@@ -19,10 +19,10 @@ following "component" maps
 
 <div>
 
-![Example of a land suitability input map](images/area_of_interest.png)
-![Example of a land suitability input map](images/land_suitability.png)
-![Example of a water resources input map](images/water_resources.png) ![Example
-of a protected areas input map](images/protected_areas.png)
+![Example of a land suitability input map](images/r_estimap_recreation_area_of_interest.png)
+![Example of a land suitability input map](images/r_estimap_recreation_land_suitability.png)
+![Example of a water resources input map](images/r_estimap_recreation_water_resources.png) ![Example
+of a protected areas input map](images/r_estimap_recreation_protected_areas.png)
 
 </div>
 
@@ -55,7 +55,7 @@ recreation (here the map named
 
 </div>
 
-![Example of a recreation potential output map](images/potential.png)
+![Example of a recreation potential output map](images/r_estimap_recreation_potential.png)
 
 Note, this will process the input map `land_suitability` over the extent
 defined previously via `g.region`, which is the standard behaviour in
@@ -71,7 +71,7 @@ as a mask and feed it to the input map option `mask`:
 </div>
 
 ![Example of a recreation potential output map while using a
-MASK](images/potential_1.png)
+MASK](images/r_estimap_recreation_potential_1.png)
 
 The use of a mask (in GRASS GIS' terminology known as **MASK**) will
 ignore areas of **No Data** (pixels in the `area_of_interest` map
@@ -98,7 +98,7 @@ the output map name to `potential_2` and execute again, without a mask:
 </div>
 
 ![Example of a recreation potential output map while using a MASK, a
-land suitability map and a water resources map](images/potential_2.png)
+land suitability map and a water resources map](images/r_estimap_recreation_potential_2.png)
 
 At this point it becomes clear that all `NULL` cells present in the
 "water" map, are proagated in the output map `potential_2`.
@@ -115,7 +115,7 @@ execution:
 
 ![Example of a recreation potential output map while using a MASK, a
 land suitability map, a water resources map and a natural resources
-map](images/potential_3.png)
+map](images/r_estimap_recreation_potential_3.png)
 
 While the `land` option accepts only one map as an input, both the
 `water` and the `natural` options accept multiple maps as inputs. In
@@ -133,7 +133,7 @@ to options that accept multiple inputs.
 
 ![Example of a recreation potential output map while using a MASK, a
 land suitability map, two water resources maps and a natural resources
-map](images/potential_4.png)
+map](images/r_estimap_recreation_potential_4.png)
 
 This example, features also a title and a legend, so as to make sense of
 the map.
@@ -164,7 +164,7 @@ scores distance to infrastructure (such as the road network) named
 `distance_to_infrastructure` is defined as an input:
 
 ![Example of an input map showing distances to
-infrastructure](images/distance_to_infrastructure.png)
+infrastructure](images/r_estimap_recreation_distance_to_infrastructure.png)
 
 Naturally, we need to define the output map option `spectrum` too:
 
@@ -189,7 +189,7 @@ or, the same command in a copy-paste friendly way:
 
 ![Example of a recreation spectrum output map while using a MASK, a land
 suitability map, a water resources map and a natural resources
-map](images/spectrum.png)
+map](images/r_estimap_recreation_spectrum.png)
 
 Missing to define the `infrastructure` map, the command will abort and
 inform about.
@@ -236,7 +236,7 @@ or, the same command in a copy-paste friendly way:
 
 ![Example of a recreation spectrum output map while using a MASK, a land
 suitability map, a water resources map and a natural resources
-map](images/opportunity.png)
+map](images/r_estimap_recreation_opportunity.png)
 
 #### More input maps
 
@@ -252,7 +252,7 @@ sets internally the spatial resolution of all related output maps
 
 Population
 
-![Fragment of a population map (GHSL, 2015)](images/population_2015.png)
+![Fragment of a population map (GHSL, 2015)](images/r_estimap_recreation_population_2015.png)
 
 In this example, the population map named `population_2015` is of
 1000m\^2.
@@ -260,7 +260,7 @@ In this example, the population map named `population_2015` is of
 Local administrative units
 
 ![Fragment of a local administrative units input
-map](images/local_administrative_units.png)
+map](images/r_estimap_recreation_local_administrative_units.png)
 
 The map named `local_administrative_units` serves in the following
 example as the base map for the zonal statistics to obtain the demand
@@ -284,7 +284,7 @@ map.
 
 ![Example of a demand distribution output map while using a MASK and
 inputs for land suitability, water resources, natural resources,
-infrastructure, population and base](images/demand.png)
+infrastructure, population and base](images/r_estimap_recreation_demand.png)
 
 #### Unmet Demand
 
@@ -305,7 +305,7 @@ infrastructure, population and base](images/demand.png)
 
 ![Example of an 'unmet demand' output map while using a MASK and inputs
 for land suitability, water resources, natural resources,
-infrastructure, population and base](images/unmet_demand.png)
+infrastructure, population and base](images/r_estimap_recreation_unmet_demand.png)
 
 #### Mobility
 
@@ -350,7 +350,7 @@ geometric boundaries
 
 ![Example of a mobility output map while using a MASK and inputs for
 land suitability, water resources, natural resources, infrastructure,
-population and base](images/mobility.png)
+population and base](images/r_estimap_recreation_mobility.png)
 
 #### All in one call
 
@@ -441,8 +441,8 @@ potential.
 
 <div>
 
-![Fragment from the CORINE land data base ](images/corine_land_cover_2006.png)
-![Legend for the CORINE land data base](images/corine_land_cover_legend.png)
+![Fragment from the CORINE land data base ](images/r_estimap_recreation_corine_land_cover_2006.png)
+![Legend for the CORINE land data base](images/r_estimap_recreation_corine_land_cover_legend.png)
 
 </div>
 
@@ -492,7 +492,7 @@ This file is provided in the `suitability_scores` option:
 </div>
 
 ![Example of a recreation spectrum output map while using a MASK, based
-on a fragment from the CORINE land data base](images/potential_corine.png)
+on a fragment from the CORINE land data base](images/r_estimap_recreation_potential_corine.png)
 
 The same can be achieved with a long one-line string too:
 

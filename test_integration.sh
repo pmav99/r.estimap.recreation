@@ -49,7 +49,7 @@ g.remove \
     name=demand,flow,maes_ecosystem_types,maes_ecosystem_types_flow,flow_corine_land_cover_2006,opportunity,potential,potential_1,potential_2,potential_3,potential_4,recreation_opportunity,spectrum,highest_recreation_spectrum,demand,unmet,unmet_demand,mobility,crossmap
 
 # Re-run the module
-r.estimap.recreation \
+$GRASS_PYTHON r.estimap.recreation/r.estimap.recreation.py \
   --verbose \
   --overwrite \
   mask=area_of_interest \

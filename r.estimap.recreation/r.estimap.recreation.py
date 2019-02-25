@@ -638,9 +638,8 @@ if "GISBASE" not in os.environ:
 import grass.script as grass
 
 from grass.script.utils import set_path
-
 try:
-    # set python path to the shared r.green libraries
+    # set python path to the shared libraries
     set_path('r.estimap.recreation', 'estimap_recreation', '..')
     # constants
     from estimap_recreation.colors import *

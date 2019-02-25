@@ -5,7 +5,7 @@ include $(MODULE_TOPDIR)/include/Make/Python.make
 
 MODULES = __init__ accessibility colors components constants distance grassy_utilities labels main mobility normalisation panos spectrum supply_and_use utilities
 
-PGM = r.estimap_recreation
+PGM = r.estimap.recreation
 LIBDIR = estimap_recreation
 ETCDIR = $(ETC)/$(PGM)/$(LIBDIR)
 
@@ -21,4 +21,5 @@ $(ETCDIR)/%: % | $(ETCDIR)
 	$(INSTALL_DATA) $< $@
 
 install:
-	cp -r $(ETCDIR) $(INST_DIR)/etc
+	$(MKDIR) $(INST_DIR)/etc/$(PGM)
+	cp -r $(ETCDIR) $(INST_DIR)/etc/$(PGM)/$(LIBDIR)

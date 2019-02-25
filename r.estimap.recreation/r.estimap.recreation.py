@@ -636,19 +636,36 @@ if "GISBASE" not in os.environ:
     sys.exit("Exiting: You must be in GRASS GIS to run this program.")
 
 import grass.script as grass
-from grass.script.utils import get_lib_path
-path = get_lib_path(modname='estimap_recreation', libname='colors')
-if path is None:
-    grass.fatal('Not able to find the estimap_recreation library directory.')
-sys.path.append(os.path.dirname(path))
 
-# constants
+from grass.script.utils import set_path
 
-from estimap_recreation.colors import *
-from estimap_recreation.constants import *
-from estimap_recreation.labels import *
+try:
+    # set python path to the shared r.green libraries
+    set_path('r.estimap.recreation', 'estimap_recreation', '..')
+    # constants
+    from estimap_recreation.colors import *
+    from estimap_recreation.constants import *
+    from estimap_recreation.labels import *
+    # main
+    from estimap_recreation.main import main as main_estimap
+except ImportError:
+    try:
+        set_path('r.estimap.recreation', 'estimap_recreation', os.path.join('..', 'etc', 'r.estimap.recreation'))
+        # constants
+        from estimap_recreation.colors import *
+        from estimap_recreation.constants import *
+        from estimap_recreation.labels import *
+        # main
+        from estimap_recreation.main import main as main_estimap
+    except ImportError:
+        gcore.warning('estimap_recreation not in the python path!')
 
-from estimap_recreation.main import main as main_estimap
+# from grass.script.utils import get_lib_path
+# path = get_lib_path(modname='estimap_recreation', libname='colors')
+# if path is None:
+#     grass.fatal('Not able to find the estimap_recreation library directory.')
+# sys.path.append(os.path.dirname(path))
+
 
 def main(options, flags):
     sys.exit(main_estimap())

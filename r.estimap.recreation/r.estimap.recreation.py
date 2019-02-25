@@ -659,11 +659,12 @@ except ImportError:
     except ImportError:
         gcore.warning('estimap_recreation not in the python path!')
 
-# from grass.script.utils import get_lib_path
-# path = get_lib_path(modname='estimap_recreation', libname='colors')
-# if path is None:
-#     grass.fatal('Not able to find the estimap_recreation library directory.')
-# sys.path.append(os.path.dirname(path))
+from grass.script.utils import get_lib_path
+path = get_lib_path(modname='estimap_recreation', libname='colors')
+print("Path is:", path)
+if path is None:
+    grass.fatal('Not able to find the estimap_recreation library directory.')
+sys.path.append(os.path.dirname(path))
 
 
 def main(options, flags):
